@@ -116,7 +116,7 @@ impl<'a> Game<'a> {
             unsafe {
                 ptr = ptr.sub(1);
                 
-                if (*self.ptr).repetition_ep(position) {
+                if (*ptr).repetition_ep(position) {
                     count += 1;
                     if count == 3 {
                         return true;
@@ -124,7 +124,7 @@ impl<'a> Game<'a> {
                 }
 
                 // Can't have repetition after a 50-mr reset
-                if (*self.ptr).fifty_moves() == 0 {
+                if (*ptr).fifty_moves() == 0 {
                     return false;
                 }
             }
