@@ -20,10 +20,10 @@ const MATERIAL_EVAL: [Eval; 5] = [
 ];
 
 const MOBILITY_EVAL: [Eval; 4] = [
-    Eval(64, 48),
-    Eval(32, 48),
-    Eval(16, 32),
-    Eval(8, 8),
+    Eval(32, 24),
+    Eval(16, 24),
+    Eval(8, 16),
+    Eval(4, 4),
 ];
 
 impl Eval {
