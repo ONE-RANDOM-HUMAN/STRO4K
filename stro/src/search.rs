@@ -1,8 +1,8 @@
 use std::cmp;
 
-use crate::game::Game;
+use crate::game::{Game, GameBuf};
 use crate::movegen::{MoveBuf, gen_moves};
-use crate::evaluate::{self, MIN_EVAL};
+use crate::evaluate::{self, MIN_EVAL, MAX_EVAL};
 use crate::position::Move;
 
 pub struct Search<'a> {
@@ -80,6 +80,14 @@ impl<'a> Search<'a> {
             } 
 
             moves.sort_by_key(|x| cmp::Reverse(x.score));
+
+            println!("info depth {} nodes {} nps {} score cp {} pv {}",
+                depth + 1,
+                self.nodes,
+                (self.nodes as f64 / self.start.elapsed().as_secs_f64()) as u64,
+                moves[0].score,
+                moves[0].mov,
+            )
         }
 
         
@@ -152,6 +160,20 @@ impl<'a> Search<'a> {
 
     pub fn game(&mut self) -> &mut Game<'a> {
         &mut self.game
+    }
+
+    pub fn bench() {
+        let mut buffer = GameBuf::uninit();
+        let (game, _) = Game::startpos(&mut buffer);
+        let mut search = Search::new(game);
+        search.search_time = std::time::Duration::MAX;
+
+        let start = std::time::Instant::now();
+        search.alpha_beta(MIN_EVAL, MAX_EVAL, 7, 0);
+
+        let nodes = search.nodes;
+        let nps = (search.nodes as f64 / start.elapsed().as_secs_f64()) as u64;
+        println!("{nodes} nodes {nps} nps");
     }
 
     fn should_stop(&self) -> bool {

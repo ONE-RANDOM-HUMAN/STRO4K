@@ -188,7 +188,7 @@ impl Board {
         self.fifty_moves
     }
 
-    pub fn repetition_ep(&self, other: &Board) -> bool {
+    pub fn repetition_eq(&self, other: &Board) -> bool {
         self.pieces == other.pieces
             && self.side_to_move == other.side_to_move
             && self.ep == other.ep

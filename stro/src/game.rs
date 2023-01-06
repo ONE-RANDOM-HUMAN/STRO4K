@@ -116,7 +116,7 @@ impl<'a> Game<'a> {
             unsafe {
                 ptr = ptr.sub(1);
                 
-                if (*ptr).repetition_ep(position) {
+                if (*ptr).repetition_eq(position) {
                     count += 1;
                     if count == 3 {
                         return true;

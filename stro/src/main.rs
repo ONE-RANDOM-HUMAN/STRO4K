@@ -77,6 +77,12 @@ fn uci_loop() {
 }
 
 fn main() {
+    // Openbench compat
+    if std::env::args().nth(1).map_or(false, |x| x == "bench") {
+        Search::bench();
+        return;
+    }
+
     // Assume the first line is uci
     let mut uci = String::new();
     io::stdin().read_line(&mut uci).unwrap();
@@ -84,6 +90,10 @@ fn main() {
     println!("uciok");
     println!("id name STRO");
     println!("id author ONE_RANDOM_HUMAN");
+
+    // Openbench compat
+    println!("option name Hash type spin default 0 min 0 max 0");
+    println!("option name Threads type spin defaulet 1 min 1 max 1");
 
 
     uci_loop();
