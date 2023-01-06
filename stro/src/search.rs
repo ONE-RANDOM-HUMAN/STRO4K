@@ -47,7 +47,8 @@ impl<'a> Search<'a> {
 
         if moves.len() == 1 {
             let score = evaluate::evaluate(self.game().position());
-            self.print_move(moves[0], score)
+            self.print_move(moves[0], score);
+            return;
         }
 
         let mut moves = moves
