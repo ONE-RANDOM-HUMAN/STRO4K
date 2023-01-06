@@ -72,7 +72,7 @@ impl<'a> Search<'a> {
                 }
 
                 let score = match score {
-                    Some(x) => x,
+                    Some(x) => -x,
                     None => break 'a,
                 };
 
