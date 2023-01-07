@@ -178,6 +178,8 @@ impl<'a> Search<'a> {
             return Some(best_eval);
         }
 
+        alpha = cmp::max(alpha, best_eval);
+
         for mov in moves {
             // Quiescence
             if depth <= 0 && !mov.flags.is_noisy() {
