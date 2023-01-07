@@ -151,7 +151,7 @@ impl<'a> Search<'a> {
                 moves.swap(0, index);
                 ordered_moves = 1;
 
-                if tt_data.depth() >= depth {
+                if tt_data.depth() >= depth && beta - alpha == 1 {
                     let eval = tt_data.eval();
                     match tt_data.bound() {
                         Bound::None => (),
