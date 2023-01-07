@@ -502,9 +502,9 @@ pub struct MoveFlags(pub u8);
 impl MoveFlags {
     pub const NONE: MoveFlags = MoveFlags(0b0);
     pub const DOUBLE_PAWN_PUSH: MoveFlags = MoveFlags(0b1);
-    pub const EN_PASSANT: MoveFlags = MoveFlags(0b10);
-    pub const QUEENSIDE_CASTLE: MoveFlags = MoveFlags(0b100);
-    pub const KINGSIDE_CASTLE: MoveFlags = MoveFlags(0b1000);
+    pub const QUEENSIDE_CASTLE: MoveFlags = MoveFlags(0b10);
+    pub const KINGSIDE_CASTLE: MoveFlags = MoveFlags(0b100);
+    pub const EN_PASSANT: MoveFlags = MoveFlags(0b1000);
     pub const CAPTURE: MoveFlags = MoveFlags(0b1_0000);
     pub const PROMO: MoveFlags = MoveFlags(0b10_0000);
 
@@ -514,6 +514,10 @@ impl MoveFlags {
 
     pub const fn is_nonep_capture(self) -> bool {
         self.0 & Self::CAPTURE.0 != 0
+    }
+
+    pub const fn is_capture(self) -> bool {
+        self.0 & (Self::CAPTURE.0 | Self::EN_PASSANT.0) != 0
     }
 
     pub const fn is_noisy(self) -> bool {
