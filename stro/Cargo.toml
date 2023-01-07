@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 
 [profile.release]
-debug = 1
+lto = "fat"
