@@ -105,13 +105,14 @@ fn main() {
     let mut uci = String::new();
     io::stdin().read_line(&mut uci).unwrap();
 
-    println!("uciok");
     println!("id name STRO");
     println!("id author ONE_RANDOM_HUMAN");
-
+    
     // Openbench compat
     println!("option name Hash type spin default 16 min 1 max 131072");
     println!("option name Threads type spin default 1 min 1 max 1");
+    
+    println!("uciok");
 
     uci_loop();
 }
