@@ -6,6 +6,7 @@ pub mod consts;
 pub mod evaluate;
 pub mod game;
 pub mod movegen;
+pub mod moveorder;
 pub mod position;
 pub mod search;
 pub mod tt;
