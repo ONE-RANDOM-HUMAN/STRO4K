@@ -13,7 +13,7 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 const MATERIAL_EVAL: [Eval; 5] = [
     Eval(200, 256),
     Eval(832, 832).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(832, 832).accum_to(MOBILITY_EVAL[0], -6),
+    Eval(832, 832).accum_to(MOBILITY_EVAL[1], -6),
     Eval(1344, 1344).accum_to(MOBILITY_EVAL[2], -7),
     Eval(2560, 2560).accum_to(MOBILITY_EVAL[3], -13),
 ];
@@ -33,7 +33,7 @@ impl Eval {
     const fn accum_to(self, eval: Eval, count: i16) -> Eval {
         Eval(
             self.0 + count * eval.0,
-            self.1 + count + eval.1,
+            self.1 + count * eval.1,
         )
     }
 }
