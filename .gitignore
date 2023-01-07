@@ -1,5 +1,6 @@
 stro/target/
 stro/Cargo.lock
+stro/.cargo
 
 .vscode/
 

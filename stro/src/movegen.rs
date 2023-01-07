@@ -2,10 +2,8 @@
 //! 850 bytes allocated for binary
 //!
 
-use crate::{
-    consts::{AB_FILE, ALL, A_FILE, H_FILE},
-    position::{Bitboard, Board, Color, Move, MoveFlags, Square},
-};
+use crate::consts::{AB_FILE, ALL, A_FILE, H_FILE};
+use crate::position::{Bitboard, Board, Color, Move, MoveFlags, Square};
 
 pub type MoveFn = fn(Bitboard, Bitboard) -> Bitboard;
 
@@ -183,7 +181,12 @@ unsafe fn gen_pawn(
 
     // SAFETY: The ptr is valid by the safety requirements of the function
     unsafe {
-        ptr = pawn_serialise(ptr, queenside_attacks & enemy, consts[3], MoveFlags::CAPTURE);
+        ptr = pawn_serialise(
+            ptr,
+            queenside_attacks & enemy,
+            consts[3],
+            MoveFlags::CAPTURE,
+        );
         ptr = pawn_serialise(ptr, kingside_attacks & enemy, consts[2], MoveFlags::CAPTURE);
         ptr = pawn_serialise(
             ptr,

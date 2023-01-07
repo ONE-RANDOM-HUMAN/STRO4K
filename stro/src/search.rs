@@ -1,15 +1,17 @@
 use std::cmp;
 
+use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
-use crate::movegen::{MoveBuf, gen_moves};
-use crate::evaluate::{self, MIN_EVAL, MAX_EVAL};
+use crate::movegen::{gen_moves, MoveBuf};
 use crate::position::Move;
+use crate::tt::{Bound, TTData, TT};
 
 pub struct Search<'a> {
     game: Game<'a>,
     nodes: u64,
     pub start: std::time::Instant,
     search_time: std::time::Duration,
+    tt: TT,
 }
 
 /// Automatically unmakes move and returns when `None` is received
@@ -35,7 +37,17 @@ impl<'a> Search<'a> {
             nodes: 0,
             start: std::time::Instant::now(),
             search_time: std::time::Duration::from_secs(0),
+            tt: TT::new((16 * 1024 * 1024).try_into().unwrap()),
         }
+    }
+
+    pub fn new_game(&mut self) {
+        self.tt.clear()
+    }
+
+    pub fn resize_tt_mb(&mut self, size_in_mb: usize) {
+        self.tt
+            .resize((size_in_mb * 1024 * 1024).max(1).try_into().unwrap());
     }
 
     pub fn search(&mut self, time_ms: u32, _inc_ms: u32) {
@@ -53,7 +65,10 @@ impl<'a> Search<'a> {
 
         let mut moves = moves
             .iter()
-            .map(|&mov| SearchMove { score: MIN_EVAL, mov })
+            .map(|&mov| SearchMove {
+                score: MIN_EVAL,
+                mov,
+            })
             .collect::<Vec<_>>();
 
         'a: for depth in 0.. {
@@ -78,11 +93,12 @@ impl<'a> Search<'a> {
 
                 mov.score = score;
                 alpha = cmp::max(alpha, score)
-            } 
+            }
 
             moves.sort_by_key(|x| cmp::Reverse(x.score));
 
-            println!("info depth {} nodes {} nps {} score cp {} pv {}",
+            println!(
+                "info depth {} nodes {} nps {} score cp {} pv {}",
                 depth + 1,
                 self.nodes,
                 (self.nodes as f64 / self.start.elapsed().as_secs_f64()) as u64,
@@ -91,12 +107,17 @@ impl<'a> Search<'a> {
             )
         }
 
-        
         moves.sort_by_key(|x| cmp::Reverse(x.score));
         self.print_move(moves[0].mov, moves[0].score)
     }
 
-    pub fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: i32, _ply: usize) -> Option<i32> {
+    pub fn alpha_beta(
+        &mut self,
+        mut alpha: i32,
+        beta: i32,
+        depth: i32,
+        _ply: usize,
+    ) -> Option<i32> {
         if self.nodes % 4096 == 0 && self.should_stop() {
             return None;
         }
@@ -109,7 +130,7 @@ impl<'a> Search<'a> {
 
         let mut buffer = MoveBuf::uninit();
         let moves = gen_moves(self.game.position(), &mut buffer);
-        
+
         let is_check = self.game.position().is_check();
         if moves.is_empty() {
             return Some(if is_check { evaluate::MIN_EVAL } else { 0 });
@@ -120,8 +141,38 @@ impl<'a> Search<'a> {
             return Some(0);
         }
 
+        // tt
+        let hash = self.game.position().hash();
+        if let Some(tt_data) = self.tt.load(hash) {
+            let best_mov = tt_data.best_move();
+            if let Some(index) = moves.iter().position(|&x| x == best_mov) {
+                moves.swap(0, index);
+
+                if tt_data.depth() >= depth {
+                    let eval = tt_data.eval();
+                    match tt_data.bound() {
+                        Bound::None => (),
+                        Bound::Lower => {
+                            if eval >= beta {
+                                return Some(eval);
+                            }
+                        }
+                        Bound::Upper => {
+                            if eval <= alpha {
+                                return Some(eval);
+                            }
+                        }
+                        Bound::Exact => return Some(eval),
+                    }
+                }
+            }
+        }
+
         let static_eval = evaluate::evaluate(self.game.position());
+
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
+        let mut best_move = None;
+        let mut bound = Bound::Upper;
 
         if best_eval >= beta {
             return Some(best_eval);
@@ -137,23 +188,31 @@ impl<'a> Search<'a> {
                 self.game.make_move(*mov);
             }
 
-            let eval = -search!{ self, self.alpha_beta(-beta, -alpha, depth - 1, _ply + 1) };
+            let eval = -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, _ply + 1) };
 
             unsafe {
                 self.game.unmake_move();
             }
 
-            if eval >= beta {
-                return Some(eval);
-            }
-
             if eval > best_eval {
+                best_move = Some(*mov);
                 best_eval = eval;
-
-                if eval > alpha {
-                    alpha = eval;
-                }
             }
+
+            if eval >= beta {
+                bound = Bound::Lower;
+                break;
+            }
+
+            if eval > alpha {
+                bound = Bound::Exact;
+                alpha = eval;
+            }
+        }
+
+        if let Some(mov) = best_move {
+            self.tt
+                .store(hash, TTData::new(mov, bound, best_eval, depth, hash));
         }
 
         Some(best_eval)
@@ -170,7 +229,7 @@ impl<'a> Search<'a> {
         search.search_time = std::time::Duration::MAX;
 
         let start = std::time::Instant::now();
-        search.alpha_beta(MIN_EVAL, MAX_EVAL, 7, 0);
+        search.alpha_beta(MIN_EVAL, MAX_EVAL, 8, 0);
 
         let nodes = search.nodes;
         let nps = (search.nodes as f64 / start.elapsed().as_secs_f64()) as u64;
@@ -184,7 +243,11 @@ impl<'a> Search<'a> {
     fn print_move(&self, mov: Move, score: i32) {
         // not really centipawns, but no scaling to remain consistent
         // with a possible binary version.
-        println!("info nodes {} nps {} score cp {score}", self.nodes, (self.nodes as f64 / self.start.elapsed().as_secs_f64()) as u64);
+        println!(
+            "info nodes {} nps {} score cp {score}",
+            self.nodes,
+            (self.nodes as f64 / self.start.elapsed().as_secs_f64()) as u64
+        );
         println!("bestmove {mov}")
     }
 }

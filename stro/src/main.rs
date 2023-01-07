@@ -1,6 +1,9 @@
 use std::io;
 
-use stro::{game::{GameBuf, Game}, search::Search, position::{Board, Color}, movegen::{MoveBuf, gen_moves}};
+use stro::game::{Game, GameBuf};
+use stro::movegen::{gen_moves, MoveBuf};
+use stro::position::{Board, Color};
+use stro::search::Search;
 
 fn uci_loop() {
     let mut buffer = GameBuf::uninit();
@@ -11,7 +14,7 @@ fn uci_loop() {
         let line = line.unwrap();
         let line = line.trim();
         if line.starts_with("ucinewgame") {
-            // do nothing
+            search.new_game();
         } else if line.starts_with("isready") {
             println!("readyok");
         } else if line.starts_with("position") {
@@ -25,7 +28,8 @@ fn uci_loop() {
                 // do nothing
             } else if line.starts_with("fen") {
                 // the fen parser doesn't care about what comes afterwards
-                let position = Board::from_fen(line.trim_start_matches("fen").trim_start()).unwrap();
+                let position =
+                    Board::from_fen(line.trim_start_matches("fen").trim_start()).unwrap();
 
                 unsafe {
                     search.game().add_position(position);
@@ -40,7 +44,9 @@ fn uci_loop() {
                 let moves = gen_moves(search.game().position(), &mut buffer);
 
                 unsafe {
-                    search.game().make_move(*moves.iter().find(|x| x.to_string() == mov).unwrap());
+                    search
+                        .game()
+                        .make_move(*moves.iter().find(|x| x.to_string() == mov).unwrap());
                 }
             }
         } else if line.starts_with("go") {
@@ -71,9 +77,21 @@ fn uci_loop() {
 
             let inc = parts.next().unwrap().parse().unwrap();
             search.search(time, inc);
+        } else if line.starts_with("setoption") {
+            let name = line[line.find("name").unwrap() + 4..line.find("value").unwrap()]
+                .trim()
+                .to_ascii_lowercase();
+            let value = line[line.find("value").unwrap() + 5..].trim();
+
+            #[allow(clippy::single_match)]
+            match &*name {
+                "hash" => search.resize_tt_mb(value.parse().unwrap()),
+                _ => (),
+            }
+        } else if line.starts_with("quit") {
+            break;
         }
     }
-
 }
 
 fn main() {
@@ -92,9 +110,8 @@ fn main() {
     println!("id author ONE_RANDOM_HUMAN");
 
     // Openbench compat
-    println!("option name Hash type spin default 0 min 0 max 0");
+    println!("option name Hash type spin default 16 min 1 max 131072");
     println!("option name Threads type spin default 1 min 1 max 1");
-
 
     uci_loop();
 }

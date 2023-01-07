@@ -1,11 +1,10 @@
-use crate::position::{Board, Bitboard, Color};
+use crate::position::{Bitboard, Board, Color};
 
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
 struct Eval(i16, i16);
 
-
-pub const MAX_EVAL: i32 = 256 * 256;
+pub const MAX_EVAL: i32 = 128 * 256 - 1;
 pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 const MATERIAL_EVAL: [Eval; 5] = [
@@ -38,12 +37,16 @@ fn resolve(board: &Board, eval: Eval) -> i32 {
     }
 
     let score = (i32::from(eval.0) * phase + i32::from(eval.1) * (24 - phase)) / 24;
-    if board.side_to_move() == Color::White { score } else { -score }
+    if board.side_to_move() == Color::White {
+        score
+    } else {
+        -score
+    }
 }
 
 pub fn evaluate(board: &Board) -> i32 {
     let mut eval = Eval(0, 0);
-    
+
     #[allow(clippy::needless_range_loop)]
     for i in 0..5 {
         let count = popcnt(board.pieces()[0][i]) - popcnt(board.pieces()[1][i]);
