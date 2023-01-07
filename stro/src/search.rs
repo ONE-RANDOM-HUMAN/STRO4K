@@ -3,6 +3,7 @@ use std::cmp;
 use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{gen_moves, MoveBuf};
+use crate::moveorder;
 use crate::position::Move;
 use crate::tt::{Bound, TTData, TT};
 
@@ -142,11 +143,13 @@ impl<'a> Search<'a> {
         }
 
         // tt
+        let mut ordered_moves = 0;
         let hash = self.game.position().hash();
         if let Some(tt_data) = self.tt.load(hash) {
             let best_mov = tt_data.best_move();
             if let Some(index) = moves.iter().position(|&x| x == best_mov) {
                 moves.swap(0, index);
+                ordered_moves = 1;
 
                 if tt_data.depth() >= depth {
                     let eval = tt_data.eval();
@@ -168,6 +171,7 @@ impl<'a> Search<'a> {
             }
         }
 
+        ordered_moves += moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
         let static_eval = evaluate::evaluate(self.game.position());
 
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
@@ -180,10 +184,14 @@ impl<'a> Search<'a> {
 
         alpha = cmp::max(alpha, best_eval);
 
-        for mov in moves {
+        for (i, mov) in moves.iter().enumerate() {
             // Quiescence
-            if depth <= 0 && !mov.flags.is_noisy() {
-                continue;
+            if depth <= 0 {
+                if i >= ordered_moves {
+                    break;
+                } else if !mov.flags.is_noisy() {
+                    continue;
+                }
             }
 
             unsafe {
