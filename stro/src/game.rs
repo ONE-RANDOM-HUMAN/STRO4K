@@ -1,7 +1,5 @@
-use crate::{
-    movegen::{gen_moves, MoveBuf},
-    position::{Board, Move},
-};
+use crate::movegen::{gen_moves, MoveBuf};
+use crate::position::{Board, Move};
 
 // Enough space to fit longest possible chess game with 50-mr
 pub type GameBuf = std::mem::MaybeUninit<[Board; 6144]>;
@@ -35,7 +33,7 @@ impl<'a> Game<'a> {
             GameStart(Self {
                 ptr,
                 phantom: std::marker::PhantomData,
-            })
+            }),
         )
     }
 
@@ -115,7 +113,7 @@ impl<'a> Game<'a> {
             // the loop.
             unsafe {
                 ptr = ptr.sub(1);
-                
+
                 if (*ptr).repetition_eq(position) {
                     count += 1;
                     if count == 3 {
@@ -162,15 +160,12 @@ impl<'a> Game<'a> {
     /// See `perft
     pub unsafe fn divide(&mut self, depth: usize) -> Vec<(Move, u64)> {
         if depth == 0 {
-            return Vec::new()
+            return Vec::new();
         }
 
         let mut buffer = MoveBuf::uninit();
         let moves = gen_moves(self.position(), &mut buffer);
-        let mut moves = moves
-            .iter()
-            .map(|&mov| (mov, 0))
-            .collect::<Vec<_>>();
+        let mut moves = moves.iter().map(|&mov| (mov, 0)).collect::<Vec<_>>();
 
         if depth == 1 {
             for (_, count) in &mut moves {
@@ -196,8 +191,7 @@ impl<'a> Game<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{GameBuf, Game};
-
+    use super::{Game, GameBuf};
 
     #[test]
     fn perft_startpos() {
@@ -206,7 +200,8 @@ mod tests {
             &mut buffer,
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
         )
-        .unwrap().0;
+        .unwrap()
+        .0;
 
         unsafe {
             assert_eq!(position.perft(1), 20);
@@ -229,7 +224,8 @@ mod tests {
             &mut buffer,
             "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
         )
-        .unwrap().0;
+        .unwrap()
+        .0;
 
         unsafe {
             assert_eq!(position.perft(1), 48);
@@ -247,8 +243,9 @@ mod tests {
     #[test]
     fn perft_3() {
         let mut buffer = GameBuf::uninit();
-        let mut position =
-            Game::from_fen(&mut buffer, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1").unwrap().0;
+        let mut position = Game::from_fen(&mut buffer, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1")
+            .unwrap()
+            .0;
         unsafe {
             assert_eq!(position.perft(1), 14);
             assert_eq!(position.perft(2), 191);
@@ -271,7 +268,8 @@ mod tests {
             &mut buffer,
             "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
         )
-        .unwrap().0;
+        .unwrap()
+        .0;
 
         unsafe {
             assert_eq!(position.perft(1), 6);
@@ -294,7 +292,8 @@ mod tests {
             &mut buffer,
             "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
         )
-        .unwrap().0;
+        .unwrap()
+        .0;
 
         unsafe {
             assert_eq!(position.perft(1), 44);
@@ -315,7 +314,8 @@ mod tests {
             &mut buffer,
             "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
         )
-        .unwrap().0;
+        .unwrap()
+        .0;
 
         unsafe {
             assert_eq!(position.perft(1), 46);

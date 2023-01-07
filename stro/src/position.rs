@@ -199,6 +199,28 @@ impl Board {
         self.is_area_attacked(self.pieces[self.side_to_move as usize][5])
     }
 
+    pub fn hash(&self) -> u64 {
+        // SAFETY: aes-ni and 64 bit required for build
+        unsafe {
+            use std::arch::x86_64::*;
+
+            let mut value = _mm_cvtsi32_si128(
+                self.side_to_move as i32
+                    | self.ep.map_or(64, |x| x as i32) << 8
+                    | (self.castling as i32) << 16,
+            );
+
+            let ptr = self.pieces.as_ptr().cast::<i64>();
+
+            // pieces and color
+            for i in (0..=12).rev() {
+                value = _mm_aesenc_si128(value, _mm_loadu_si128(ptr.add(i).cast()));
+            }
+
+            _mm_cvtsi128_si64x(value) as u64
+        }
+    }
+
     pub fn from_fen(fen: &str) -> Option<Self> {
         let mut parts = fen.split_ascii_whitespace();
         let mut position = Self {
@@ -455,7 +477,11 @@ pub struct Move {
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         const PROMOS: [&str; 4] = ["n", "b", "r", "q"];
-        let promo = self.flags.promo_piece().map_or("", |p| PROMOS[p as usize - 1]);
+        let promo = self
+            .flags
+            .promo_piece()
+            .map_or("", |p| PROMOS[p as usize - 1]);
+
         write!(f, "{}{}{}", self.origin, self.dest, promo)
     }
 }
