@@ -1,6 +1,6 @@
 use crate::consts;
-use crate::movegen::{MoveFn, knight_moves, bishop_moves, rook_moves, queen_moves};
-use crate::position::{Board, Bitboard, Color};
+use crate::movegen::{bishop_moves, knight_moves, queen_moves, rook_moves, MoveFn};
+use crate::position::{Bitboard, Board, Color};
 
 #[repr(C)]
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
@@ -18,12 +18,7 @@ const MATERIAL_EVAL: [Eval; 5] = [
     Eval(2560, 2560).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [
-    Eval(32, 32),
-    Eval(32, 16),
-    Eval(16, 16),
-    Eval(8, 8),
-];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(32, 32), Eval(32, 16), Eval(16, 16), Eval(8, 8)];
 
 impl Eval {
     fn accum(&mut self, eval: Eval, count: i16) {
@@ -31,10 +26,7 @@ impl Eval {
     }
 
     const fn accum_to(self, eval: Eval, count: i16) -> Eval {
-        Eval(
-            self.0 + count * eval.0,
-            self.1 + count * eval.1,
-        )
+        Eval(self.0 + count * eval.0, self.1 + count * eval.1)
     }
 }
 
@@ -61,12 +53,7 @@ fn resolve(board: &Board, eval: Eval) -> i32 {
 }
 
 fn side_mobility(pieces: &[Bitboard; 6], occ: Bitboard, mask: Bitboard) -> Eval {
-    const MOVE_FNS: [MoveFn; 4] = [
-        knight_moves,
-        bishop_moves,
-        rook_moves,
-        queen_moves,
-    ];
+    const MOVE_FNS: [MoveFn; 4] = [knight_moves, bishop_moves, rook_moves, queen_moves];
 
     let mut eval = Eval(0, 0);
     for i in 0..4 {

@@ -44,9 +44,12 @@ fn uci_loop() {
                 let moves = gen_moves(search.game().position(), &mut buffer);
 
                 unsafe {
-                    search
-                        .game()
-                        .make_move(*moves.iter().find(|x| x.to_string() == mov).unwrap());
+                    assert!(
+                        search
+                            .game()
+                            .make_move(*moves.iter().find(|x| x.to_string() == mov).unwrap()),
+                        "illegal move"
+                    );
                 }
             }
         } else if line.starts_with("go") {
@@ -107,11 +110,11 @@ fn main() {
 
     println!("id name STRO");
     println!("id author ONE_RANDOM_HUMAN");
-    
+
     // Openbench compat
     println!("option name Hash type spin default 16 min 1 max 131072");
     println!("option name Threads type spin default 1 min 1 max 1");
-    
+
     println!("uciok");
 
     uci_loop();

@@ -63,6 +63,7 @@ impl Board {
 
     /// Makes a pseudo-legal move and returns a boolean
     /// indicating if the move was legal
+    #[must_use]
     pub fn make_move(&mut self, mov: Move) -> bool {
         let piece = self.get_piece(mov.origin, self.side_to_move).unwrap();
 

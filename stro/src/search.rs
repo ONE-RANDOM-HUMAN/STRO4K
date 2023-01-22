@@ -58,26 +58,27 @@ impl<'a> Search<'a> {
         let mut buffer = MoveBuf::uninit();
         let moves = gen_moves(self.game.position(), &mut buffer);
 
-        if moves.len() == 1 {
-            let score = evaluate::evaluate(self.game().position());
-            self.print_move(moves[0], score);
-            return;
-        }
-
         let mut moves = moves
             .iter()
+            .filter(|&&mov| self.game.is_legal(mov))
             .map(|&mov| SearchMove {
                 score: MIN_EVAL,
                 mov,
             })
             .collect::<Vec<_>>();
 
+        if moves.len() == 1 {
+            let score = evaluate::evaluate(self.game().position());
+            self.print_move(moves[0].mov, score);
+            return;
+        }
+
         'a: for depth in 0.. {
             let mut alpha = MIN_EVAL;
 
             for mov in &mut moves {
                 unsafe {
-                    self.game.make_move(mov.mov);
+                    assert!(self.game.make_move(mov.mov));
                 }
 
                 let score = self.alpha_beta(MIN_EVAL, -alpha, depth, 1);
@@ -133,8 +134,8 @@ impl<'a> Search<'a> {
         let moves = gen_moves(self.game.position(), &mut buffer);
 
         let is_check = self.game.position().is_check();
-        if moves.is_empty() {
-            return Some(if is_check { evaluate::MIN_EVAL } else { 0 });
+        if !moves.iter().any(|&mov| self.game.is_legal(mov)) {
+            return Some(if is_check { MIN_EVAL } else { 0 });
         }
 
         // Only check after it is known that it is not checkmate
@@ -148,30 +149,33 @@ impl<'a> Search<'a> {
         if let Some(tt_data) = self.tt.load(hash) {
             let best_mov = tt_data.best_move();
             if let Some(index) = moves.iter().position(|&x| x == best_mov) {
-                moves.swap(0, index);
-                ordered_moves = 1;
+                if self.game.is_legal(moves[index]) {
+                    moves.swap(0, index);
+                    ordered_moves = 1;
 
-                if tt_data.depth() >= depth {
-                    let eval = tt_data.eval();
-                    match tt_data.bound() {
-                        Bound::None => (),
-                        Bound::Lower => {
-                            if eval >= beta {
-                                return Some(eval);
+                    if tt_data.depth() >= depth {
+                        let eval = tt_data.eval();
+                        match tt_data.bound() {
+                            Bound::None => (),
+                            Bound::Lower => {
+                                if eval >= beta {
+                                    return Some(eval);
+                                }
                             }
-                        }
-                        Bound::Upper => {
-                            if eval <= alpha {
-                                return Some(eval);
+                            Bound::Upper => {
+                                if eval <= alpha {
+                                    return Some(eval);
+                                }
                             }
+                            Bound::Exact => return Some(eval),
                         }
-                        Bound::Exact => return Some(eval),
                     }
                 }
             }
         }
 
-        ordered_moves += moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
+        ordered_moves +=
+            moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
         let static_eval = evaluate::evaluate(self.game.position());
 
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
@@ -195,7 +199,9 @@ impl<'a> Search<'a> {
             }
 
             unsafe {
-                self.game.make_move(*mov);
+                if !self.game.make_move(*mov) {
+                    continue;
+                }
             }
 
             let eval = if i == 0 || depth <= 0 {
