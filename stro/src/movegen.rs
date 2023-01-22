@@ -81,28 +81,8 @@ pub fn gen_moves<'a>(position: &Board, buf: &'a mut MoveBuf) -> &'a mut [Move] {
         ptr = gen_castle(ptr, position, occ);
     }
 
-    // filter illegal moves
-    let mut end = start;
-    let mut current = start;
-    while current != ptr {
-        let mut position = *position;
-
-        // SAFETY: `current` is a valid pointer to a generated move since
-        // it is between `start` and `ptr`. The pointers will not overflow
-        // since they are less than `ptr`
-        unsafe {
-            let mov = *current;
-            current = current.add(1);
-
-            if position.make_move(mov) {
-                *end = mov;
-                end = end.add(1);
-            }
-        }
-    }
-
-    // SAFETY: begin..end is a valid pointer range in buf
-    unsafe { std::slice::from_raw_parts_mut(start, end.offset_from(start) as usize) }
+    // // SAFETY: begin..ptr is a valid pointer range in buf
+    unsafe { std::slice::from_raw_parts_mut(start, ptr.offset_from(start) as usize) }
 }
 
 /// # Safety

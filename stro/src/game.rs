@@ -69,6 +69,7 @@ impl<'a> Game<'a> {
 
     /// # Safety
     /// The total number of position stored must not exceed 6144
+    #[must_use]
     pub unsafe fn make_move(&mut self, mov: Move) -> bool {
         let mut board = unsafe { self.ptr.read() };
 
@@ -82,6 +83,12 @@ impl<'a> Game<'a> {
         }
 
         true
+    }
+
+    /// Determines if a pseudo-legal move is legal
+    pub fn is_legal(&self, mov: Move) -> bool {
+        let mut board = unsafe { self.ptr.read() };
+        board.make_move(mov)
     }
 
     /// # Safety
@@ -139,15 +146,13 @@ impl<'a> Game<'a> {
         let mut buffer = MoveBuf::uninit();
         let moves = gen_moves(self.position(), &mut buffer);
 
-        if depth == 1 {
-            return moves.len() as u64;
-        }
-
         let mut count = 0;
         for mov in moves {
             unsafe {
-                let legal = self.make_move(*mov);
-                debug_assert!(legal);
+                if !self.make_move(*mov) {
+                    continue;
+                }
+
                 count += self.perft(depth - 1);
                 self.unmake_move();
             }
@@ -167,18 +172,11 @@ impl<'a> Game<'a> {
         let moves = gen_moves(self.position(), &mut buffer);
         let mut moves = moves.iter().map(|&mov| (mov, 0)).collect::<Vec<_>>();
 
-        if depth == 1 {
-            for (_, count) in &mut moves {
-                *count = 1;
-            }
-
-            return moves;
-        }
-
         for (mov, count) in &mut moves {
             unsafe {
-                let legal = self.make_move(*mov);
-                debug_assert!(legal);
+                if !self.make_move(*mov) {
+                    continue;
+                }
 
                 *count += self.perft(depth - 1);
                 self.unmake_move();
