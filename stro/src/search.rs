@@ -13,6 +13,7 @@ pub struct Search<'a> {
     pub start: std::time::Instant,
     search_time: std::time::Duration,
     tt: TT,
+    kt: [moveorder::KillerTable; 6144]
 }
 
 /// Automatically unmakes move and returns when `None` is received
@@ -39,11 +40,13 @@ impl<'a> Search<'a> {
             start: std::time::Instant::now(),
             search_time: std::time::Duration::from_secs(0),
             tt: TT::new((16 * 1024 * 1024).try_into().unwrap()),
+            kt: [moveorder::KillerTable::new(); 6144],
         }
     }
 
     pub fn new_game(&mut self) {
-        self.tt.clear()
+        self.tt.clear();
+        self.kt.fill(moveorder::KillerTable::new());
     }
 
     pub fn resize_tt_mb(&mut self, size_in_mb: usize) {
@@ -118,7 +121,7 @@ impl<'a> Search<'a> {
         mut alpha: i32,
         beta: i32,
         depth: i32,
-        _ply: usize,
+        ply: usize,
     ) -> Option<i32> {
         if self.nodes % 4096 == 0 && self.should_stop() {
             return None;
@@ -188,35 +191,45 @@ impl<'a> Search<'a> {
 
         alpha = cmp::max(alpha, best_eval);
 
-        for (i, mov) in moves.iter().enumerate() {
-            // Quiescence
-            if depth <= 0 {
-                if i >= ordered_moves {
+        for i in 0..moves.len() {
+            if i >= ordered_moves {
+                if depth > 0 {
+                    ordered_moves += moveorder::order_quiet_moves(&mut moves[ordered_moves..], self.kt[ply]);
+                } else {
                     break;
-                } else if !mov.flags.is_noisy() {
-                    continue;
                 }
+            }
+            
+            let mov = moves[i];
+
+            // ignore quiet tt move in quiescence
+            if depth <= 0 && !mov.flags.is_noisy() {
+                continue;
             }
 
             unsafe {
-                if !self.game.make_move(*mov) {
+                if !self.game.make_move(mov) {
                     continue;
                 }
             }
 
-            let eval = -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, _ply + 1) };
+            let eval = -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) };
 
             unsafe {
                 self.game.unmake_move();
             }
 
             if eval > best_eval {
-                best_move = Some(*mov);
+                best_move = Some(mov);
                 best_eval = eval;
             }
 
             if eval >= beta {
                 bound = Bound::Lower;
+                if !mov.flags.is_noisy() {
+                    self.kt[ply].beta_cutoff(mov);
+                }
+
                 break;
             }
 
