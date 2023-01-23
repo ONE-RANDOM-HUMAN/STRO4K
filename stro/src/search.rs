@@ -213,7 +213,17 @@ impl<'a> Search<'a> {
                 }
             }
 
-            let eval = -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) };
+            let eval = if i == 0 || depth <= 0 {
+                -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
+            } else {
+                let eval = -search! { self, self.alpha_beta(-alpha - 1, -alpha, depth - 1, ply + 1) };
+
+                if eval > alpha && eval < beta {
+                    -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
+                } else {
+                    eval
+                }
+            };
 
             unsafe {
                 self.game.unmake_move();
