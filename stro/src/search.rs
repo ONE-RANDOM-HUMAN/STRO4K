@@ -225,7 +225,10 @@ impl<'a> Search<'a> {
 
             if eval >= beta {
                 bound = Bound::Lower;
-                self.kt[ply].beta_cutoff(mov);
+                if !mov.flags.is_noisy() {
+                    self.kt[ply].beta_cutoff(mov);
+                }
+
                 break;
             }
 
