@@ -2,6 +2,20 @@ use std::cmp;
 
 use crate::position::{Board, Move};
 
+#[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Default, Debug)]
+pub struct KillerTable([Option<Move>; 2]);
+impl KillerTable {
+    pub fn new() -> Self {
+        Self([None; 2])
+    }
+
+    pub fn beta_cutoff(&mut self, mov: Move) {
+        self.0[1] = self.0[0];
+        self.0[0] = Some(mov);
+    }
+}
+
 pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     // Sorts in order of:
     // promos and promo-captures by promo piece
@@ -25,6 +39,19 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     });
 
     quiet
+}
+
+pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable) -> usize {
+    for mov in kt.0 {
+        let Some(mov) = mov else { break; };
+
+        if let Some(index) = moves.iter().position(|&x| x == mov) {
+            moves.swap(0, index);
+            moves = &mut moves[1..];
+        }
+    }
+
+    moves.len()
 }
 
 fn cmp_mvv(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
