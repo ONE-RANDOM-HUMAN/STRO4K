@@ -240,8 +240,10 @@ impl<'a> Search<'a> {
         }
 
         if let Some(mov) = best_move {
-            self.tt
-                .store(hash, TTData::new(mov, bound, best_eval, depth, hash));
+            if depth > 0 {
+                self.tt
+                    .store(hash, TTData::new(mov, bound, best_eval, depth, hash));
+            }
         }
 
         Some(best_eval)
