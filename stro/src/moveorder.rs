@@ -42,6 +42,7 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
 }
 
 pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable) -> usize {
+    let len = moves.len();
     for mov in kt.0 {
         let Some(mov) = mov else { break; };
 
@@ -51,7 +52,7 @@ pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable) -> usize {
         }
     }
 
-    moves.len()
+    len
 }
 
 fn cmp_mvv(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {

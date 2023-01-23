@@ -192,7 +192,6 @@ impl<'a> Search<'a> {
         alpha = cmp::max(alpha, best_eval);
 
         for i in 0..moves.len() {
-            let mov = moves[i];
             if i >= ordered_moves {
                 if depth > 0 {
                     ordered_moves += moveorder::order_quiet_moves(&mut moves[ordered_moves..], self.kt[ply]);
@@ -201,6 +200,8 @@ impl<'a> Search<'a> {
                 }
             }
             
+            let mov = moves[i];
+
             // ignore quiet tt move in quiescence
             if depth <= 0 && !mov.flags.is_noisy() {
                 continue;
