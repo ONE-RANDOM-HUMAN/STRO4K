@@ -13,7 +13,8 @@ pub struct Search<'a> {
     pub start: std::time::Instant,
     search_time: std::time::Duration,
     tt: TT,
-    kt: [moveorder::KillerTable; 6144]
+    history: [[[i64; 64]; 64]; 2],
+    kt: [moveorder::KillerTable; 6144],
 }
 
 /// Automatically unmakes move and returns when `None` is received
@@ -40,12 +41,14 @@ impl<'a> Search<'a> {
             start: std::time::Instant::now(),
             search_time: std::time::Duration::from_secs(0),
             tt: TT::new((16 * 1024 * 1024).try_into().unwrap()),
+            history: [[[0; 64]; 64]; 2],
             kt: [moveorder::KillerTable::new(); 6144],
         }
     }
 
     pub fn new_game(&mut self) {
         self.tt.clear();
+        self.history.fill([[0; 64]; 64]);
         self.kt.fill(moveorder::KillerTable::new());
     }
 
@@ -116,13 +119,7 @@ impl<'a> Search<'a> {
         self.print_move(moves[0].mov, moves[0].score)
     }
 
-    pub fn alpha_beta(
-        &mut self,
-        mut alpha: i32,
-        beta: i32,
-        depth: i32,
-        ply: usize,
-    ) -> Option<i32> {
+    pub fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: i32, ply: usize) -> Option<i32> {
         if self.nodes % 4096 == 0 && self.should_stop() {
             return None;
         }
@@ -194,12 +191,16 @@ impl<'a> Search<'a> {
         for i in 0..moves.len() {
             if i >= ordered_moves {
                 if depth > 0 {
-                    ordered_moves += moveorder::order_quiet_moves(&mut moves[ordered_moves..], self.kt[ply]);
+                    ordered_moves += moveorder::order_quiet_moves(
+                        &mut moves[ordered_moves..],
+                        self.kt[ply],
+                        &self.history[self.game.position().side_to_move() as usize],
+                    );
                 } else {
                     break;
                 }
             }
-            
+
             let mov = moves[i];
 
             // ignore quiet tt move in quiescence
@@ -228,6 +229,9 @@ impl<'a> Search<'a> {
                 bound = Bound::Lower;
                 if !mov.flags.is_noisy() {
                     self.kt[ply].beta_cutoff(mov);
+                    self.history[self.game.position().side_to_move() as usize]
+                        [mov.origin as usize][mov.dest as usize] +=
+                        i64::from(depth) * i64::from(depth);
                 }
 
                 break;
@@ -258,7 +262,7 @@ impl<'a> Search<'a> {
         search.search_time = std::time::Duration::MAX;
 
         let start = std::time::Instant::now();
-        search.alpha_beta(MIN_EVAL, MAX_EVAL, 7, 0);
+        search.alpha_beta(MIN_EVAL, MAX_EVAL, 8, 0);
 
         let nodes = search.nodes;
         let nps = (search.nodes as f64 / start.elapsed().as_secs_f64()) as u64;

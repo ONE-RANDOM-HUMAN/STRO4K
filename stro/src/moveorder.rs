@@ -41,7 +41,12 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     quiet
 }
 
-pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable) -> usize {
+pub fn order_quiet_moves(
+    mut moves: &mut [Move],
+    kt: KillerTable,
+    history: &[[i64; 64]; 64],
+) -> usize {
+    // killers
     let len = moves.len();
     for mov in kt.0 {
         let Some(mov) = mov else { break; };
@@ -51,6 +56,9 @@ pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable) -> usize {
             moves = &mut moves[1..];
         }
     }
+
+    // sort by history
+    moves.sort_by_key(|mov| cmp::Reverse(history[mov.origin as usize][mov.dest as usize]));
 
     len
 }
