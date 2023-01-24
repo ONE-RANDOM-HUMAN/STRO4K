@@ -123,6 +123,7 @@ impl<'a> Search<'a> {
         depth: i32,
         ply: usize,
     ) -> Option<i32> {
+        // Check if should stop
         if self.nodes % 4096 == 0 && self.should_stop() {
             return None;
         }
@@ -136,51 +137,62 @@ impl<'a> Search<'a> {
         let mut buffer = MoveBuf::uninit();
         let moves = gen_moves(self.game.position(), &mut buffer);
 
+        // Checkmate and stalemate
         let is_check = self.game.position().is_check();
         if !moves.iter().any(|&mov| self.game.is_legal(mov)) {
             return Some(if is_check { MIN_EVAL } else { 0 });
         }
 
-        // Only check after it is known that it is not checkmate
+        // Only check 50mr after it is known that it is not checkmate
         if self.game.position().fifty_moves() >= 100 {
             return Some(0);
         }
 
-        // tt
         let mut ordered_moves = 0;
-        let hash = self.game.position().hash();
-        if let Some(tt_data) = self.tt.load(hash) {
-            let best_mov = tt_data.best_move();
-            if let Some(index) = moves.iter().position(|&x| x == best_mov) {
-                if self.game.is_legal(moves[index]) {
-                    moves.swap(0, index);
-                    ordered_moves = 1;
+        let mut hash = 0;
+        
+        // Probe tt if not in qsearch
+        if depth > 0 {
+            hash = self.game.position().hash();
 
-                    if tt_data.depth() >= depth {
-                        let eval = tt_data.eval();
-                        match tt_data.bound() {
-                            Bound::None => (),
-                            Bound::Lower => {
-                                if eval >= beta {
-                                    return Some(eval);
-                                }
+            'tt: {
+                let Some(tt_data) = self.tt.load(hash) else { break 'tt };
+                let best_move = tt_data.best_move();
+                
+                let Some(index) = moves.iter().position(|&x| x == best_move) else { break 'tt };
+                if !self.game.is_legal(moves[index]) {
+                    break 'tt;
+                }
+    
+                moves.swap(0, index);
+                ordered_moves = 1;
+    
+                if tt_data.depth() >= depth {
+                    let eval = tt_data.eval();
+                    match tt_data.bound() {
+                        Bound::None => (),
+                        Bound::Lower => {
+                            if eval >= beta {
+                                return Some(eval);
                             }
-                            Bound::Upper => {
-                                if eval <= alpha {
-                                    return Some(eval);
-                                }
-                            }
-                            Bound::Exact => return Some(eval),
                         }
+                        Bound::Upper => {
+                            if eval <= alpha {
+                                return Some(eval);
+                            }
+                        }
+                        Bound::Exact => return Some(eval),
                     }
                 }
             }
         }
-
+        
+        // Order the noisy moves
         ordered_moves +=
             moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
         let static_eval = evaluate::evaluate(self.game.position());
 
+        // Stand pat in qsearch
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
         let mut best_move = None;
         let mut bound = Bound::Upper;
@@ -189,10 +201,13 @@ impl<'a> Search<'a> {
             return Some(best_eval);
         }
 
-        alpha = cmp::max(alpha, best_eval);
+        if best_eval > alpha {
+            bound = Bound::Exact;
+            alpha = best_eval;
+        }
 
         for i in 0..moves.len() {
-            if i >= ordered_moves {
+            if i == ordered_moves {
                 if depth > 0 {
                     ordered_moves += moveorder::order_quiet_moves(&mut moves[ordered_moves..], self.kt[ply]);
                 } else {
@@ -201,15 +216,13 @@ impl<'a> Search<'a> {
             }
             
             let mov = moves[i];
-
-            // ignore quiet tt move in quiescence
-            if depth <= 0 && !mov.flags.is_noisy() {
-                continue;
+            if depth <= 0 {
+                assert!(mov.flags.is_noisy(), "{mov:?}");
             }
 
             unsafe {
                 if !self.game.make_move(mov) {
-                    continue;
+                    continue; // the move was illegal
                 }
             }
 
@@ -239,9 +252,12 @@ impl<'a> Search<'a> {
             }
         }
 
+        // Store tt if not in qsearch
         if let Some(mov) = best_move {
-            self.tt
-                .store(hash, TTData::new(mov, bound, best_eval, depth, hash));
+            if depth > 0 {
+                self.tt
+                    .store(hash, TTData::new(mov, bound, best_eval, depth, hash));
+            }
         }
 
         Some(best_eval)
@@ -258,7 +274,7 @@ impl<'a> Search<'a> {
         search.search_time = std::time::Duration::MAX;
 
         let start = std::time::Instant::now();
-        search.alpha_beta(MIN_EVAL, MAX_EVAL, 7, 0);
+        search.alpha_beta(MIN_EVAL, MAX_EVAL, 8, 0);
 
         let nodes = search.nodes;
         let nps = (search.nodes as f64 / start.elapsed().as_secs_f64()) as u64;
