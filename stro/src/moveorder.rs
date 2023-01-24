@@ -23,22 +23,23 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     // other moves
     moves.sort_by_key(|mov| std::cmp::Reverse(mov.flags.0));
 
+    // find first non-promo move
     let promo = moves
         .iter()
         .position(|x| !x.flags.is_promo())
         .unwrap_or(moves.len());
 
-    let quiet = moves[promo..]
+    // find first quiet move
+    let noisy = moves[promo..]
         .iter()
         .position(|x| !x.flags.is_capture())
-        .map(|x| x + promo)
-        .unwrap_or(moves.len());
+        .map_or(moves.len(), |x| x + promo);
 
-    moves[promo..quiet].sort_by(|&lhs, &rhs| {
+    moves[promo..noisy].sort_by(|&lhs, &rhs| {
         cmp_mvv(position, lhs, rhs).then_with(|| cmp_lva(position, lhs, rhs))
     });
 
-    quiet
+    noisy
 }
 
 pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable) -> usize {
@@ -59,13 +60,11 @@ fn cmp_mvv(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
     // 0 is ep
     let lhs_v = position
         .get_piece(lhs.dest, position.side_to_move().other())
-        .map(|x| x as u8)
-        .unwrap_or(0);
+        .map_or(0, |x| x as u8);
 
     let rhs_v = position
         .get_piece(rhs.dest, position.side_to_move().other())
-        .map(|x| x as u8)
-        .unwrap_or(0);
+        .map_or(0, |x| x as u8);
 
     lhs_v.cmp(&rhs_v).reverse()
 }
