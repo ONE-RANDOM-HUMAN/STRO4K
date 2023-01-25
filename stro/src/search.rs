@@ -13,7 +13,7 @@ pub struct Search<'a> {
     pub start: std::time::Instant,
     search_time: std::time::Duration,
     tt: TT,
-    kt: [moveorder::KillerTable; 6144]
+    kt: [moveorder::KillerTable; 6144],
 }
 
 /// Automatically unmakes move and returns when `None` is received
@@ -116,13 +116,7 @@ impl<'a> Search<'a> {
         self.print_move(moves[0].mov, moves[0].score)
     }
 
-    pub fn alpha_beta(
-        &mut self,
-        mut alpha: i32,
-        beta: i32,
-        depth: i32,
-        ply: usize,
-    ) -> Option<i32> {
+    pub fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: i32, ply: usize) -> Option<i32> {
         // Check if should stop
         if self.nodes % 4096 == 0 && self.should_stop() {
             return None;
@@ -150,7 +144,7 @@ impl<'a> Search<'a> {
 
         let mut ordered_moves = 0;
         let mut hash = 0;
-        
+
         // Probe tt if not in qsearch
         if depth > 0 {
             hash = self.game.position().hash();
@@ -158,15 +152,15 @@ impl<'a> Search<'a> {
             'tt: {
                 let Some(tt_data) = self.tt.load(hash) else { break 'tt };
                 let best_move = tt_data.best_move();
-                
+
                 let Some(index) = moves.iter().position(|&x| x == best_move) else { break 'tt };
                 if !self.game.is_legal(moves[index]) {
                     break 'tt;
                 }
-    
+
                 moves.swap(0, index);
                 ordered_moves = 1;
-    
+
                 if tt_data.depth() >= depth {
                     let eval = tt_data.eval();
                     match tt_data.bound() {
@@ -186,7 +180,7 @@ impl<'a> Search<'a> {
                 }
             }
         }
-        
+
         // Order the noisy moves
         ordered_moves +=
             moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
@@ -209,12 +203,13 @@ impl<'a> Search<'a> {
         for i in 0..moves.len() {
             if i == ordered_moves {
                 if depth > 0 {
-                    ordered_moves += moveorder::order_quiet_moves(&mut moves[ordered_moves..], self.kt[ply]);
+                    ordered_moves +=
+                        moveorder::order_quiet_moves(&mut moves[ordered_moves..], self.kt[ply]);
                 } else {
                     break;
                 }
             }
-            
+
             let mov = moves[i];
             if depth <= 0 {
                 assert!(mov.flags.is_noisy(), "{mov:?}");
@@ -226,7 +221,20 @@ impl<'a> Search<'a> {
                 }
             }
 
-            let eval = -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) };
+            // PVS
+            let eval = if best_move.is_none() || depth <= 0 {
+                -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
+            } else {
+                let eval =
+                    -search! { self, self.alpha_beta(-alpha - 1, -alpha, depth - 1, ply + 1) };
+
+                // Re-search
+                if eval > alpha && eval < beta {
+                    -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
+                } else {
+                    eval
+                }
+            };
 
             unsafe {
                 self.game.unmake_move();
