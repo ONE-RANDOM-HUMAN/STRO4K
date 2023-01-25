@@ -18,7 +18,7 @@ const MATERIAL_EVAL: [Eval; 5] = [
     Eval(2560, 2560).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(32, 32), Eval(32, 16), Eval(16, 16), Eval(8, 8)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(32, 32), Eval(16, 32), Eval(16, 16), Eval(8, 8)];
 
 impl Eval {
     fn accum(&mut self, eval: Eval, count: i16) {
