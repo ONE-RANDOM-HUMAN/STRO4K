@@ -13,6 +13,7 @@ pub struct Search<'a> {
     pub start: std::time::Instant,
     search_time: std::time::Duration,
     tt: TT,
+    history: [[[i64; 64]; 64]; 2],
     kt: [moveorder::KillerTable; 6144],
 }
 
@@ -40,12 +41,14 @@ impl<'a> Search<'a> {
             start: std::time::Instant::now(),
             search_time: std::time::Duration::from_secs(0),
             tt: TT::new((16 * 1024 * 1024).try_into().unwrap()),
+            history: [[[0; 64]; 64]; 2],
             kt: [moveorder::KillerTable::new(); 6144],
         }
     }
 
     pub fn new_game(&mut self) {
         self.tt.clear();
+        self.history.fill([[0; 64]; 64]);
         self.kt.fill(moveorder::KillerTable::new());
     }
 
@@ -203,8 +206,11 @@ impl<'a> Search<'a> {
         for i in 0..moves.len() {
             if i == ordered_moves {
                 if depth > 0 {
-                    ordered_moves +=
-                        moveorder::order_quiet_moves(&mut moves[ordered_moves..], self.kt[ply]);
+                    ordered_moves += moveorder::order_quiet_moves(
+                        &mut moves[ordered_moves..],
+                        self.kt[ply],
+                        &self.history[self.game.position().side_to_move() as usize],
+                    );
                 } else {
                     break;
                 }
@@ -249,6 +255,9 @@ impl<'a> Search<'a> {
                 bound = Bound::Lower;
                 if !mov.flags.is_noisy() {
                     self.kt[ply].beta_cutoff(mov);
+                    self.history[self.game.position().side_to_move() as usize]
+                        [mov.origin as usize][mov.dest as usize] +=
+                        i64::from(depth) * i64::from(depth);
                 }
 
                 break;
