@@ -20,6 +20,8 @@ const MATERIAL_EVAL: [Eval; 5] = [
 
 const MOBILITY_EVAL: [Eval; 4] = [Eval(32, 32), Eval(16, 32), Eval(16, 16), Eval(8, 8)];
 
+const BISHOP_PAIR_EVAL: Eval = Eval(128, 128);
+
 impl Eval {
     fn accum(&mut self, eval: Eval, count: i16) {
         *self = self.accum_to(eval, count);
@@ -74,10 +76,24 @@ fn side_mobility(pieces: &[Bitboard; 6], occ: Bitboard, mask: Bitboard) -> Eval 
 pub fn evaluate(board: &Board) -> i32 {
     let mut eval = Eval(0, 0);
 
+    // material
     #[allow(clippy::needless_range_loop)]
     for i in 0..5 {
         let count = popcnt(board.pieces()[0][i]) - popcnt(board.pieces()[1][i]);
         eval.accum(MATERIAL_EVAL[i], count);
+    }
+
+    // bishop pair
+    if board.pieces()[0][2] & consts::DARK_SQUARES != 0
+        && board.pieces()[0][2] & consts::LIGHT_SQUARES != 0
+    {
+        eval.accum(BISHOP_PAIR_EVAL, 1);
+    }
+
+    if board.pieces()[1][2] & consts::DARK_SQUARES != 0
+        && board.pieces()[1][2] & consts::LIGHT_SQUARES != 0
+    {
+        eval.accum(BISHOP_PAIR_EVAL, -1);
     }
 
     let occ = board.white() | board.black();
