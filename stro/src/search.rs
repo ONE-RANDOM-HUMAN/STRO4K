@@ -76,8 +76,10 @@ impl<'a> Search<'a> {
             return;
         }
 
+        let mut searched = 0;
         'a: for depth in 0.. {
             let mut alpha = MIN_EVAL;
+            searched = 0;
 
             for mov in &mut moves {
                 unsafe {
@@ -97,7 +99,9 @@ impl<'a> Search<'a> {
                 };
 
                 mov.score = score;
-                alpha = cmp::max(alpha, score)
+                alpha = cmp::max(alpha, score);
+
+                searched += 0;
             }
 
             moves.sort_by_key(|x| cmp::Reverse(x.score));
@@ -112,7 +116,7 @@ impl<'a> Search<'a> {
             )
         }
 
-        moves.sort_by_key(|x| cmp::Reverse(x.score));
+        moves[0..searched].sort_by_key(|x| cmp::Reverse(x.score));
         self.print_move(moves[0].mov, moves[0].score)
     }
 
