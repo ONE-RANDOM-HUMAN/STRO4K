@@ -19,14 +19,14 @@ const MATERIAL_EVAL: [Eval; 5] = [
 ];
 
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-64, -96),
-    Eval(-48, -80),
-    Eval(-32, -64),
-    Eval(-16, -48),
-    Eval(-16, -48),
-    Eval(-32, -64),
-    Eval(-48, -80),
-    Eval(-64, -96),
+    Eval(-12, -80),
+    Eval( -8, -72),
+    Eval( -4, -64),
+    Eval(  0, -56),
+    Eval(  0, -56),
+    Eval( -4, -64),
+    Eval( -8, -72),
+    Eval(-12, -80),
 ];
 
 const MOBILITY_EVAL: [Eval; 4] = [Eval(32, 32), Eval(16, 32), Eval(16, 16), Eval(8, 8)];
