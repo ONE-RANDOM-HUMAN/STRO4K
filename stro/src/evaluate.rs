@@ -11,23 +11,23 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(254, 310),
-    Eval(769, 770).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(894, 811).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1285, 1420).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2615, 2576).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(266, 337),
+    Eval(751, 753).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(912, 792).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1269, 1438).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2627, 2559).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(31, 26), Eval(23, 26), Eval(23, 20), Eval(15, 14)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(33, 25), Eval(25, 24), Eval(25, 19), Eval(16, 15)];
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-12, -80),
-    Eval( -8, -72),
-    Eval( -4, -64),
-    Eval(  0, -56),
-    Eval(  0, -56),
-    Eval( -4, -64),
-    Eval( -8, -72),
-    Eval(-12, -80),
+    Eval(-30, -98),
+    Eval(  8, -59),
+    Eval( 10, -78),
+    Eval(-17, -73),
+    Eval(-17, -73),
+    Eval(-21, -81),
+    Eval(  6, -88),
+    Eval(-30, -98),
 ];
 
 const BISHOP_PAIR_EVAL: Eval = Eval(128, 128);
