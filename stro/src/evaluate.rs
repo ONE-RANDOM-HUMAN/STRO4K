@@ -19,6 +19,16 @@ const MATERIAL_EVAL: [Eval; 5] = [
 ];
 
 const MOBILITY_EVAL: [Eval; 4] = [Eval(31, 26), Eval(23, 26), Eval(23, 20), Eval(15, 14)];
+const DOUBLED_PAWN_EVAL: [Eval; 8] = [
+    Eval(-12, -80),
+    Eval( -8, -72),
+    Eval( -4, -64),
+    Eval(  0, -56),
+    Eval(  0, -56),
+    Eval( -4, -64),
+    Eval( -8, -72),
+    Eval(-12, -80),
+];
 
 const BISHOP_PAIR_EVAL: Eval = Eval(128, 128);
 
@@ -73,6 +83,17 @@ fn side_mobility(pieces: &[Bitboard; 6], occ: Bitboard, mask: Bitboard) -> Eval 
     eval
 }
 
+fn side_doubled_pawn(pawns: Bitboard) -> Eval {
+    let mut eval = Eval(0, 0);
+    let mut file = consts::A_FILE;
+    for doubled in DOUBLED_PAWN_EVAL {
+        eval.accum(doubled, popcnt(pawns & file).max(1) - 1);
+        file <<= 1;
+    }
+
+    eval
+}
+
 pub fn evaluate(board: &Board) -> i32 {
     let mut eval = Eval(0, 0);
 
@@ -100,5 +121,7 @@ pub fn evaluate(board: &Board) -> i32 {
     eval.accum(side_mobility(&board.pieces()[0], occ, consts::ALL), 1);
     eval.accum(side_mobility(&board.pieces()[1], occ, consts::ALL), -1);
 
+    eval.accum(side_doubled_pawn(board.pieces()[0][0]), 1);
+    eval.accum(side_doubled_pawn(board.pieces()[1][0]), -1);
     resolve(board, eval)
 }
