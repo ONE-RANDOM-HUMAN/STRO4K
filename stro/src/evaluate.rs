@@ -11,14 +11,14 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(200, 256),
-    Eval(832, 832).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(832, 832).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1344, 1344).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2560, 2560).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(254, 310),
+    Eval(769, 770).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(894, 811).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1285, 1420).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2615, 2576).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(32, 32), Eval(16, 32), Eval(16, 16), Eval(8, 8)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(31, 26), Eval(23, 26), Eval(23, 20), Eval(15, 14)];
 
 const BISHOP_PAIR_EVAL: Eval = Eval(128, 128);
 
