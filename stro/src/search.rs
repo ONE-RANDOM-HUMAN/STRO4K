@@ -282,6 +282,12 @@ impl<'a> Search<'a> {
                 break;
             }
 
+            // Decrease history
+            if depth > 0 && !mov.flags.is_noisy() {
+                self.history[self.game.position().side_to_move() as usize]
+                        [mov.origin as usize][mov.dest as usize] -= i64::from(depth);
+            }
+
             if eval > alpha {
                 bound = Bound::Exact;
                 alpha = eval;
