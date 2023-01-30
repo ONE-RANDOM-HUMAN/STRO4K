@@ -11,23 +11,32 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(266, 337),
-    Eval(751, 753).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(912, 792).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1269, 1438).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2627, 2559).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(255, 339),
+    Eval(739, 742).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(923, 780).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1270, 1449).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2631, 2548).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(33, 25), Eval(25, 24), Eval(25, 19), Eval(16, 15)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(34, 23), Eval(26, 23), Eval(26, 20), Eval(18, 16)];
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-30, -98),
-    Eval(  8, -59),
-    Eval( 10, -78),
-    Eval(-17, -73),
-    Eval(-17, -73),
-    Eval(-21, -81),
-    Eval(  6, -88),
-    Eval(-30, -98),
+    Eval(-42, -109),
+    Eval( 19,  -62),
+    Eval( 18,  -88),
+    Eval(-29,  -85),
+    Eval(-29,  -85),
+    Eval(-31,  -92),
+    Eval( 16,  -99),
+    Eval(-42, -110),
+];
+
+const PASSED_PAWN_EVAL: [Eval; 6] = [
+    Eval(  4,  54),
+    Eval( 20,  84),
+    Eval( 36, 116),
+    Eval( 57, 172),
+    Eval( 92, 204),
+    Eval(108, 268),
 ];
 
 const BISHOP_PAIR_EVAL: Eval = Eval(128, 128);
@@ -94,6 +103,31 @@ fn side_doubled_pawn(pawns: Bitboard) -> Eval {
     eval
 }
 
+// Passed pawns from white's perspective
+fn white_passed_pawn(side: Bitboard, enemy: Bitboard) -> Eval {
+    let mut mask = enemy;
+    mask |= mask >> 8;
+    mask |= mask >> 16;
+    mask |= mask >> 32;
+
+    mask |= ((mask >> 7) & !consts::A_FILE) | ((mask & !consts::A_FILE) >> 9);
+
+    let mut eval = Eval(0, 0);
+    let pawns = side & !mask;
+    let mut file = consts::A_FILE;
+    for _ in 0..8 {
+        let index = (pawns & file).leading_zeros();
+        if index != 64 {
+            eval.accum(PASSED_PAWN_EVAL[(6 - index / 8) as usize], 1);
+        }
+
+
+        file <<= 1;
+    }
+
+    eval
+} 
+
 pub fn evaluate(board: &Board) -> i32 {
     let mut eval = Eval(0, 0);
 
@@ -123,5 +157,8 @@ pub fn evaluate(board: &Board) -> i32 {
 
     eval.accum(side_doubled_pawn(board.pieces()[0][0]), 1);
     eval.accum(side_doubled_pawn(board.pieces()[1][0]), -1);
+
+    eval.accum(white_passed_pawn(board.pieces()[0][0], board.pieces()[1][0]), 1);
+    eval.accum(white_passed_pawn(board.pieces()[1][0].swap_bytes(), board.pieces()[0][0].swap_bytes()), -1);
     resolve(board, eval)
 }
