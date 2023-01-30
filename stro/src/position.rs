@@ -157,6 +157,14 @@ impl Board {
         true
     }
 
+    /// # Safety
+    /// The position must not be check
+    pub unsafe fn make_null_move(&mut self) {
+        self.ep = None;
+        self.fifty_moves += 1;
+        self.side_to_move = self.side_to_move.other();
+    }
+
     pub fn white(&self) -> u64 {
         self.colors[0]
     }

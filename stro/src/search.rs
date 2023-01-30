@@ -149,15 +149,33 @@ impl<'a> Search<'a> {
             return Some(0);
         }
 
-
         // Check extension
         let depth = if is_check { depth + 1 } else { depth };
 
         let mut ordered_moves = 0;
         let mut hash = 0;
 
-        // Probe tt if not in qsearch
         if depth > 0 {
+            // Null Move Pruning
+            if depth >= 5 && beta - alpha == 1 && !is_check {
+                const R: i32 = 3;
+                unsafe {
+                    self.game.make_null_move();
+                }
+
+                let eval =
+                    -search! { self, self.alpha_beta(-beta, -beta + 1, depth - R - 1, ply + 1) };
+
+                unsafe {
+                    self.game.unmake_move();
+                }
+
+                if eval >= beta {
+                    return Some(eval);
+                }
+            }
+
+            // Probe tt
             hash = self.game.position().hash();
 
             'tt: {
