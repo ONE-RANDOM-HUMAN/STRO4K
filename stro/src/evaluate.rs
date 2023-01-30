@@ -159,6 +159,6 @@ pub fn evaluate(board: &Board) -> i32 {
     eval.accum(side_doubled_pawn(board.pieces()[1][0]), -1);
 
     eval.accum(white_passed_pawn(board.pieces()[0][0], board.pieces()[1][0]), 1);
-    eval.accum(white_passed_pawn(board.pieces()[1][0].swap_bytes(), board.pieces()[0][0].swap_bytes()), 1);
+    eval.accum(white_passed_pawn(board.pieces()[1][0].swap_bytes(), board.pieces()[0][0].swap_bytes()), -1);
     resolve(board, eval)
 }
