@@ -245,7 +245,7 @@ impl<'a> Search<'a> {
                     && !is_check
                     && !self.game.position().is_check()
                 {
-                    depth - depth / 4 - (i / 8) as i32 - 1
+                    cmp::max(1, depth - depth / 4 - (i / 8) as i32 - 1)
                 } else {
                     depth - 1
                 };
