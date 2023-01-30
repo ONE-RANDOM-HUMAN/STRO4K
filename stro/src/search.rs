@@ -239,11 +239,22 @@ impl<'a> Search<'a> {
             let eval = if best_move.is_none() || depth <= 0 {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
             } else {
+                let lmr_depth = if depth >= 3
+                    && beta - alpha == 1
+                    && !mov.flags.is_noisy()
+                    && !is_check
+                    && !self.game.position().is_check()
+                {
+                    cmp::max(1, depth - depth / 4 - (i / 8) as i32 - 1)
+                } else {
+                    depth - 1
+                };
+
                 let eval =
-                    -search! { self, self.alpha_beta(-alpha - 1, -alpha, depth - 1, ply + 1) };
+                    -search! { self, self.alpha_beta(-alpha - 1, -alpha, lmr_depth, ply + 1) };
 
                 // Re-search
-                if eval > alpha && eval < beta {
+                if eval > alpha && (eval < beta || lmr_depth != depth - 1) {
                     -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
                 } else {
                     eval
