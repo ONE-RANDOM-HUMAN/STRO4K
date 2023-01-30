@@ -149,6 +149,10 @@ impl<'a> Search<'a> {
             return Some(0);
         }
 
+
+        // Check extension
+        let depth = if is_check { depth + 1 } else { depth };
+
         let mut ordered_moves = 0;
         let mut hash = 0;
 
