@@ -195,7 +195,11 @@ impl<'a> Search<'a> {
         // Order the noisy moves
         ordered_moves +=
             moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
-        let static_eval = evaluate::evaluate(self.game.position());
+        let static_eval = if depth <= 0 {
+            evaluate::evaluate(self.game.position())
+        } else {
+            0
+        };
 
         // Stand pat in qsearch
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
@@ -210,6 +214,11 @@ impl<'a> Search<'a> {
             bound = Bound::Exact;
             alpha = best_eval;
         }
+
+        // Delta pruning
+        let delta_prune = depth <= 0 
+            && !is_check
+            && beta - alpha == 1;
 
         for i in 0..moves.len() {
             if i == ordered_moves {
@@ -227,6 +236,26 @@ impl<'a> Search<'a> {
             let mov = moves[i];
             if depth <= 0 {
                 assert!(mov.flags.is_noisy(), "{mov:?}");
+            }
+
+            if delta_prune {
+                const DELTA: i32 = 512;
+                const PIECE_VALUES: [i32; 5] = [
+                    256, 832, 832, 1344, 2496
+                ];
+                
+                let capture = self.game.position()
+                    .get_piece(mov.dest, self.game.position().side_to_move().other())
+                    .map_or(0, |x| PIECE_VALUES[x as usize]);
+
+                let promo = mov
+                    .flags
+                    .promo_piece()
+                    .map_or(0, |x| PIECE_VALUES[x as usize]);
+
+                if static_eval + capture + promo + DELTA <= alpha {
+                    continue;
+                }
             }
 
             unsafe {
