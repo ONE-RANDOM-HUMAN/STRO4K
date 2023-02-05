@@ -11,35 +11,35 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(255, 339),
-    Eval(739, 742).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(923, 780).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1270, 1449).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2631, 2548).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(249, 345),
+    Eval(733, 736).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(806, 794).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1266, 1455).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2629, 2542).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(34, 23), Eval(26, 23), Eval(26, 20), Eval(18, 16)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(35, 23), Eval(27, 23), Eval(26, 19), Eval(18, 16)];
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-42, -109),
-    Eval( 19,  -62),
-    Eval( 18,  -88),
-    Eval(-29,  -85),
-    Eval(-29,  -85),
-    Eval(-31,  -92),
-    Eval( 16,  -99),
-    Eval(-42, -110),
+    Eval(-48, -115),
+    Eval( 24,  -65),
+    Eval( 14,  -94),
+    Eval(-35,  -91),
+    Eval(-35,  -90),
+    Eval(-37,  -98),
+    Eval( 22, -104),
+    Eval(-48, -116),
 ];
 
 const PASSED_PAWN_EVAL: [Eval; 6] = [
-    Eval(  4,  54),
-    Eval( 20,  84),
-    Eval( 36, 116),
-    Eval( 57, 172),
-    Eval( 92, 204),
-    Eval(108, 268),
+    Eval( -2,  52),
+    Eval( 14,  78),
+    Eval( 30, 111),
+    Eval( 53, 178),
+    Eval( 98, 210),
+    Eval(114, 274),
 ];
 
-const BISHOP_PAIR_EVAL: Eval = Eval(128, 128);
+const BISHOP_PAIR_EVAL: Eval = Eval(134, 134);
 
 impl Eval {
     fn accum(&mut self, eval: Eval, count: i16) {
