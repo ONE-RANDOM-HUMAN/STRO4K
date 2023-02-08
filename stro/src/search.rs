@@ -104,7 +104,7 @@ impl<'a> Search<'a> {
                 mov.score = score;
                 alpha = cmp::max(alpha, score);
 
-                searched += 0;
+                searched += 1;
             }
 
             moves.sort_by_key(|x| cmp::Reverse(x.score));
