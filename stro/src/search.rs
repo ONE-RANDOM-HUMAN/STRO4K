@@ -3,7 +3,7 @@ use std::cmp;
 use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{gen_moves, MoveBuf};
-use crate::moveorder;
+use crate::moveorder::{self, KillerTable};
 use crate::position::Move;
 use crate::tt::{Bound, TTData, TT};
 
@@ -14,7 +14,7 @@ pub struct Search<'a> {
     search_time: std::time::Duration,
     tt: TT,
     history: [[[i64; 64]; 64]; 2],
-    kt: [moveorder::KillerTable; 6144],
+    ply: [PlyData; 6144],
 }
 
 /// Automatically unmakes move and returns when `None` is received
@@ -42,14 +42,14 @@ impl<'a> Search<'a> {
             search_time: std::time::Duration::from_secs(0),
             tt: TT::new((16 * 1024 * 1024).try_into().unwrap()),
             history: [[[0; 64]; 64]; 2],
-            kt: [moveorder::KillerTable::new(); 6144],
+            ply: [PlyData::new(); 6144],
         }
     }
 
     pub fn new_game(&mut self) {
         self.tt.clear();
         self.history.fill([[0; 64]; 64]);
-        self.kt.fill(moveorder::KillerTable::new());
+        self.ply.fill(PlyData::new());
     }
 
     pub fn resize_tt_mb(&mut self, size_in_mb: usize) {
@@ -149,15 +149,37 @@ impl<'a> Search<'a> {
             return Some(0);
         }
 
-
         // Check extension
         let depth = if is_check { depth + 1 } else { depth };
 
         let mut ordered_moves = 0;
         let mut hash = 0;
 
-        // Probe tt if not in qsearch
         if depth > 0 {
+            // Null Move Pruning
+            if !self.ply[ply].no_nmp && depth >= 4 && beta - alpha == 1 && !is_check {
+                let r: i32 = if depth >= 6 { 3 } else { 2 };
+                unsafe {
+                    self.game.make_null_move();
+                }
+
+                // Don't do nmp on the next ply
+                self.ply[ply + 1].no_nmp = true;
+                let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
+                self.ply[ply + 1].no_nmp = false;
+
+                unsafe {
+                    self.game.unmake_move();
+                }
+
+                let eval = -eval?;
+
+                if eval >= beta {
+                    return Some(eval);
+                }
+            }
+
+            // Probe tt
             hash = self.game.position().hash();
 
             'tt: {
@@ -216,16 +238,14 @@ impl<'a> Search<'a> {
         }
 
         // Delta pruning
-        let delta_prune = depth <= 0 
-            && !is_check
-            && beta - alpha == 1;
+        let delta_prune = depth <= 0 && !is_check && beta - alpha == 1;
 
         for i in 0..moves.len() {
             if i == ordered_moves {
                 if depth > 0 {
                     ordered_moves += moveorder::order_quiet_moves(
                         &mut moves[ordered_moves..],
-                        self.kt[ply],
+                        self.ply[ply].kt,
                         &self.history[self.game.position().side_to_move() as usize],
                     );
                 } else {
@@ -240,11 +260,11 @@ impl<'a> Search<'a> {
 
             if delta_prune {
                 const DELTA: i32 = 512;
-                const PIECE_VALUES: [i32; 5] = [
-                    256, 832, 832, 1344, 2496
-                ];
-                
-                let capture = self.game.position()
+                const PIECE_VALUES: [i32; 5] = [256, 832, 832, 1344, 2496];
+
+                let capture = self
+                    .game
+                    .position()
                     .get_piece(mov.dest, self.game.position().side_to_move().other())
                     .map_or(0, |x| PIECE_VALUES[x as usize]);
 
@@ -302,7 +322,7 @@ impl<'a> Search<'a> {
             if eval >= beta {
                 bound = Bound::Lower;
                 if !mov.flags.is_noisy() {
-                    self.kt[ply].beta_cutoff(mov);
+                    self.ply[ply].kt.beta_cutoff(mov);
                     self.history[self.game.position().side_to_move() as usize]
                         [mov.origin as usize][mov.dest as usize] +=
                         i64::from(depth) * i64::from(depth);
@@ -367,4 +387,20 @@ impl<'a> Search<'a> {
 struct SearchMove {
     score: i32,
     mov: Move,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+struct PlyData {
+    kt: KillerTable,
+    no_nmp: bool,
+}
+
+impl PlyData {
+    fn new() -> Self {
+        Self {
+            kt: KillerTable::new(),
+            no_nmp: false,
+        }
+    }
 }

@@ -85,6 +85,21 @@ impl<'a> Game<'a> {
         true
     }
 
+    /// # Safety
+    /// The total number of position stored must not exceed 6144
+    /// The current position must not be in check
+    pub unsafe fn make_null_move(&mut self) -> bool {
+        let mut board = unsafe { self.ptr.read() };
+
+        unsafe {
+            board.make_null_move();
+            self.ptr = self.ptr.add(1);
+            self.ptr.write(board);
+        }
+
+        true
+    }
+
     /// Determines if a pseudo-legal move is legal
     pub fn is_legal(&self, mov: Move) -> bool {
         let mut board = unsafe { self.ptr.read() };
