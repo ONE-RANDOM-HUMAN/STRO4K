@@ -111,7 +111,10 @@ fn side_pawn_structure(pawns: Bitboard) -> Eval {
         let count = popcnt(pawns & file);
         eval.accum(DOUBLED_PAWN_EVAL[i], count.max(1) - 1);
 
-        if pawns & (file << 1) & (file >> 1) == 0 {
+        let sides = ((file << 1) & !consts::A_FILE)
+            | ((file & !consts::A_FILE) >> 1);
+
+        if pawns & sides == 0 {
             eval.accum(ISOLATED_PAWN_EVAL[i], count);
         }
 
