@@ -11,35 +11,46 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(264, 270),
-    Eval(815, 815).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(847, 812).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1338, 1417).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2664, 2563).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(264, 269),
+    Eval(816, 816).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(846, 816).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1345, 1410).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2654, 2592).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(30, 21), Eval(28, 20), Eval(27, 22), Eval(24, 16)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(29, 21), Eval(28, 21), Eval(27, 22), Eval(23, 17)];
 
-const BISHOP_PAIR_EVAL: Eval = Eval(192, 156);
+const BISHOP_PAIR_EVAL: Eval = Eval(190, 155);
 
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-40, -24),
-    Eval(  8,  -4),
-    Eval(-35, -10),
-    Eval(-35, -16),
-    Eval(-46, -19),
-    Eval(-62, -22),
-    Eval( -2, -19),
-    Eval(-51, -42),
+    Eval(-33, -16),
+    Eval(  8,  -3),
+    Eval(-27,   2),
+    Eval(-29, -11),
+    Eval(-36,  -7),
+    Eval(-48,  -4),
+    Eval( -4, -16),
+    Eval(-34, -28),
+];
+
+const ISOLATED_PAWN_EVAL: [Eval; 8] = [
+    Eval(-38, -15),
+    Eval( -7,  -3),
+    Eval(-39,  -4),
+    Eval(-42, -24),
+    Eval(-50, -61),
+    Eval(-42,  -1),
+    Eval(-31,  10),
+    Eval(-37, -55),
 ];
 
 const PASSED_PAWN_EVAL: [Eval; 6] = [
-    Eval( -1,  23),
-    Eval( -4,   4),
-    Eval(  8,  32),
+    Eval(  0,  27),
+    Eval( -1,   9),
+    Eval( 10,  44),
     Eval( 55, 106),
-    Eval( 81, 156),
-    Eval( 93, 203),
+    Eval( 78, 153),
+    Eval( 96, 217),
 ];
 
 impl Eval {
@@ -93,11 +104,17 @@ fn side_mobility(pieces: &[Bitboard; 6], occ: Bitboard, mask: Bitboard) -> Eval 
     eval
 }
 
-fn side_doubled_pawn(pawns: Bitboard) -> Eval {
+fn side_pawn_structure(pawns: Bitboard) -> Eval {
     let mut eval = Eval(0, 0);
     let mut file = consts::A_FILE;
-    for doubled in DOUBLED_PAWN_EVAL {
-        eval.accum(doubled, popcnt(pawns & file).max(1) - 1);
+    for i in 0..8 {
+        let count = popcnt(pawns & file);
+        eval.accum(DOUBLED_PAWN_EVAL[i], count.max(1) - 1);
+
+        if pawns & (file << 1) & (file >> 1) == 0 {
+            eval.accum(ISOLATED_PAWN_EVAL[i], count);
+        }
+
         file <<= 1;
     }
 
@@ -156,8 +173,8 @@ pub fn evaluate(board: &Board) -> i32 {
     eval.accum(side_mobility(&board.pieces()[0], occ, consts::ALL), 1);
     eval.accum(side_mobility(&board.pieces()[1], occ, consts::ALL), -1);
 
-    eval.accum(side_doubled_pawn(board.pieces()[0][0]), 1);
-    eval.accum(side_doubled_pawn(board.pieces()[1][0]), -1);
+    eval.accum(side_pawn_structure(board.pieces()[0][0]), 1);
+    eval.accum(side_pawn_structure(board.pieces()[1][0]), -1);
 
     eval.accum(white_passed_pawn(board.pieces()[0][0], board.pieces()[1][0]), 1);
     eval.accum(white_passed_pawn(board.pieces()[1][0].swap_bytes(), board.pieces()[0][0].swap_bytes()), -1);
