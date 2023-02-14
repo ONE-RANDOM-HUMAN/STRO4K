@@ -240,6 +240,9 @@ impl<'a> Search<'a> {
         // Delta pruning
         let delta_prune = depth <= 0 && !is_check && beta - alpha == 1;
 
+        // first quiet, non-tt move
+        let first_quiet = ordered_moves;
+
         for i in 0..moves.len() {
             if i == ordered_moves {
                 if depth > 0 {
@@ -326,6 +329,14 @@ impl<'a> Search<'a> {
                     self.history[self.game.position().side_to_move() as usize]
                         [mov.origin as usize][mov.dest as usize] +=
                         i64::from(depth) * i64::from(depth);
+
+                    // Decrease history of searched moves
+                    #[allow(clippy::needless_range_loop)]
+                    for i in first_quiet..i {
+                        self.history[self.game.position().side_to_move() as usize]
+                            [moves[i].origin as usize][moves[i].dest as usize]
+                            -= i64::from(depth);
+                    }
                 }
 
                 break;
