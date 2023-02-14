@@ -22,6 +22,7 @@ const MOBILITY_EVAL: [Eval; 4] = [Eval(29, 21), Eval(28, 21), Eval(27, 22), Eval
 
 const BISHOP_PAIR_EVAL: Eval = Eval(188, 154);
 
+#[rustfmt::skip]
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
     Eval(-40, -24),
     Eval(  7,  -4),
@@ -33,13 +34,14 @@ const DOUBLED_PAWN_EVAL: [Eval; 8] = [
     Eval(-51, -43),
 ];
 
+#[rustfmt::skip]
 const PASSED_PAWN_EVAL: [Eval; 6] = [
-    Eval(  0,  26),
-    Eval( -2,   7),
-    Eval( 10,  35),
-    Eval( 55, 104),
-    Eval( 78, 152),
-    Eval( 95, 212),
+    Eval( 0,  26),
+    Eval(-2,   7),
+    Eval(10,  35),
+    Eval(55, 104),
+    Eval(78, 152),
+    Eval(95, 212),
 ];
 
 const OPEN_FILE_EVAL: Eval = Eval(76, 14);
@@ -125,12 +127,11 @@ fn white_passed_pawn(side: Bitboard, enemy: Bitboard) -> Eval {
             eval.accum(PASSED_PAWN_EVAL[(6 - index / 8) as usize], 1);
         }
 
-
         file <<= 1;
     }
 
     eval
-} 
+}
 
 fn side_open_file(rook: Bitboard, side_pawns: Bitboard, enemy_pawns: Bitboard) -> Eval {
     let mut eval = Eval(0, 0);
@@ -171,17 +172,47 @@ pub fn evaluate(board: &Board) -> i32 {
         eval.accum(BISHOP_PAIR_EVAL, -1);
     }
 
+    // mobility
     let occ = board.white() | board.black();
     eval.accum(side_mobility(&board.pieces()[0], occ, consts::ALL), 1);
     eval.accum(side_mobility(&board.pieces()[1], occ, consts::ALL), -1);
 
+    // doubled pawns
     eval.accum(side_doubled_pawn(board.pieces()[0][0]), 1);
     eval.accum(side_doubled_pawn(board.pieces()[1][0]), -1);
 
-    eval.accum(white_passed_pawn(board.pieces()[0][0], board.pieces()[1][0]), 1);
-    eval.accum(white_passed_pawn(board.pieces()[1][0].swap_bytes(), board.pieces()[0][0].swap_bytes()), -1);
+    // passed pawns
+    eval.accum(
+        white_passed_pawn(board.pieces()[0][0], board.pieces()[1][0]),
+        1,
+    );
 
-    eval.accum(side_open_file(board.pieces()[0][3], board.pieces()[0][0], board.pieces()[1][0]), 1);
-    eval.accum(side_open_file(board.pieces()[1][3], board.pieces()[1][0], board.pieces()[0][0]), -1);
+    eval.accum(
+        white_passed_pawn(
+            board.pieces()[1][0].swap_bytes(),
+            board.pieces()[0][0].swap_bytes(),
+        ),
+        -1,
+    );
+
+    // open files
+    eval.accum(
+        side_open_file(
+            board.pieces()[0][3],
+            board.pieces()[0][0],
+            board.pieces()[1][0],
+        ),
+        1,
+    );
+
+    eval.accum(
+        side_open_file(
+            board.pieces()[1][3],
+            board.pieces()[1][0],
+            board.pieces()[0][0],
+        ),
+        -1,
+    );
+
     resolve(board, eval)
 }

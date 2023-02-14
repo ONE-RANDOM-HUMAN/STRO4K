@@ -21,12 +21,14 @@ A binary can be about 5500-6000 bytes and compress to 4k. Planned byte allocatio
     * Killer Heuristic
     * History Heuristic
     * Late Move Reductions
-* Eval
+    * Null Move Pruning
+* Evaluation
     * Material
     * Mobility
     * Bishop Pair
     * Doubled Pawns
     * Passed Pawns
+    * Open Files
 
 A neural network is planned.
 
