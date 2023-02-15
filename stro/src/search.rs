@@ -355,7 +355,8 @@ impl<'a> Search<'a> {
                     #[allow(clippy::needless_range_loop)]
                     for i in first_quiet..i {
                         self.history[self.game.position().side_to_move() as usize]
-                            [moves[i].origin as usize][moves[i].dest as usize] -= i64::from(depth);
+                            [moves[i].origin as usize][moves[i].dest as usize] -=
+                            i64::from(depth) * i64::from(depth);
                     }
                 }
 
