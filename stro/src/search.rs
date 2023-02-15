@@ -217,10 +217,23 @@ impl<'a> Search<'a> {
         // Order the noisy moves
         ordered_moves +=
             moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
-        let static_eval = if depth <= 0 {
+
+        // Futility pruning
+        let f_prune = depth <= 3 && !is_check && beta - alpha == 1;
+
+        let static_eval = if depth <= 0 || f_prune {
             evaluate::evaluate(self.game.position())
         } else {
             0
+        };
+
+        let f_prune = f_prune && {
+            const F_PRUNE_MIN: i32 = 512;
+            const F_PRUNE_PER_PLY: i32 = 768;
+
+            let margin = F_PRUNE_MIN + cmp::max(0, depth - 1) * F_PRUNE_PER_PLY;
+
+            static_eval + margin <= alpha
         };
 
         // Stand pat in qsearch
@@ -236,9 +249,6 @@ impl<'a> Search<'a> {
             bound = Bound::Exact;
             alpha = best_eval;
         }
-
-        // Delta pruning
-        let delta_prune = depth <= 0 && !is_check && beta - alpha == 1;
 
         // first quiet, non-tt move
         let first_quiet = ordered_moves;
@@ -261,7 +271,8 @@ impl<'a> Search<'a> {
                 assert!(mov.flags.is_noisy(), "{mov:?}");
             }
 
-            if delta_prune {
+            if f_prune && depth <= 0 {
+                // Delta pruning
                 const DELTA: i32 = 512;
                 const PIECE_VALUES: [i32; 5] = [256, 832, 832, 1344, 2496];
 
@@ -287,6 +298,16 @@ impl<'a> Search<'a> {
                 }
             }
 
+            let gives_check = self.game.position().is_check();
+
+            if f_prune && !mov.flags.is_noisy() && !gives_check {
+                unsafe {
+                    self.game.unmake_move();
+                }
+
+                continue;
+            }
+
             // PVS
             let eval = if best_move.is_none() || depth <= 0 {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
@@ -295,7 +316,7 @@ impl<'a> Search<'a> {
                     && beta - alpha == 1
                     && !mov.flags.is_noisy()
                     && !is_check
-                    && !self.game.position().is_check()
+                    && !gives_check
                 {
                     cmp::max(1, depth - depth / 4 - (i / 8) as i32 - 1)
                 } else {
@@ -334,8 +355,7 @@ impl<'a> Search<'a> {
                     #[allow(clippy::needless_range_loop)]
                     for i in first_quiet..i {
                         self.history[self.game.position().side_to_move() as usize]
-                            [moves[i].origin as usize][moves[i].dest as usize]
-                            -= i64::from(depth);
+                            [moves[i].origin as usize][moves[i].dest as usize] -= i64::from(depth);
                     }
                 }
 
