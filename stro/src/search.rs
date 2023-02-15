@@ -297,7 +297,19 @@ impl<'a> Search<'a> {
                     && !is_check
                     && !self.game.position().is_check()
                 {
-                    cmp::max(1, depth - depth / 4 - (i / 8) as i32 - 1)
+                    let depth = depth - depth / 4 - (i / 8) as i32 - 1;
+                    if depth < 0
+                        && self.history[self.game.position().side_to_move().other() as usize]
+                            [mov.origin as usize][mov.dest as usize]
+                            < 0
+                    {
+                        // Prune if depth < 0 and history < 0
+                        unsafe { self.game.unmake_move() }
+
+                        continue;
+                    }
+
+                    cmp::max(1, depth)
                 } else {
                     depth - 1
                 };
@@ -334,8 +346,7 @@ impl<'a> Search<'a> {
                     #[allow(clippy::needless_range_loop)]
                     for i in first_quiet..i {
                         self.history[self.game.position().side_to_move() as usize]
-                            [moves[i].origin as usize][moves[i].dest as usize]
-                            -= i64::from(depth);
+                            [moves[i].origin as usize][moves[i].dest as usize] -= i64::from(depth);
                     }
                 }
 
