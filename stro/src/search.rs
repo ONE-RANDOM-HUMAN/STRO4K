@@ -1,4 +1,8 @@
+pub mod threads;
+
 use std::cmp;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
@@ -13,6 +17,7 @@ pub struct Search<'a> {
     pub start: std::time::Instant,
     search_time: std::time::Duration,
     tt: TT,
+    running: Arc<AtomicBool>,
     history: [[[i64; 64]; 64]; 2],
     ply: [PlyData; 6144],
 }
@@ -34,30 +39,32 @@ macro_rules! search {
 }
 
 impl<'a> Search<'a> {
-    pub fn new(game: Game<'a>) -> Self {
+    /// # Safety
+    /// The tt must always be valid
+    pub unsafe fn new(game: Game<'a>, tt: TT, running: Arc<AtomicBool>) -> Self {
         Self {
             game,
             nodes: 0,
             start: std::time::Instant::now(),
             search_time: std::time::Duration::from_secs(0),
-            tt: TT::new((16 * 1024 * 1024).try_into().unwrap()),
+            tt,
+            running,
             history: [[[0; 64]; 64]; 2],
             ply: [PlyData::new(); 6144],
         }
     }
 
-    pub fn new_game(&mut self) {
+    pub fn clear_tt(&mut self) {
         self.tt.clear();
+    }
+
+    pub fn new_game(&mut self) {
+        // tt must be cleared seperately
         self.history.fill([[0; 64]; 64]);
         self.ply.fill(PlyData::new());
     }
 
-    pub fn resize_tt_mb(&mut self, size_in_mb: usize) {
-        self.tt
-            .resize((size_in_mb * 1024 * 1024).max(1).try_into().unwrap());
-    }
-
-    pub fn search(&mut self, time_ms: u32, _inc_ms: u32) {
+    pub fn search(&mut self, time_ms: u32, _inc_ms: u32, print_info: bool) -> (Move, i32) {
         self.nodes = 0;
         self.search_time = std::time::Duration::from_millis(u64::from(time_ms / 30));
 
@@ -75,8 +82,7 @@ impl<'a> Search<'a> {
 
         if moves.len() == 1 {
             let score = evaluate::evaluate(self.game().position());
-            self.print_move(moves[0].mov, score);
-            return;
+            return (moves[0].mov, score);
         }
 
         let mut searched = 0;
@@ -109,18 +115,20 @@ impl<'a> Search<'a> {
 
             moves.sort_by_key(|x| cmp::Reverse(x.score));
 
-            println!(
-                "info depth {} nodes {} nps {} score cp {} pv {}",
-                depth + 1,
-                self.nodes,
-                (self.nodes as f64 / self.start.elapsed().as_secs_f64()) as u64,
-                moves[0].score,
-                moves[0].mov,
-            )
+            if print_info {
+                println!(
+                    "info depth {} nodes {} nps {} score cp {} pv {}",
+                    depth + 1,
+                    self.nodes,
+                    (self.nodes as f64 / self.start.elapsed().as_secs_f64()) as u64,
+                    moves[0].score,
+                    moves[0].mov,
+                )
+            }
         }
 
         moves[0..searched].sort_by_key(|x| cmp::Reverse(x.score));
-        self.print_move(moves[0].mov, moves[0].score)
+        (moves[0].mov, moves[0].score)
     }
 
     pub fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: i32, ply: usize) -> Option<i32> {
@@ -386,7 +394,9 @@ impl<'a> Search<'a> {
     pub fn bench() {
         let mut buffer = GameBuf::uninit();
         let (game, _) = Game::startpos(&mut buffer);
-        let mut search = Search::new(game);
+        let tt = TT::new((16 * 1024 * 1024).try_into().unwrap());
+        let mut search = unsafe { Search::new(game, tt.clone(), Arc::new(AtomicBool::new(true))) };
+
         search.search_time = std::time::Duration::MAX;
 
         let start = std::time::Instant::now();
@@ -395,21 +405,12 @@ impl<'a> Search<'a> {
         let nodes = search.nodes;
         let nps = (search.nodes as f64 / start.elapsed().as_secs_f64()) as u64;
         println!("{nodes} nodes {nps} nps");
+
+        tt.dealloc();
     }
 
     fn should_stop(&self) -> bool {
-        self.start.elapsed() >= self.search_time
-    }
-
-    fn print_move(&self, mov: Move, score: i32) {
-        // not really centipawns, but no scaling to remain consistent
-        // with a possible binary version.
-        println!(
-            "info nodes {} nps {} score cp {score}",
-            self.nodes,
-            (self.nodes as f64 / self.start.elapsed().as_secs_f64()) as u64
-        );
-        println!("bestmove {mov}")
+        !self.running.load(Ordering::Relaxed) || self.start.elapsed() >= self.search_time
     }
 }
 

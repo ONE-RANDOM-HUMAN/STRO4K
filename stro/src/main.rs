@@ -1,14 +1,12 @@
 use std::io;
 
-use stro::game::{Game, GameBuf};
 use stro::movegen::{gen_moves, MoveBuf};
 use stro::position::{Board, Color};
+use stro::search::threads::SearchThreads;
 use stro::search::Search;
 
 fn uci_loop() {
-    let mut buffer = GameBuf::uninit();
-    let (game, start) = Game::startpos(&mut buffer);
-    let mut search = Search::new(game);
+    let mut search = SearchThreads::new(1);
 
     for line in io::stdin().lines() {
         let line = line.unwrap();
@@ -19,10 +17,7 @@ fn uci_loop() {
             println!("readyok");
         } else if line.starts_with("position") {
             let line = line.trim_start_matches("position ").trim_start();
-
-            unsafe {
-                search.game().reset(&start);
-            }
+            search.reset();
 
             if line.starts_with("startpos") {
                 // do nothing
@@ -32,7 +27,7 @@ fn uci_loop() {
                     Board::from_fen(line.trim_start_matches("fen").trim_start()).unwrap();
 
                 unsafe {
-                    search.game().add_position(position);
+                    search.add_position(position);
                 }
             }
 
@@ -45,15 +40,13 @@ fn uci_loop() {
 
                 unsafe {
                     assert!(
-                        search
-                            .game()
-                            .make_move(*moves.iter().find(|x| x.to_string() == mov).unwrap()),
+                        search.make_move(*moves.iter().find(|x| x.to_string() == mov).unwrap()),
                         "illegal move"
                     );
                 }
             }
         } else if line.starts_with("go") {
-            search.start = std::time::Instant::now();
+            let start = std::time::Instant::now();
             let (time, inc) = if search.game().position().side_to_move() == Color::White {
                 ("wtime", "winc")
             } else {
@@ -79,16 +72,16 @@ fn uci_loop() {
             }
 
             let inc = parts.next().unwrap().parse().unwrap();
-            search.search(time, inc);
+            search.search(start, time, inc);
         } else if line.starts_with("setoption") {
             let name = line[line.find("name").unwrap() + 4..line.find("value").unwrap()]
                 .trim()
                 .to_ascii_lowercase();
             let value = line[line.find("value").unwrap() + 5..].trim();
 
-            #[allow(clippy::single_match)]
             match &*name {
                 "hash" => search.resize_tt_mb(value.parse().unwrap()),
+                "threads" => search.set_threads(value.parse().unwrap()),
                 _ => (),
             }
         } else if line.starts_with("quit") {
@@ -113,7 +106,7 @@ fn main() {
 
     // Openbench compat
     println!("option name Hash type spin default 16 min 1 max 131072");
-    println!("option name Threads type spin default 1 min 1 max 1");
+    println!("option name Threads type spin default 1 min 1 max 128");
 
     println!("uciok");
 
