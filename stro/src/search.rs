@@ -326,7 +326,7 @@ impl<'a> Search<'a> {
                     && !is_check
                     && !gives_check
                 {
-                    cmp::max(1, depth - depth / 4 - (i / 8) as i32 - 1)
+                    cmp::max(1, depth - cmp::min(depth / 4 + 1, (i / 8) as i32) - 2)
                 } else {
                     depth - 1
                 };
