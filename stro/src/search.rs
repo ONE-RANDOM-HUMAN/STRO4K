@@ -227,7 +227,7 @@ impl<'a> Search<'a> {
             moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
 
         // Futility pruning
-        let f_prune = depth <= 3 && !is_check && beta - alpha == 1;
+        let f_prune = depth <= 5 && !is_check && beta - alpha == 1;
 
         let static_eval = if depth <= 0 || f_prune {
             evaluate::evaluate(self.game.position())
