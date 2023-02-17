@@ -93,11 +93,15 @@ fn mov_unpack(mov: u16) -> Move {
     }
 }
 
+// Not copy to avoid accidental copies
+#[derive(Clone, Debug)]
 pub struct TT {
     // size will be hard coded in 4k version
     ptr: *mut u64,
     size: usize,
 }
+
+unsafe impl Send for TT {}
 
 impl TT {
     pub fn new(size_in_bytes: NonZeroUsize) -> TT {

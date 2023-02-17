@@ -7,6 +7,12 @@ pub type GameBuf = std::mem::MaybeUninit<[Board; 6144]>;
 /// Required to get around lifetimes
 pub struct GameStart<'a>(Game<'a>);
 
+impl GameStart<'_> {
+    pub(crate) fn as_mut_ptr(&mut self) -> *mut Board {
+        self.0.ptr
+    }
+}
+
 #[repr(transparent)]
 #[derive(Debug)]
 pub struct Game<'a> {
@@ -15,6 +21,8 @@ pub struct Game<'a> {
     ptr: *mut Board,
     phantom: std::marker::PhantomData<&'a ()>,
 }
+
+unsafe impl Send for Game<'_> {}
 
 impl<'a> Game<'a> {
     pub fn startpos(buf: &'a mut GameBuf) -> (Self, GameStart<'a>) {
@@ -199,6 +207,12 @@ impl<'a> Game<'a> {
         }
 
         moves
+    }
+
+    /// # Safety
+    /// `ptr` must be a pointer to a valid position in a valid `GameBuf`
+    pub(crate) unsafe fn set_ptr(&mut self, ptr: *mut Board) {
+        self.ptr = ptr;
     }
 }
 

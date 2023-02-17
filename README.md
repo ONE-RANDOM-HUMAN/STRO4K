@@ -23,6 +23,7 @@ A binary can be about 5500-6000 bytes and compress to 4k. Planned byte allocatio
     * Late Move Reductions
     * Null Move Pruning
     * Futility Pruning
+    * Lazy SMP
 * Evaluation
     * Material
     * Mobility
