@@ -35,4 +35,11 @@ A neural network is planned.
 
 ## Questions
 ### Why is it called STRO4K?
-It might be stronger than we4k after a while.
+```
+Score of STRO-005ec0b21fbee26675b3efb3696e3de5e8427504 vs we4k-tcec: 223 - 169 - 108  [0.554] 500
+...      STRO-005ec0b21fbee26675b3efb3696e3de5e8427504 playing White: 116 - 88 - 46  [0.556] 250
+...      STRO-005ec0b21fbee26675b3efb3696e3de5e8427504 playing Black: 107 - 81 - 62  [0.552] 250
+...      White vs Black: 197 - 195 - 108  [0.502] 500
+Elo difference: 37.7 +/- 27.1, LOS: 99.7 %, DrawRatio: 21.6 %
+Finished match
+```
