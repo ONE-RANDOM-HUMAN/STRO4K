@@ -237,7 +237,7 @@ impl<'a> Search<'a> {
 
         let f_prune = f_prune && {
             const F_PRUNE_MIN: i32 = 512;
-            const F_PRUNE_PER_PLY: i32 = 384;
+            const F_PRUNE_PER_PLY: i32 = 192;
 
             let margin = F_PRUNE_MIN + cmp::max(0, depth - 1) * F_PRUNE_PER_PLY;
 
