@@ -327,12 +327,12 @@ impl<'a> Search<'a> {
                     && !gives_check
                 {
                     let depth = depth - depth / 4 - (i / 8) as i32 - 1;
-                    if depth < 0
+                    if depth <= 0
                         && self.history[self.game.position().side_to_move().other() as usize]
                             [mov.origin as usize][mov.dest as usize]
                             < 0
                     {
-                        // Prune if depth < 0 and history < 0
+                        // Prune if depth <= 0 and history < 0
                         unsafe { self.game.unmake_move() }
 
                         continue;
