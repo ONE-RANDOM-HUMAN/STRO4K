@@ -326,7 +326,7 @@ impl<'a> Search<'a> {
                     && !is_check
                     && !gives_check
                 {
-                    cmp::max(1, depth - depth / 4 - (i / 8) as i32 - 1)
+                    cmp::max(1, depth - (depth * 2 + i as i32) / 8 - 1)
                 } else {
                     depth - 1
                 };
@@ -400,7 +400,7 @@ impl<'a> Search<'a> {
         search.search_time = std::time::Duration::MAX;
 
         let start = std::time::Instant::now();
-        search.alpha_beta(MIN_EVAL, MAX_EVAL, 8, 0);
+        search.alpha_beta(MIN_EVAL, MAX_EVAL, 9, 0);
 
         let nodes = search.nodes;
         let nps = (search.nodes as f64 / start.elapsed().as_secs_f64()) as u64;
