@@ -164,29 +164,6 @@ impl<'a> Search<'a> {
         let mut hash = 0;
 
         if depth > 0 {
-            // Null Move Pruning
-            if !self.ply[ply].no_nmp && depth >= 4 && beta - alpha == 1 && !is_check {
-                let r: i32 = if depth >= 6 { 3 } else { 2 };
-                unsafe {
-                    self.game.make_null_move();
-                }
-
-                // Don't do nmp on the next ply
-                self.ply[ply + 1].no_nmp = true;
-                let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
-                self.ply[ply + 1].no_nmp = false;
-
-                unsafe {
-                    self.game.unmake_move();
-                }
-
-                let eval = -eval?;
-
-                if eval >= beta {
-                    return Some(eval);
-                }
-            }
-
             // Probe tt
             hash = self.game.position().hash();
 
@@ -218,6 +195,29 @@ impl<'a> Search<'a> {
                         }
                         Bound::Exact => return Some(eval),
                     }
+                }
+            }
+
+            // Null Move Pruning
+            if !self.ply[ply].no_nmp && depth >= 4 && beta - alpha == 1 && !is_check {
+                let r: i32 = if depth >= 6 { 3 } else { 2 };
+                unsafe {
+                    self.game.make_null_move();
+                }
+
+                // Don't do nmp on the next ply
+                self.ply[ply + 1].no_nmp = true;
+                let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
+                self.ply[ply + 1].no_nmp = false;
+
+                unsafe {
+                    self.game.unmake_move();
+                }
+
+                let eval = -eval?;
+
+                if eval >= beta {
+                    return Some(eval);
                 }
             }
         }
