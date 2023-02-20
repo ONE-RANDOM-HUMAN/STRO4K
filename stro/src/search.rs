@@ -236,7 +236,7 @@ impl<'a> Search<'a> {
         };
 
         let f_prune = f_prune && {
-            const F_PRUNE_MIN: i32 = 512;
+            const F_PRUNE_MIN: i32 = 384;
             const F_PRUNE_PER_PLY: i32 = 384;
 
             let margin = F_PRUNE_MIN + cmp::max(0, depth - 1) * F_PRUNE_PER_PLY;
@@ -281,7 +281,7 @@ impl<'a> Search<'a> {
 
             if f_prune && depth <= 0 {
                 // Delta pruning
-                const DELTA: i32 = 512;
+                const DELTA: i32 = 384;
                 const PIECE_VALUES: [i32; 5] = [256, 832, 832, 1344, 2496];
 
                 let capture = self
