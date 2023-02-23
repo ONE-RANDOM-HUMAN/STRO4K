@@ -254,7 +254,7 @@ impl<'a> Search<'a> {
 
         // first quiet, non-tt move
         let first_quiet = ordered_moves;
-
+        let mut legals = 0;
         for i in 0..moves.len() {
             if i == ordered_moves {
                 if depth > 0 {
@@ -299,6 +299,10 @@ impl<'a> Search<'a> {
                 }
             }
 
+            // only used in lmr, so does not matter if it is not
+            // incremented when pruning occurs in qsearch
+            legals += 1;
+
             let gives_check = self.game.position().is_check();
 
             if f_prune && !mov.flags.is_noisy() && !gives_check {
@@ -319,7 +323,7 @@ impl<'a> Search<'a> {
                     && !is_check
                     && !gives_check
                 {
-                    cmp::max(1, depth - depth / 4 - (i / 8) as i32 - 1)
+                    cmp::max(1, depth - (2 * depth + legals / 8) - 1)
                 } else {
                     depth - 1
                 };
@@ -393,7 +397,7 @@ impl<'a> Search<'a> {
         search.search_time = std::time::Duration::MAX;
 
         let start = std::time::Instant::now();
-        search.alpha_beta(MIN_EVAL, MAX_EVAL, 8, 0);
+        search.alpha_beta(MIN_EVAL, MAX_EVAL, 9, 0);
 
         let nodes = search.nodes;
         let nps = (search.nodes as f64 / start.elapsed().as_secs_f64()) as u64;
