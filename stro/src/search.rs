@@ -235,14 +235,8 @@ impl<'a> Search<'a> {
             0
         };
 
-        let f_prune = f_prune && {
-            const F_PRUNE_MIN: i32 = 384;
-            const F_PRUNE_PER_PLY: i32 = 384;
-
-            let margin = F_PRUNE_MIN + cmp::max(0, depth - 1) * F_PRUNE_PER_PLY;
-
-            static_eval + margin <= alpha
-        };
+        const F_PRUNE_MARGIN: i32 = 384;
+        let f_prune = f_prune && static_eval + cmp::max(1, depth) * F_PRUNE_MARGIN <= alpha;
 
         // Stand pat in qsearch
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
@@ -281,7 +275,6 @@ impl<'a> Search<'a> {
 
             if f_prune && depth <= 0 {
                 // Delta pruning
-                const DELTA: i32 = 384;
                 const PIECE_VALUES: [i32; 5] = [256, 832, 832, 1344, 2496];
 
                 let capture = self
@@ -295,7 +288,7 @@ impl<'a> Search<'a> {
                     .promo_piece()
                     .map_or(0, |x| PIECE_VALUES[x as usize]);
 
-                if static_eval + capture + promo + DELTA <= alpha {
+                if static_eval + capture + promo + F_PRUNE_MARGIN <= alpha {
                     continue;
                 }
             }
