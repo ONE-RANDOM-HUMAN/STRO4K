@@ -256,7 +256,7 @@ impl<'a> Search<'a> {
         let first_quiet = ordered_moves;
 
         // move count used in lmr
-        let mut legals = -1;
+        let mut legals = 0;
 
         for i in 0..moves.len() {
             if i == ordered_moves {
