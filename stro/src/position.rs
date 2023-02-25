@@ -222,7 +222,7 @@ impl Board {
             let ptr = self.pieces.as_ptr().cast::<i64>();
 
             // pieces and color
-            for i in (0..=12).rev() {
+            for i in (0..=12).rev().step_by(2) {
                 value = _mm_aesenc_si128(value, _mm_loadu_si128(ptr.add(i).cast()));
             }
 
