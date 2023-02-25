@@ -217,7 +217,8 @@ impl<'a> Game<'a> {
 }
 
 #[cfg(test)]
-mod tests {
+/// Test perfts from CPW
+mod perft_tests {
     use super::{Game, GameBuf};
 
     #[test]
