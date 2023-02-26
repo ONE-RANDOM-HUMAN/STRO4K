@@ -68,6 +68,11 @@ impl<'a> Search<'a> {
         self.nodes = 0;
         self.search_time = std::time::Duration::from_millis(u64::from(time_ms / 30));
 
+        // Decrease value of past history
+        for history in self.history.iter_mut().flatten().flatten() {
+            *history -= *history / 16;
+        }
+
         let mut buffer = MoveBuf::uninit();
         let moves = gen_moves(self.game.position(), &mut buffer);
 
@@ -404,6 +409,8 @@ impl<'a> Search<'a> {
         let mut duration = std::time::Duration::ZERO;
         for fen in fens {
             tt.clear();
+            search.new_game();
+
             search.new_game();
 
             unsafe {
