@@ -404,6 +404,8 @@ impl<'a> Search<'a> {
         let mut duration = std::time::Duration::ZERO;
         for fen in fens {
             tt.clear();
+            search.new_game();
+
             unsafe {
                 search.game.reset(&start);
                 search.game.add_position(Board::from_fen(fen).unwrap());
