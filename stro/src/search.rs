@@ -314,6 +314,7 @@ impl<'a> Search<'a> {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
             } else {
                 let lmr_depth = if depth >= 3
+                    && i > 3
                     && beta - alpha == 1
                     && !mov.flags.is_noisy()
                     && !is_check
