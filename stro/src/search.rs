@@ -323,7 +323,7 @@ impl<'a> Search<'a> {
                     && !is_check
                     && !gives_check
                 {
-                    cmp::max(1, depth - depth / 4 - legals / 8 - 1)
+                    cmp::max(1, depth - (2 * depth + legals) / 8 - 1)
                 } else {
                     depth - 1
                 };
