@@ -205,7 +205,7 @@ impl<'a> Search<'a> {
         if !self.ply[ply].no_nmp
             && depth >= 4
             && beta - alpha == 1
-            && static_eval + 32 > alpha
+            && static_eval + 64 > alpha
             && !is_check
         {
             let r: i32 = if depth >= 6 { 3 } else { 2 };
