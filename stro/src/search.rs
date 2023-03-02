@@ -8,7 +8,7 @@ use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{gen_moves, MoveBuf};
 use crate::moveorder::{self, KillerTable};
-use crate::position::{Move, Board};
+use crate::position::{Board, Move};
 use crate::tt::{Bound, TTData, TT};
 
 pub struct Search<'a> {
@@ -197,28 +197,35 @@ impl<'a> Search<'a> {
                     }
                 }
             }
+        }
 
-            // Null Move Pruning
-            if !self.ply[ply].no_nmp && depth >= 4 && beta - alpha == 1 && !is_check {
-                let r: i32 = if depth >= 6 { 3 } else { 2 };
-                unsafe {
-                    self.game.make_null_move();
-                }
+        let static_eval = evaluate::evaluate(self.game.position());
 
-                // Don't do nmp on the next ply
-                self.ply[ply + 1].no_nmp = true;
-                let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
-                self.ply[ply + 1].no_nmp = false;
+        // Null Move Pruning
+        if !self.ply[ply].no_nmp
+            && depth >= 4
+            && beta - alpha == 1
+            && static_eval + 32 > alpha
+            && !is_check
+        {
+            let r: i32 = if depth >= 6 { 3 } else { 2 };
+            unsafe {
+                self.game.make_null_move();
+            }
 
-                unsafe {
-                    self.game.unmake_move();
-                }
+            // Don't do nmp on the next ply
+            self.ply[ply + 1].no_nmp = true;
+            let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
+            self.ply[ply + 1].no_nmp = false;
 
-                let eval = -eval?;
+            unsafe {
+                self.game.unmake_move();
+            }
 
-                if eval >= beta {
-                    return Some(eval);
-                }
+            let eval = -eval?;
+
+            if eval >= beta {
+                return Some(eval);
             }
         }
 
@@ -227,16 +234,11 @@ impl<'a> Search<'a> {
             moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
 
         // Futility pruning
-        let f_prune = depth <= 3 && !is_check && beta - alpha == 1;
-
-        let static_eval = if depth <= 0 || f_prune {
-            evaluate::evaluate(self.game.position())
-        } else {
-            0
-        };
-
         const F_PRUNE_MARGIN: i32 = 384;
-        let f_prune = f_prune && static_eval + cmp::max(1, depth) * F_PRUNE_MARGIN <= alpha;
+        let f_prune = depth <= 3
+            && !is_check
+            && beta - alpha == 1
+            && static_eval + cmp::max(1, depth) * F_PRUNE_MARGIN <= alpha;
 
         // Stand pat in qsearch
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
@@ -417,7 +419,6 @@ impl<'a> Search<'a> {
 
             duration += start.elapsed()
         }
-
 
         let nodes = search.nodes;
         let nps = (search.nodes as f64 / duration.as_secs_f64()) as u64;
