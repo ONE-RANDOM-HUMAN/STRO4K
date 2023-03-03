@@ -21,18 +21,18 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     // promos and promo-captures by promo piece
     // regular captures
     // other moves
-    moves.sort_by_key(|mov| std::cmp::Reverse(mov.flags.0));
+    moves.sort_by_key(|mov| std::cmp::Reverse(mov.flags().0 as usize));
 
     // find first non-promo move
     let promo = moves
         .iter()
-        .position(|x| !x.flags.is_promo())
+        .position(|x| !x.flags().is_promo())
         .unwrap_or(moves.len());
 
     // find first quiet move
     let noisy = moves[promo..]
         .iter()
-        .position(|x| !x.flags.is_capture())
+        .position(|x| !x.flags().is_capture())
         .map_or(moves.len(), |x| x + promo);
 
     moves[promo..noisy].sort_by(|&lhs, &rhs| {
@@ -59,7 +59,7 @@ pub fn order_quiet_moves(
     }
 
     // sort by history
-    moves.sort_by_key(|mov| cmp::Reverse(history[mov.origin as usize][mov.dest as usize]));
+    moves.sort_by_key(|mov| cmp::Reverse(history[mov.origin() as usize][mov.dest() as usize]));
 
     len
 }
@@ -67,11 +67,11 @@ pub fn order_quiet_moves(
 fn cmp_mvv(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
     // 0 is ep
     let lhs_v = position
-        .get_piece(lhs.dest, position.side_to_move().other())
+        .get_piece(lhs.dest(), position.side_to_move().other())
         .map_or(0, |x| x as u8);
 
     let rhs_v = position
-        .get_piece(rhs.dest, position.side_to_move().other())
+        .get_piece(rhs.dest(), position.side_to_move().other())
         .map_or(0, |x| x as u8);
 
     lhs_v.cmp(&rhs_v).reverse()
@@ -79,10 +79,10 @@ fn cmp_mvv(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
 
 fn cmp_lva(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
     let lhs_a = position
-        .get_piece(lhs.origin, position.side_to_move())
+        .get_piece(lhs.origin(), position.side_to_move())
         .unwrap();
     let rhs_a = position
-        .get_piece(rhs.origin, position.side_to_move())
+        .get_piece(rhs.origin(), position.side_to_move())
         .unwrap();
 
     (lhs_a as u8).cmp(&(rhs_a as u8))

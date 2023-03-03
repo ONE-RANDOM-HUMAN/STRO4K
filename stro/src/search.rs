@@ -8,7 +8,7 @@ use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{gen_moves, MoveBuf};
 use crate::moveorder::{self, KillerTable};
-use crate::position::{Move, Board};
+use crate::position::{Board, Move};
 use crate::tt::{Bound, TTData, TT};
 
 pub struct Search<'a> {
@@ -270,7 +270,7 @@ impl<'a> Search<'a> {
 
             let mov = moves[i];
             if depth <= 0 {
-                assert!(mov.flags.is_noisy(), "{mov:?}");
+                assert!(mov.flags().is_noisy(), "{mov:?}");
             }
 
             if f_prune && depth <= 0 {
@@ -280,11 +280,11 @@ impl<'a> Search<'a> {
                 let capture = self
                     .game
                     .position()
-                    .get_piece(mov.dest, self.game.position().side_to_move().other())
+                    .get_piece(mov.dest(), self.game.position().side_to_move().other())
                     .map_or(0, |x| PIECE_VALUES[x as usize]);
 
                 let promo = mov
-                    .flags
+                    .flags()
                     .promo_piece()
                     .map_or(0, |x| PIECE_VALUES[x as usize]);
 
@@ -301,7 +301,7 @@ impl<'a> Search<'a> {
 
             let gives_check = self.game.position().is_check();
 
-            if f_prune && !mov.flags.is_noisy() && !gives_check {
+            if f_prune && !mov.flags().is_noisy() && !gives_check {
                 unsafe {
                     self.game.unmake_move();
                 }
@@ -316,7 +316,7 @@ impl<'a> Search<'a> {
                 let lmr_depth = if depth >= 3
                     && i >= 3
                     && beta - alpha == 1
-                    && !mov.flags.is_noisy()
+                    && !mov.flags().is_noisy()
                     && !is_check
                     && !gives_check
                 {
@@ -347,17 +347,18 @@ impl<'a> Search<'a> {
 
             if eval >= beta {
                 bound = Bound::Lower;
-                if !mov.flags.is_noisy() {
+                if !mov.flags().is_noisy() {
                     self.ply[ply].kt.beta_cutoff(mov);
                     self.history[self.game.position().side_to_move() as usize]
-                        [mov.origin as usize][mov.dest as usize] +=
+                        [mov.origin() as usize][mov.dest() as usize] +=
                         i64::from(depth) * i64::from(depth);
 
                     // Decrease history of searched moves
                     #[allow(clippy::needless_range_loop)]
                     for i in first_quiet..i {
                         self.history[self.game.position().side_to_move() as usize]
-                            [moves[i].origin as usize][moves[i].dest as usize] -= i64::from(depth);
+                            [moves[i].origin() as usize][moves[i].dest() as usize] -=
+                            i64::from(depth);
                     }
                 }
 
@@ -417,7 +418,6 @@ impl<'a> Search<'a> {
 
             duration += start.elapsed()
         }
-
 
         let nodes = search.nodes;
         let nps = (search.nodes as f64 / duration.as_secs_f64()) as u64;

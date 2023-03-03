@@ -1,4 +1,5 @@
 use std::fmt;
+use std::num::NonZeroU16;
 
 use crate::{consts, movegen};
 
@@ -65,25 +66,30 @@ impl Board {
     /// indicating if the move was legal
     #[must_use]
     pub fn make_move(&mut self, mov: Move) -> bool {
-        let piece = self.get_piece(mov.origin, self.side_to_move).unwrap();
+        let piece = self.get_piece(mov.origin(), self.side_to_move).unwrap();
 
         let pieces = &mut self.pieces[self.side_to_move as usize];
 
         // move the piece
-        pieces[piece as usize] ^= mov.origin.as_mask();
+        pieces[piece as usize] ^= mov.origin().as_mask();
 
-        let dest_piece = mov.flags.promo_piece().unwrap_or(piece);
-        pieces[dest_piece as usize] ^= mov.dest.as_mask();
+        let dest_piece = mov.flags().promo_piece().unwrap_or(piece);
+        pieces[dest_piece as usize] ^= mov.dest().as_mask();
 
         // captures
-        if mov.flags.is_nonep_capture() {
-            let dest_piece = self.get_piece(mov.dest, self.side_to_move.other()).unwrap();
-            self.pieces[self.side_to_move.other() as usize][dest_piece as usize] ^=
-                mov.dest.as_mask();
-        } else if mov.flags == MoveFlags::EN_PASSANT {
-            // rank of origin, file of destination
-            let captured_index = (mov.origin as u8 & 0b111000) | (mov.dest as u8 & 0b000111);
-            self.pieces[self.side_to_move.other() as usize][0] ^= 1 << captured_index;
+        if mov.flags().is_capture() {
+            if mov.flags() == MoveFlags::EN_PASSANT {
+                // rank of origin, file of destination
+                let captured_index =
+                    (mov.origin() as u8 & 0b111000) | (mov.dest() as u8 & 0b000111);
+                self.pieces[self.side_to_move.other() as usize][0] ^= 1 << captured_index;
+            } else {
+                let dest_piece = self
+                    .get_piece(mov.dest(), self.side_to_move.other())
+                    .unwrap();
+                self.pieces[self.side_to_move.other() as usize][dest_piece as usize] ^=
+                    mov.dest().as_mask();
+            }
         }
 
         let pieces = &mut self.pieces[self.side_to_move as usize];
@@ -98,10 +104,10 @@ impl Board {
                 56
             };
 
-            if mov.flags == MoveFlags::QUEENSIDE_CASTLE {
+            if mov.flags() == MoveFlags::QUEENSIDE_CASTLE {
                 pieces[Piece::Rook as usize] ^= 0b0000_1001 << shift;
                 king_area = 0b0001_1100 << shift;
-            } else if mov.flags == MoveFlags::KINGSIDE_CASTLE {
+            } else if mov.flags() == MoveFlags::KINGSIDE_CASTLE {
                 pieces[Piece::Rook as usize] ^= 0b1010_0000 << shift;
                 king_area = 0b0111_0000 << shift;
             }
@@ -123,7 +129,7 @@ impl Board {
         }
 
         // remove castling rights
-        let moved = mov.origin.as_mask() | mov.dest.as_mask();
+        let moved = mov.origin().as_mask() | mov.dest().as_mask();
         if Square::A1.intersects(moved) {
             self.castling &= 0b1110;
         }
@@ -141,11 +147,11 @@ impl Board {
         }
 
         // ep target halfway between origin and dest
-        self.ep = (mov.flags == MoveFlags::DOUBLE_PAWN_PUSH)
-            .then(|| Square::from_index((mov.origin as u8 + mov.dest as u8) / 2).unwrap());
+        self.ep = (mov.flags() == MoveFlags::DOUBLE_PAWN_PUSH)
+            .then(|| Square::from_index((mov.origin() as u8 + mov.dest() as u8) / 2).unwrap());
 
         // set 50 move rule
-        self.fifty_moves = if piece == Piece::Pawn || mov.flags.is_nonep_capture() {
+        self.fifty_moves = if piece == Piece::Pawn || mov.flags().is_capture() {
             0
         } else {
             self.fifty_moves + 1
@@ -474,24 +480,41 @@ impl Piece {
     }
 }
 
-#[repr(C, align(4))]
+#[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-/// Move: 24 bytes, compressed to 16 bytes for tt
-pub struct Move {
-    pub origin: Square,
-    pub dest: Square,
-    pub flags: MoveFlags,
+/// Format:
+/// Bits 5-0: origin square
+/// Bits 11-6: destination square
+/// Bits 15-12: flags
+pub struct Move(pub NonZeroU16);
+
+impl Move {
+    pub fn new(origin: Square, dest: Square, flags: MoveFlags) -> Move {
+        Move(NonZeroU16::new(origin as u16 | (dest as u16) << 6 | (flags.0 as u16) << 12).unwrap())
+    }
+
+    pub fn origin(self) -> Square {
+        Square::from_index((self.0.get() & 0x3F) as u8).unwrap()
+    }
+
+    pub fn dest(self) -> Square {
+        Square::from_index(((self.0.get() >> 6) & 0x3F) as u8).unwrap()
+    }
+
+    pub fn flags(self) -> MoveFlags {
+        MoveFlags((self.0.get() >> 12) as u8)
+    }
 }
 
 impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         const PROMOS: [&str; 4] = ["n", "b", "r", "q"];
         let promo = self
-            .flags
+            .flags()
             .promo_piece()
             .map_or("", |p| PROMOS[p as usize - 1]);
 
-        write!(f, "{}{}{}", self.origin, self.dest, promo)
+        write!(f, "{}{}{}", self.origin(), self.dest(), promo)
     }
 }
 
@@ -512,29 +535,25 @@ impl MoveFlags {
     pub const NONE: MoveFlags = MoveFlags(0b0);
     pub const DOUBLE_PAWN_PUSH: MoveFlags = MoveFlags(0b1);
     pub const QUEENSIDE_CASTLE: MoveFlags = MoveFlags(0b10);
-    pub const KINGSIDE_CASTLE: MoveFlags = MoveFlags(0b100);
-    pub const EN_PASSANT: MoveFlags = MoveFlags(0b1000);
-    pub const CAPTURE: MoveFlags = MoveFlags(0b1_0000);
-    pub const PROMO: MoveFlags = MoveFlags(0b10_0000);
+    pub const KINGSIDE_CASTLE: MoveFlags = MoveFlags(0b11);
+    pub const CAPTURE: MoveFlags = MoveFlags(0b0100);
+    pub const PROMO: MoveFlags = MoveFlags(0b1000);
+    pub const EN_PASSANT: MoveFlags = MoveFlags(Self::CAPTURE.0 | 0b1);
 
     pub const fn is_promo(self) -> bool {
         self.0 & Self::PROMO.0 != 0
     }
 
-    pub const fn is_nonep_capture(self) -> bool {
+    pub const fn is_capture(self) -> bool {
         self.0 & Self::CAPTURE.0 != 0
     }
 
-    pub const fn is_capture(self) -> bool {
-        self.0 & (Self::CAPTURE.0 | Self::EN_PASSANT.0) != 0
-    }
-
     pub const fn is_noisy(self) -> bool {
-        self.0 & (Self::CAPTURE.0 | Self::PROMO.0 | Self::EN_PASSANT.0) != 0
+        self.0 & (Self::CAPTURE.0 | Self::PROMO.0) != 0
     }
 
     pub fn promo_piece(self) -> Option<Piece> {
         self.is_promo()
-            .then(|| Piece::from_index((self.0 >> 6) + 1).unwrap())
+            .then(|| Piece::from_index((self.0 & 0b11) + 1).unwrap())
     }
 }

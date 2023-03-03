@@ -135,12 +135,11 @@ unsafe fn gen_pawn(
         if target.intersects(queenside_attacks) {
             // SAFETY: The ptr is valid by the safety requirements of the function
             unsafe {
-                ptr.write(Move {
-                    origin: target.offset(-consts[3]).unwrap(),
-                    dest: target,
-                    flags: MoveFlags::EN_PASSANT,
-                });
-
+                ptr.write(Move::new(
+                    target.offset(-consts[3]).unwrap(),
+                    target,
+                    MoveFlags::EN_PASSANT,
+                ));
                 ptr = ptr.add(1);
             }
         }
@@ -148,12 +147,11 @@ unsafe fn gen_pawn(
         if target.intersects(kingside_attacks) {
             // SAFETY: The ptr is valid by the safety requirements of the function
             unsafe {
-                ptr.write(Move {
-                    origin: target.offset(-consts[2]).unwrap(),
-                    dest: target,
-                    flags: MoveFlags::EN_PASSANT,
-                });
-
+                ptr.write(Move::new(
+                    target.offset(-consts[2]).unwrap(),
+                    target,
+                    MoveFlags::EN_PASSANT,
+                ));
                 ptr = ptr.add(1);
             }
         }
@@ -193,12 +191,11 @@ unsafe fn gen_castle(mut ptr: *mut Move, position: &Board, occ: Bitboard) -> *mu
     if castle & 0b1 != 0 && occ & 0b0000_1110 == 0 {
         // SAFETY: The ptr is valid by the safety requirements of the function
         unsafe {
-            ptr.write(Move {
+            ptr.write(Move::new(
                 origin,
-                dest: origin.offset(-2).unwrap(),
-                flags: MoveFlags::QUEENSIDE_CASTLE,
-            });
-
+                origin.offset(-2).unwrap(),
+                MoveFlags::QUEENSIDE_CASTLE,
+            ));
             ptr = ptr.add(1);
         }
     }
@@ -206,12 +203,11 @@ unsafe fn gen_castle(mut ptr: *mut Move, position: &Board, occ: Bitboard) -> *mu
     if castle & 0b10 != 0 && occ & 0b0110_0000 == 0 {
         // SAFETY: The ptr is valid by the safety requirements of the function
         unsafe {
-            ptr.write(Move {
+            ptr.write(Move::new(
                 origin,
-                dest: origin.offset(2).unwrap(),
-                flags: MoveFlags::KINGSIDE_CASTLE,
-            });
-
+                origin.offset(2).unwrap(),
+                MoveFlags::KINGSIDE_CASTLE,
+            ));
             ptr = ptr.add(1);
         }
     }
@@ -232,16 +228,15 @@ unsafe fn serialise(
 
         // SAFETY: The ptr is valid by the safety requirements of the function
         unsafe {
-            ptr.write(Move {
+            ptr.write(Move::new(
                 origin,
                 dest,
-                flags: if dest.intersects(enemy) {
+                if dest.intersects(enemy) {
                     MoveFlags::CAPTURE
                 } else {
                     MoveFlags::NONE
                 },
-            });
-
+            ));
             ptr = ptr.add(1);
         }
 
@@ -269,28 +264,18 @@ unsafe fn pawn_serialise(
             // would be implemented differently in binary
             for i in (0..4).rev() {
                 // add promo piece
-                let flags = MoveFlags(flags.0 | MoveFlags::PROMO.0 | (i << 6));
+                let flags = MoveFlags(flags.0 | MoveFlags::PROMO.0 | i);
 
                 // SAFETY: The ptr is valid by the safety requirements of the function
                 unsafe {
-                    ptr.write(Move {
-                        origin,
-                        dest,
-                        flags,
-                    });
-
+                    ptr.write(Move::new(origin, dest, flags));
                     ptr = ptr.add(1);
                 }
             }
         } else {
             // SAFETY: The ptr is valid by the safety requirements of the function
             unsafe {
-                ptr.write(Move {
-                    origin,
-                    dest,
-                    flags,
-                });
-
+                ptr.write(Move::new(origin, dest, flags));
                 ptr = ptr.add(1);
             }
         }
