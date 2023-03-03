@@ -16,23 +16,54 @@ impl KillerTable {
     }
 }
 
+#[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct HistoryTable([i64; 64 * 64]);
+impl HistoryTable {
+    pub fn new() -> Self {
+        HistoryTable([0; 64 * 64])
+    }
+
+    pub fn reset(&mut self) {
+        self.0.fill(0);
+    }
+
+    pub fn get(&self, mov: Move) -> i64 {
+        self.0[(mov.0.get() & 0x0FFF) as usize]
+    }
+
+    pub fn beta_cutoff(&mut self, mov: Move, depth: i32) {
+        self.0[(mov.0.get() & 0x0FFF) as usize] += i64::from(depth) * i64::from(depth);
+    }
+
+    pub fn failed_cutoff(&mut self, mov: Move, depth: i32) {
+        self.0[(mov.0.get() & 0x0FFF) as usize] -= i64::from(depth);
+    }
+}
+
+impl Default for HistoryTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     // Sorts in order of:
     // promos and promo-captures by promo piece
     // regular captures
     // other moves
-    moves.sort_by_key(|mov| std::cmp::Reverse(mov.flags.0));
+    moves.sort_by_key(|mov| std::cmp::Reverse(mov.flags().0 as usize));
 
     // find first non-promo move
     let promo = moves
         .iter()
-        .position(|x| !x.flags.is_promo())
+        .position(|x| !x.flags().is_promo())
         .unwrap_or(moves.len());
 
     // find first quiet move
     let noisy = moves[promo..]
         .iter()
-        .position(|x| !x.flags.is_capture())
+        .position(|x| !x.flags().is_capture())
         .map_or(moves.len(), |x| x + promo);
 
     moves[promo..noisy].sort_by(|&lhs, &rhs| {
@@ -45,7 +76,7 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
 pub fn order_quiet_moves(
     mut moves: &mut [Move],
     kt: KillerTable,
-    history: &[[i64; 64]; 64],
+    history: &HistoryTable
 ) -> usize {
     // killers
     let len = moves.len();
@@ -59,7 +90,7 @@ pub fn order_quiet_moves(
     }
 
     // sort by history
-    moves.sort_by_key(|mov| cmp::Reverse(history[mov.origin as usize][mov.dest as usize]));
+    moves.sort_by_key(|&mov| cmp::Reverse(history.get(mov)));
 
     len
 }
@@ -67,11 +98,11 @@ pub fn order_quiet_moves(
 fn cmp_mvv(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
     // 0 is ep
     let lhs_v = position
-        .get_piece(lhs.dest, position.side_to_move().other())
+        .get_piece(lhs.dest(), position.side_to_move().other())
         .map_or(0, |x| x as u8);
 
     let rhs_v = position
-        .get_piece(rhs.dest, position.side_to_move().other())
+        .get_piece(rhs.dest(), position.side_to_move().other())
         .map_or(0, |x| x as u8);
 
     lhs_v.cmp(&rhs_v).reverse()
@@ -79,10 +110,10 @@ fn cmp_mvv(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
 
 fn cmp_lva(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
     let lhs_a = position
-        .get_piece(lhs.origin, position.side_to_move())
+        .get_piece(lhs.origin(), position.side_to_move())
         .unwrap();
     let rhs_a = position
-        .get_piece(rhs.origin, position.side_to_move())
+        .get_piece(rhs.origin(), position.side_to_move())
         .unwrap();
 
     (lhs_a as u8).cmp(&(rhs_a as u8))

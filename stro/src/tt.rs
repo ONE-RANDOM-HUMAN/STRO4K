@@ -1,6 +1,6 @@
 use std::num::{NonZeroU64, NonZeroUsize};
 
-use crate::position::{Move, MoveFlags, Square};
+use crate::position::Move;
 
 /// One entry in the tt
 #[repr(u8)]
@@ -29,7 +29,8 @@ impl TTData {
 
         TTData(
             NonZeroU64::new(
-                u64::from(mov_pack(mov))
+                // u64::from(mov_pack(mov))
+                u64::from(mov.0.get())
                     | (eval as i16 as u64) << 16
                     | (bound as u64) << 32
                     | (depth as u64 & ((1 << 14) - 1)) << 34
@@ -40,7 +41,8 @@ impl TTData {
     }
 
     pub fn best_move(self) -> Move {
-        mov_unpack(self.0.get() as u16)
+        // mov_unpack(self.0.get() as u16)
+        Move((self.0.get() as u16).try_into().unwrap())
     }
 
     pub fn bound(self) -> Bound {
@@ -57,39 +59,6 @@ impl TTData {
 
         // sign extend with arithmetic right shift
         (value << 18) >> 18
-    }
-}
-
-const MOVE_FLAGS: [u8; 16] = [
-    MoveFlags::NONE.0,
-    MoveFlags::DOUBLE_PAWN_PUSH.0,
-    MoveFlags::QUEENSIDE_CASTLE.0,
-    MoveFlags::KINGSIDE_CASTLE.0,
-    MoveFlags::CAPTURE.0,
-    MoveFlags::EN_PASSANT.0,
-    MoveFlags::NONE.0, // These don't exist
-    MoveFlags::NONE.0,
-    MoveFlags::PROMO.0,
-    MoveFlags::PROMO.0 | 0b0100_0000,
-    MoveFlags::PROMO.0 | 0b1000_0000,
-    MoveFlags::PROMO.0 | 0b1100_0000,
-    MoveFlags::PROMO.0 | MoveFlags::CAPTURE.0,
-    MoveFlags::PROMO.0 | MoveFlags::CAPTURE.0 | 0b0100_0000,
-    MoveFlags::PROMO.0 | MoveFlags::CAPTURE.0 | 0b1000_0000,
-    MoveFlags::PROMO.0 | MoveFlags::CAPTURE.0 | 0b1100_0000,
-];
-
-fn mov_pack(mov: Move) -> u16 {
-    mov.origin as u16
-        | (mov.dest as u16) << 6
-        | (MOVE_FLAGS.iter().position(|&x| x == mov.flags.0).unwrap() as u16) << 12
-}
-
-fn mov_unpack(mov: u16) -> Move {
-    Move {
-        origin: Square::from_index((mov & 0x3F) as u8).unwrap(),
-        dest: Square::from_index((mov >> 6) as u8 & 0x3F).unwrap(),
-        flags: MoveFlags(MOVE_FLAGS[(mov >> 12) as usize]),
     }
 }
 
@@ -159,20 +128,6 @@ impl TT {
             unsafe {
                 std::intrinsics::atomic_store_unordered(self.ptr.add(i), 0);
             }
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn mov_pack_unpack() {
-        for i in 0..=u16::MAX {
-            if i >> 12 != 0 && super::MOVE_FLAGS[(i >> 12) as usize] == 0 {
-                continue;
-            }
-
-            assert_eq!(i, super::mov_pack(super::mov_unpack(i)));
         }
     }
 }
