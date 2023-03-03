@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{gen_moves, MoveBuf};
-use crate::moveorder::{self, KillerTable};
+use crate::moveorder::{self, KillerTable, HistoryTable};
 use crate::position::{Board, Move};
 use crate::tt::{Bound, TTData, TT};
 
@@ -18,7 +18,7 @@ pub struct Search<'a> {
     search_time: std::time::Duration,
     tt: TT,
     running: Arc<AtomicBool>,
-    history: [[[i64; 64]; 64]; 2],
+    history: [HistoryTable; 2],
     ply: [PlyData; 6144],
 }
 
@@ -49,7 +49,7 @@ impl<'a> Search<'a> {
             search_time: std::time::Duration::from_secs(0),
             tt,
             running,
-            history: [[[0; 64]; 64]; 2],
+            history: [HistoryTable::new(), HistoryTable::new()],
             ply: [PlyData::new(); 6144],
         }
     }
@@ -60,7 +60,8 @@ impl<'a> Search<'a> {
 
     pub fn new_game(&mut self) {
         // tt must be cleared seperately
-        self.history.fill([[0; 64]; 64]);
+        self.history[0].reset();
+        self.history[1].reset();
         self.ply.fill(PlyData::new());
     }
 
@@ -261,7 +262,7 @@ impl<'a> Search<'a> {
                     ordered_moves += moveorder::order_quiet_moves(
                         &mut moves[ordered_moves..],
                         self.ply[ply].kt,
-                        &self.history[self.game.position().side_to_move() as usize],
+                        &self.history[self.game.position().side_to_move() as usize]
                     );
                 } else {
                     break;
@@ -349,16 +350,12 @@ impl<'a> Search<'a> {
                 bound = Bound::Lower;
                 if !mov.flags().is_noisy() {
                     self.ply[ply].kt.beta_cutoff(mov);
-                    self.history[self.game.position().side_to_move() as usize]
-                        [mov.origin() as usize][mov.dest() as usize] +=
-                        i64::from(depth) * i64::from(depth);
+                    self.history[self.game.position().side_to_move() as usize].beta_cutoff(mov, depth);
 
                     // Decrease history of searched moves
                     #[allow(clippy::needless_range_loop)]
                     for i in first_quiet..i {
-                        self.history[self.game.position().side_to_move() as usize]
-                            [moves[i].origin() as usize][moves[i].dest() as usize] -=
-                            i64::from(depth);
+                        self.history[self.game.position().side_to_move() as usize].failed_cutoff(moves[i], depth);
                     }
                 }
 

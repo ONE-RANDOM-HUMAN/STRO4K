@@ -16,6 +16,37 @@ impl KillerTable {
     }
 }
 
+#[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct HistoryTable([i64; 64 * 64]);
+impl HistoryTable {
+    pub fn new() -> Self {
+        HistoryTable([0; 64 * 64])
+    }
+
+    pub fn reset(&mut self) {
+        self.0.fill(0);
+    }
+
+    pub fn get(&self, mov: Move) -> i64 {
+        self.0[(mov.0.get() & 0x0FFF) as usize]
+    }
+
+    pub fn beta_cutoff(&mut self, mov: Move, depth: i32) {
+        self.0[(mov.0.get() & 0x0FFF) as usize] += i64::from(depth) * i64::from(depth);
+    }
+
+    pub fn failed_cutoff(&mut self, mov: Move, depth: i32) {
+        self.0[(mov.0.get() & 0x0FFF) as usize] -= i64::from(depth);
+    }
+}
+
+impl Default for HistoryTable {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     // Sorts in order of:
     // promos and promo-captures by promo piece
@@ -45,7 +76,7 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
 pub fn order_quiet_moves(
     mut moves: &mut [Move],
     kt: KillerTable,
-    history: &[[i64; 64]; 64],
+    history: &HistoryTable
 ) -> usize {
     // killers
     let len = moves.len();
@@ -59,7 +90,7 @@ pub fn order_quiet_moves(
     }
 
     // sort by history
-    moves.sort_by_key(|mov| cmp::Reverse(history[mov.origin() as usize][mov.dest() as usize]));
+    moves.sort_by_key(|&mov| cmp::Reverse(history.get(mov)));
 
     len
 }
