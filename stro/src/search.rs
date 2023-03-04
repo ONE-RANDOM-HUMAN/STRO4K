@@ -236,7 +236,7 @@ impl<'a> Search<'a> {
             0
         };
 
-        const F_PRUNE_MARGIN: i32 = 384;
+        const F_PRUNE_MARGIN: i32 = 320;
         let f_prune = f_prune && static_eval + cmp::max(1, depth) * F_PRUNE_MARGIN <= alpha;
 
         // Stand pat in qsearch
