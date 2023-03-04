@@ -296,7 +296,11 @@ impl<'a> Search<'a> {
 
             unsafe {
                 if !self.game.make_move(mov) {
-                    continue; // the move was illegal
+                    // the move was illegal
+                    
+                    // avoid affects on history - no pieces can move from H8 to H8
+                    moves[i].0 = u16::MAX.try_into().unwrap();
+                    continue;
                 }
             }
 
