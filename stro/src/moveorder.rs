@@ -73,11 +73,7 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     noisy
 }
 
-pub fn order_quiet_moves(
-    mut moves: &mut [Move],
-    kt: KillerTable,
-    history: &HistoryTable
-) -> usize {
+pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable, history: &HistoryTable) -> usize {
     // killers
     let len = moves.len();
     for mov in kt.0 {

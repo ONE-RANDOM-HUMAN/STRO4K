@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{gen_moves, MoveBuf};
-use crate::moveorder::{self, KillerTable, HistoryTable};
+use crate::moveorder::{self, HistoryTable, KillerTable};
 use crate::position::{Board, Move};
 use crate::tt::{Bound, TTData, TT};
 
@@ -262,7 +262,7 @@ impl<'a> Search<'a> {
                     ordered_moves += moveorder::order_quiet_moves(
                         &mut moves[ordered_moves..],
                         self.ply[ply].kt,
-                        &self.history[self.game.position().side_to_move() as usize]
+                        &self.history[self.game.position().side_to_move() as usize],
                     );
                 } else {
                     break;
@@ -350,12 +350,14 @@ impl<'a> Search<'a> {
                 bound = Bound::Lower;
                 if !mov.flags().is_noisy() {
                     self.ply[ply].kt.beta_cutoff(mov);
-                    self.history[self.game.position().side_to_move() as usize].beta_cutoff(mov, depth);
+                    self.history[self.game.position().side_to_move() as usize]
+                        .beta_cutoff(mov, depth);
 
                     // Decrease history of searched moves
                     #[allow(clippy::needless_range_loop)]
                     for i in first_quiet..i {
-                        self.history[self.game.position().side_to_move() as usize].failed_cutoff(moves[i], depth);
+                        self.history[self.game.position().side_to_move() as usize]
+                            .failed_cutoff(moves[i], depth);
                     }
                 }
 

@@ -91,6 +91,10 @@ fn uci_loop() {
 }
 
 fn main() {
+    unsafe {
+        stro::init();
+    }
+
     // Openbench compat
     if std::env::args().nth(1).map_or(false, |x| x == "bench") {
         Search::bench();

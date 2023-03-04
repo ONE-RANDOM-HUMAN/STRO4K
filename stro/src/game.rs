@@ -223,6 +223,10 @@ mod perft_tests {
 
     #[test]
     fn perft_startpos() {
+        unsafe {
+            crate::init();
+        }
+
         let mut buffer = GameBuf::uninit();
         let mut position = Game::from_fen(
             &mut buffer,
@@ -247,6 +251,10 @@ mod perft_tests {
 
     #[test]
     fn perft_kiwipete() {
+        unsafe {
+            crate::init();
+        }
+
         let mut buffer = GameBuf::uninit();
         let mut position = Game::from_fen(
             &mut buffer,
@@ -270,6 +278,10 @@ mod perft_tests {
 
     #[test]
     fn perft_3() {
+        unsafe {
+            crate::init();
+        }
+
         let mut buffer = GameBuf::uninit();
         let mut position = Game::from_fen(&mut buffer, "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1")
             .unwrap()
@@ -291,6 +303,10 @@ mod perft_tests {
 
     #[test]
     fn perft_4() {
+        unsafe {
+            crate::init();
+        }
+
         let mut buffer = GameBuf::uninit();
         let mut position = Game::from_fen(
             &mut buffer,
@@ -314,6 +330,10 @@ mod perft_tests {
 
     #[test]
     fn perft_5() {
+        unsafe {
+            crate::init();
+        }
+
         let mut buffer = GameBuf::uninit();
 
         let mut position = Game::from_fen(
@@ -336,6 +356,10 @@ mod perft_tests {
 
     #[test]
     fn perft_6() {
+        unsafe {
+            crate::init();
+        }
+
         let mut buffer = GameBuf::uninit();
 
         let mut position = Game::from_fen(

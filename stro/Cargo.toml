@@ -9,3 +9,6 @@ edition = "2021"
 
 [profile.release]
 lto = "fat"
+
+[features]
+asm = []

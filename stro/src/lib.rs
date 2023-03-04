@@ -2,6 +2,8 @@
 #![feature(core_intrinsics)]
 #![feature(new_uninit)]
 
+#[cfg(feature = "asm")]
+pub mod asm;
 pub mod consts;
 pub mod evaluate;
 pub mod game;
@@ -11,6 +13,18 @@ pub mod position;
 pub mod search;
 pub mod tt;
 
+#[cfg(feature = "asm")]
+/// # Safety
+/// This must not be run concurrently with other stro code.
+pub unsafe fn init() {
+    unsafe { asm::init() }
+}
+
+#[cfg(not(feature = "asm"))]
+/// # Safety
+/// This must not be run concurrently with other stro code.
+pub unsafe fn init() {}
+
 #[cfg(not(target_pointer_width = "64"))]
 compile_error!("Only 64-bit is supported");
 
@@ -19,3 +33,14 @@ compile_error!("Only x86 is supported");
 
 #[cfg(not(target_feature = "aes"))]
 compile_error!("aes-ni is required");
+
+#[cfg(all(
+    feature = "asm",
+    not(all(
+        target_arch = "x86_64",
+        target_os = "linux",
+        target_feature = "avx2",
+        target_feature = "bmi2",
+    ))
+))]
+compile_error!("asm requires avx2 and bmi2 on x86_64 linux");
