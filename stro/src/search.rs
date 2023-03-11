@@ -414,7 +414,7 @@ impl<'a> Search<'a> {
             }
 
             let start = std::time::Instant::now();
-            search.alpha_beta(MIN_EVAL, MAX_EVAL, 8, 0);
+            search.alpha_beta(MIN_EVAL, MAX_EVAL, 9, 0);
 
             duration += start.elapsed()
         }

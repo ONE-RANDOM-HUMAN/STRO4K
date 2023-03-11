@@ -52,7 +52,11 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     // promos and promo-captures by promo piece
     // regular captures
     // other moves
-    moves.sort_by_key(|mov| std::cmp::Reverse(mov.flags().0 as usize));
+
+    insertion_sort_flags(moves);
+
+    // increases performance by about 3% but loses guaranteed reproducibility
+    // moves.sort_unstable_by_key(|mov| std::cmp::Reverse(mov.flags().0));
 
     // find first non-promo move
     let promo = moves
@@ -66,9 +70,10 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
         .position(|x| !x.flags().is_capture())
         .map_or(moves.len(), |x| x + promo);
 
-    moves[promo..noisy].sort_by(|&lhs, &rhs| {
+    insertion_sort_by(&mut moves[promo..noisy], |lhs, rhs| {
         cmp_mvv(position, lhs, rhs).then_with(|| cmp_lva(position, lhs, rhs))
     });
+
 
     noisy
 }
@@ -86,9 +91,50 @@ pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable, history: &Hist
     }
 
     // sort by history
-    moves.sort_by_key(|&mov| cmp::Reverse(history.get(mov)));
+    insertion_sort_by(moves, |lhs, rhs| history.get(lhs).cmp(&history.get(rhs)).reverse());
 
     len
+}
+
+pub fn insertion_sort_by<F>(moves: &mut [Move], mut cmp: F)
+where
+    F: FnMut(Move, Move) -> cmp::Ordering,
+{
+    for i in 1..moves.len() {
+        let mov = moves[i];
+        let mut j = i;
+        while j > 0 {
+            if cmp(moves[j - 1], mov) == cmp::Ordering::Greater {
+                moves[j] = moves[j - 1];
+            } else {
+                break;
+            }
+
+            j -= 1
+        }
+
+        moves[j] = mov;
+    }
+}
+
+/// Allows the use of a special comparison for flags
+pub fn insertion_sort_flags(moves: &mut [Move]) {
+    for i in 1..moves.len() {
+        let mov = moves[i];
+        let cmp = mov.0.get() & 0xF000;
+        let mut j = i;
+        while j > 0 {
+            if moves[j - 1].0.get() < cmp {
+                moves[j] = moves[j - 1];
+            } else {
+                break;
+            }
+
+            j -= 1
+        }
+
+        moves[j] = mov;
+    }
 }
 
 fn cmp_mvv(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
