@@ -1,19 +1,17 @@
 use std::fmt;
 use std::num::NonZeroU16;
 
-use crate::{consts, movegen};
-
 pub type Bitboard = u64;
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Board {
     pieces: [[Bitboard; 6]; 2],
     colors: [Bitboard; 2],
     side_to_move: Color,
-    fifty_moves: u8,
     ep: Option<Square>,
     castling: u8,
+    fifty_moves: u8,
     padding: u64,
 }
 
@@ -46,9 +44,9 @@ impl Board {
         ],
         colors: [0x0000_0000_0000_FFFF, 0xFFFF_0000_0000_0000],
         side_to_move: Color::White,
-        fifty_moves: 0,
         ep: None,
         castling: 0b1111,
+        fifty_moves: 0,
         padding: 0,
     };
 
@@ -203,37 +201,8 @@ impl Board {
         self.fifty_moves
     }
 
-    pub fn repetition_eq(&self, other: &Board) -> bool {
-        self.pieces == other.pieces
-            && self.side_to_move == other.side_to_move
-            && self.ep == other.ep
-            && self.castling == other.castling
-    }
-
     pub fn is_check(&self) -> bool {
         self.is_area_attacked(self.pieces[self.side_to_move as usize][5])
-    }
-
-    pub fn hash(&self) -> u64 {
-        // SAFETY: aes-ni and 64 bit required for build
-        unsafe {
-            use std::arch::x86_64::*;
-
-            let mut value = _mm_cvtsi32_si128(
-                self.side_to_move as i32
-                    | self.ep.map_or(64, |x| x as i32) << 8
-                    | (self.castling as i32) << 16,
-            );
-
-            let ptr = self.pieces.as_ptr().cast::<i64>();
-
-            // pieces and color
-            for i in (0..=12).rev() {
-                value = _mm_aesenc_si128(value, _mm_loadu_si128(ptr.add(i).cast()));
-            }
-
-            _mm_cvtsi128_si64x(value) as u64
-        }
     }
 
     pub fn from_fen(fen: &str) -> Option<Self> {
@@ -343,6 +312,41 @@ impl Board {
 
         Some(position)
     }
+}
+
+#[cfg(not(feature = "asm"))]
+use crate::{consts, movegen};
+
+#[cfg(not(feature = "asm"))]
+impl Board {
+    pub fn hash(&self) -> u64 {
+        // SAFETY: aes-ni and 64 bit required for build
+        unsafe {
+            use std::arch::x86_64::*;
+
+            let mut value = _mm_cvtsi32_si128(
+                self.side_to_move as i32
+                    | self.ep.map_or(64, |x| x as i32) << 8
+                    | (self.castling as i32) << 16,
+            );
+
+            let ptr = self.pieces.as_ptr().cast::<i64>();
+
+            // pieces and color
+            for i in (0..=12).rev() {
+                value = _mm_aesenc_si128(value, _mm_loadu_si128(ptr.add(i).cast()));
+            }
+
+            _mm_cvtsi128_si64x(value) as u64
+        }
+    }
+
+    pub fn repetition_eq(&self, other: &Board) -> bool {
+        self.pieces == other.pieces
+            && self.side_to_move == other.side_to_move
+            && self.ep == other.ep
+            && self.castling == other.castling
+    }
 
     fn is_area_attacked(&self, area: Bitboard) -> bool {
         let enemy = self.pieces[self.side_to_move.other() as usize];
@@ -373,6 +377,17 @@ impl Board {
         }
 
         false
+    }
+}
+
+#[cfg(feature = "asm")]
+impl Board {
+    pub fn hash(&self) -> u64 {
+        crate::asm::board_hash(self)
+    }
+
+    fn is_area_attacked(&self, area: Bitboard) -> bool {
+        unsafe { crate::asm::board_is_area_attacked_sysv(self, area) }
     }
 }
 

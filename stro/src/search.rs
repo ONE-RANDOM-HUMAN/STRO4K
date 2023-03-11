@@ -238,7 +238,8 @@ impl<'a> Search<'a> {
         let f_prune = depth <= 3 && !is_check && beta - alpha == 1;
 
         const F_PRUNE_MARGIN: i32 = 320;
-        let f_prune = f_prune && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
+        let f_prune = f_prune
+            && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
 
         // Stand pat in qsearch
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };

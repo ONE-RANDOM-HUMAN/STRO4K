@@ -1,11 +1,16 @@
 use crate::position::Bitboard;
 use crate::position::{Board, Move};
 
+use crate::game::Game;
+
+#[allow(improper_ctypes)]
 extern "C" {
     pub static mut SHIFTS: [u64; 8];
 
-    #[allow(improper_ctypes)]
     pub fn gen_moves_sysv(board: &Board, moves: *mut Move) -> *mut Move;
+    pub fn board_is_area_attacked_sysv(board: &Board, area: Bitboard) -> bool;
+    pub fn game_is_repetition_sysv(game: &Game<'_>) -> bool;
+    pub fn game_make_move_sysv(game: &Game<'_>, mov: u16) -> bool;
 }
 
 /// # Safety
@@ -112,6 +117,22 @@ pub fn king_moves(pieces: Bitboard, _occ: Bitboard) -> Bitboard {
             in("r8") pieces,
             out("rax") result,
             out("rdx") _,
+            options(pure, readonly, nostack, raw),
+        );
+    }
+
+    result
+}
+
+#[allow(improper_ctypes)]
+pub fn board_hash(board: &Board) -> u64 {
+    let result;
+    unsafe {
+        std::arch::asm!(
+            "call board_hash",
+            in ("rsi") board,
+            out("rax") result,
+            out ("xmm0") _,
             options(pure, readonly, nostack, raw),
         );
     }

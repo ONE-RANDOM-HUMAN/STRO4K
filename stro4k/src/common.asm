@@ -7,6 +7,7 @@ THREAD_STACK_SIZE equ 4 * 1024 * 1024
 global SHIFTS
 %endif
 
+; TODO align 64 bytes and take advantage in addressing
 struc Board
     alignb 8
     .pieces:
@@ -21,11 +22,11 @@ struc Board
         resq 1
     .side_to_move:
         resb 1
-    .fifty_moves:
-        resb 1
     .ep:
         resb 1
     .castling:
+        resb 1
+    .fifty_moves:
         resb 1
     .padding:
         resb 12

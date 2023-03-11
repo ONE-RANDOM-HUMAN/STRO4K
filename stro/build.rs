@@ -24,6 +24,7 @@ fn main() {
         let manifest_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/combined.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/common.asm");
+        println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/game.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/movegen.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/uci.asm");
 

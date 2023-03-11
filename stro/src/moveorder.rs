@@ -74,7 +74,6 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
         cmp_mvv(position, lhs, rhs).then_with(|| cmp_lva(position, lhs, rhs))
     });
 
-
     noisy
 }
 
@@ -91,7 +90,9 @@ pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable, history: &Hist
     }
 
     // sort by history
-    insertion_sort_by(moves, |lhs, rhs| history.get(lhs).cmp(&history.get(rhs)).reverse());
+    insertion_sort_by(moves, |lhs, rhs| {
+        history.get(lhs).cmp(&history.get(rhs)).reverse()
+    });
 
     len
 }

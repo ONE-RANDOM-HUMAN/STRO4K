@@ -75,39 +75,6 @@ impl<'a> Game<'a> {
         Board::from_fen(fen).map(|position| Self::from_position(buf, position))
     }
 
-    /// # Safety
-    /// The total number of position stored must not exceed 6144
-    #[must_use]
-    pub unsafe fn make_move(&mut self, mov: Move) -> bool {
-        let mut board = unsafe { self.ptr.read() };
-
-        if !board.make_move(mov) {
-            return false;
-        }
-
-        unsafe {
-            self.ptr = self.ptr.add(1);
-            self.ptr.write(board);
-        }
-
-        true
-    }
-
-    /// # Safety
-    /// The total number of position stored must not exceed 6144
-    /// The current position must not be in check
-    pub unsafe fn make_null_move(&mut self) -> bool {
-        let mut board = unsafe { self.ptr.read() };
-
-        unsafe {
-            board.make_null_move();
-            self.ptr = self.ptr.add(1);
-            self.ptr.write(board);
-        }
-
-        true
-    }
-
     /// Determines if a pseudo-legal move is legal
     pub fn is_legal(&self, mov: Move) -> bool {
         let mut board = unsafe { self.ptr.read() };
@@ -126,37 +93,6 @@ impl<'a> Game<'a> {
         // SAFETY: This is always a valid pointer which cannot be
         // invalidated without using unsafe
         unsafe { &*self.ptr }
-    }
-
-    pub fn is_repetition(&self) -> bool {
-        let position = self.position();
-        if position.fifty_moves() == 0 {
-            return false;
-        }
-
-        let mut ptr = self.ptr;
-
-        let mut count = 1;
-        loop {
-            // SAFETY: The pointer is always valid because the first
-            // position is startpos, so `fifty_moves == 0` and we exit
-            // the loop.
-            unsafe {
-                ptr = ptr.sub(1);
-
-                if (*ptr).repetition_eq(position) {
-                    count += 1;
-                    if count == 3 {
-                        return true;
-                    }
-                }
-
-                // Can't have repetition after a 50-mr reset
-                if (*ptr).fifty_moves() == 0 {
-                    return false;
-                }
-            }
-        }
     }
 
     /// # Safety
@@ -213,6 +149,99 @@ impl<'a> Game<'a> {
     /// `ptr` must be a pointer to a valid position in a valid `GameBuf`
     pub(crate) unsafe fn set_ptr(&mut self, ptr: *mut Board) {
         self.ptr = ptr;
+    }
+}
+
+#[cfg(not(feature = "asm"))]
+impl Game<'_> {
+    /// # Safety
+    /// The total number of position stored must not exceed 6144
+    #[must_use]
+    #[cfg(not(feature = "asm"))]
+    pub unsafe fn make_move(&mut self, mov: Move) -> bool {
+        let mut board = unsafe { self.ptr.read() };
+
+        if !board.make_move(mov) {
+            return false;
+        }
+
+        unsafe {
+            self.ptr = self.ptr.add(1);
+            self.ptr.write(board);
+        }
+
+        true
+    }
+
+    /// # Safety
+    /// The total number of position stored must not exceed 6144
+    /// The current position must not be in check
+    pub unsafe fn make_null_move(&mut self) -> bool {
+        let mut board = unsafe { self.ptr.read() };
+
+        unsafe {
+            board.make_null_move();
+            self.ptr = self.ptr.add(1);
+            self.ptr.write(board);
+        }
+
+        true
+    }
+
+    #[must_use]
+    pub fn is_repetition(&self) -> bool {
+        let position = self.position();
+        if position.fifty_moves() == 0 {
+            return false;
+        }
+
+        let mut ptr = self.ptr;
+
+        let mut count = 1;
+        loop {
+            // SAFETY: The pointer is always valid because the first
+            // position is startpos, so `fifty_moves == 0` and we exit
+            // the loop.
+            unsafe {
+                ptr = ptr.sub(1);
+
+                if (*ptr).repetition_eq(position) {
+                    count += 1;
+                    if count == 3 {
+                        return true;
+                    }
+                }
+
+                // Can't have repetition after a 50-mr reset
+                if (*ptr).fifty_moves() == 0 {
+                    return false;
+                }
+            }
+        }
+    }
+}
+
+#[cfg(feature = "asm")]
+impl Game<'_> {
+    /// # Safety
+    /// The total number of position stored must not exceed 6144
+    /// The current position must not be in check
+    #[must_use]
+    pub unsafe fn make_move(&mut self, mov: Move) -> bool {
+        unsafe { crate::asm::game_make_move_sysv(self, mov.0.get()) }
+    }
+
+    /// # Safety
+    /// The total number of position stored must not exceed 6144
+    /// The current position must not be in check
+    pub unsafe fn make_null_move(&mut self) -> bool {
+        unsafe { crate::asm::game_make_move_sysv(self, 0) }
+    }
+
+    #[must_use]
+    #[cfg(feature = "asm")]
+    pub fn is_repetition(&self) -> bool {
+        unsafe { crate::asm::game_is_repetition_sysv(self) }
     }
 }
 
