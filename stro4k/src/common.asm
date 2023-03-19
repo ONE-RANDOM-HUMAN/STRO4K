@@ -1,6 +1,7 @@
-NUM_THREADS equ 4
+NUM_THREADS equ 1
 MAX_BOARDS equ 6144
 THREAD_STACK_SIZE equ 4 * 1024 * 1024
+TT_SIZE_BYTES equ 16 * 1024 * 1024
 
 
 %ifdef EXPORT_SYSV
@@ -56,15 +57,12 @@ struc Search
         resq 1
     .nodes:
         resq 1
+    .start_time:
     .start_tvsec:
         resq 1
     .start_tvnsec:
         resq 1
     .search_time:
-        resq 1
-    .tt:
-        resq 1
-    .running:
         resq 1
     .history:
     .white_history:
@@ -87,6 +85,8 @@ PROT_WRITE equ 2
 MAP_PRIVATE equ 2
 MAP_ANONYMOUS equ 20h
 
+CLOCK_MONOTONIC equ 1
+
 section .rodata
 alignb 8
 ALL_MASK:
@@ -100,6 +100,26 @@ NOT_AB_FILE:
 NOT_GH_FILE:
     dq ~0C0C0_C0C0_C0C0_C0C0h
 
+; TODO: reduce size of this
+STARTPOS:
+    dq 0x0000_0000_0000_FF00
+    dq 0x0000_0000_0000_0042
+    dq 0x0000_0000_0000_0024
+    dq 0x0000_0000_0000_0081
+    dq 0x0000_0000_0000_0008
+    dq 0x0000_0000_0000_0010
+
+    dq 0x00FF_0000_0000_0000
+    dq 0x4200_0000_0000_0000
+    dq 0x2400_0000_0000_0000
+    dq 0x8100_0000_0000_0000
+    dq 0x0800_0000_0000_0000
+    dq 0x1000_0000_0000_0000
+
+    dq 0x0000_0000_0000_FFFF
+    dq 0xFFFF_0000_0000_0000
+    dd 000F4000h
+
 section .bss
 alignb 8
 SHIFTS:
@@ -109,4 +129,7 @@ BISHOP_SHIFTS:
     resq 2
 KNIGHT_SHIFTS:
     resq 4
+
+TT_MEM:
+    resb TT_SIZE_BYTES
 

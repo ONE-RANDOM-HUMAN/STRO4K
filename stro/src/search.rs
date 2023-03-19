@@ -2,22 +2,59 @@ pub mod threads;
 
 use std::cmp;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 
 use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{gen_moves, MoveBuf};
 use crate::moveorder::{self, HistoryTable, KillerTable};
 use crate::position::{Board, Move};
-use crate::tt::{Bound, TTData, TT};
+use crate::tt::{Bound, TTData, self};
 
+pub static RUNNING: AtomicBool = AtomicBool::new(false);
+
+#[cfg(not(feature = "asm"))]
+pub mod time {
+    pub type Time = std::time::Instant;
+
+    pub fn time_now() -> Time {
+        std::time::Instant::now()
+    }
+
+    pub fn elapsed_nanos(time: &Time) -> u64 {
+        time.elapsed().as_nanos() as u64
+    }
+}
+
+
+#[cfg(feature = "asm")]
+pub mod time {
+    pub type Time = libc::timespec;
+
+    pub fn time_now() -> Time {
+        unsafe {
+            let mut time = std::mem::MaybeUninit::uninit();
+            assert_eq!(libc::clock_gettime(libc::CLOCK_MONOTONIC, time.as_mut_ptr()), 0);
+            time.assume_init()
+        }
+    }
+    
+    pub fn elapsed_nanos(start: &Time) -> u64 {
+        let time = time_now();
+        let elapsed = (time.tv_sec - start.tv_sec) * 1_000_000_000
+            + time.tv_nsec - start.tv_nsec;
+
+        elapsed as u64
+    }
+}
+
+pub use time::*;
+
+#[cfg_attr(feature = "asm", repr(C))]
 pub struct Search<'a> {
     game: Game<'a>,
     nodes: u64,
-    pub start: std::time::Instant,
-    search_time: std::time::Duration,
-    tt: TT,
-    running: Arc<AtomicBool>,
+    start: Time,
+    search_time: u64, // search time in nanoseconds
     history: [HistoryTable; 2],
     ply: [PlyData; 6144],
 }
@@ -39,23 +76,15 @@ macro_rules! search {
 }
 
 impl<'a> Search<'a> {
-    /// # Safety
-    /// The tt must always be valid
-    pub unsafe fn new(game: Game<'a>, tt: TT, running: Arc<AtomicBool>) -> Self {
+    fn new(game: Game<'a>) -> Self {
         Self {
             game,
             nodes: 0,
-            start: std::time::Instant::now(),
-            search_time: std::time::Duration::from_secs(0),
-            tt,
-            running,
+            start: time_now(),
+            search_time: 0,
             history: [HistoryTable::new(), HistoryTable::new()],
             ply: [PlyData::new(); 6144],
         }
-    }
-
-    pub fn clear_tt(&mut self) {
-        self.tt.clear();
     }
 
     pub fn new_game(&mut self) {
@@ -67,7 +96,8 @@ impl<'a> Search<'a> {
 
     pub fn search(&mut self, time_ms: u32, _inc_ms: u32, print_info: bool) -> (Move, i32) {
         self.nodes = 0;
-        self.search_time = std::time::Duration::from_millis(u64::from(time_ms / 30));
+        // self.search_time = std::time::Duration::from_millis(u64::from(time_ms / 30));
+        self.search_time = (time_ms as u64) * (1_000_000 / 30);
 
         self.ply[0].static_eval = evaluate::evaluate(self.game.position()) as i16;
 
@@ -123,7 +153,7 @@ impl<'a> Search<'a> {
                     "info depth {} nodes {} nps {} score cp {} pv {}",
                     depth + 1,
                     self.nodes,
-                    (self.nodes as f64 / self.start.elapsed().as_secs_f64()) as u64,
+                    (self.nodes as f64 / (elapsed_nanos(&self.start) as f64 / 1_000_000_000.0)) as u64,
                     moves[0].score,
                     moves[0].mov,
                 )
@@ -171,7 +201,7 @@ impl<'a> Search<'a> {
             hash = self.game.position().hash();
 
             'tt: {
-                let Some(tt_data) = self.tt.load(hash) else { break 'tt };
+                let Some(tt_data) = tt::load(hash) else { break 'tt };
                 let best_move = tt_data.best_move();
 
                 let Some(index) = moves.iter().position(|&x| x == best_move) else { break 'tt };
@@ -375,8 +405,7 @@ impl<'a> Search<'a> {
         // Store tt if not in qsearch
         if let Some(mov) = best_move {
             if depth > 0 {
-                self.tt
-                    .store(hash, TTData::new(mov, bound, best_eval, depth, hash));
+                tt::store(hash, TTData::new(mov, bound, best_eval, depth, hash));
             }
         }
 
@@ -390,9 +419,14 @@ impl<'a> Search<'a> {
     pub fn bench() {
         let mut buffer = GameBuf::uninit();
         let (game, start) = Game::startpos(&mut buffer);
-        let tt = TT::new((16 * 1024 * 1024).try_into().unwrap());
-        let mut search = unsafe { Search::new(game, tt.clone(), Arc::new(AtomicBool::new(true))) };
-        search.search_time = std::time::Duration::MAX;
+        let mut search = Search::new(game);
+        search.search_time = u64::MAX;
+
+        unsafe {
+            tt::alloc((16 * 1024 * 1024).try_into().unwrap());
+        }
+
+        RUNNING.store(true, Ordering::Relaxed);
 
         // Same fens used in perft testing
         let fens = [
@@ -406,7 +440,7 @@ impl<'a> Search<'a> {
 
         let mut duration = std::time::Duration::ZERO;
         for fen in fens {
-            tt.clear();
+            tt::clear();
             search.new_game();
 
             unsafe {
@@ -420,15 +454,20 @@ impl<'a> Search<'a> {
             duration += start.elapsed()
         }
 
+        RUNNING.store(false, Ordering::Relaxed);
+
         let nodes = search.nodes;
         let nps = (search.nodes as f64 / duration.as_secs_f64()) as u64;
         println!("{nodes} nodes {nps} nps");
 
-        tt.dealloc();
+        unsafe {
+            tt::dealloc()
+        }
     }
 
     fn should_stop(&self) -> bool {
-        !self.running.load(Ordering::Relaxed) || self.start.elapsed() >= self.search_time
+        !RUNNING.load(Ordering::Relaxed)
+            || elapsed_nanos(&self.start) > self.search_time
     }
 }
 

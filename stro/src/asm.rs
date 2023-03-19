@@ -2,15 +2,33 @@ use crate::position::Bitboard;
 use crate::position::{Board, Move};
 
 use crate::game::Game;
+use crate::search::Search;
 
 #[allow(improper_ctypes)]
 extern "C" {
     pub static mut SHIFTS: [u64; 8];
 
+    pub fn start_sysv() -> !;
     pub fn gen_moves_sysv(board: &Board, moves: *mut Move) -> *mut Move;
     pub fn board_is_area_attacked_sysv(board: &Board, area: Bitboard) -> bool;
     pub fn game_is_repetition_sysv(game: &Game<'_>) -> bool;
     pub fn game_make_move_sysv(game: &Game<'_>, mov: u16) -> bool;
+}
+
+#[repr(C)]
+pub struct SearchResult {
+    mov: Move,
+    score: i32
+}
+
+#[no_mangle]
+pub extern "C" fn root_search_sysv(search: &mut Search, time_ms: u32, inc_ms: u32, print_info: bool) -> SearchResult {
+    let (mov, score) = search.search(time_ms, inc_ms, print_info);
+
+    SearchResult {
+        mov,
+        score,
+    }
 }
 
 /// # Safety

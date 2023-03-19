@@ -1,11 +1,58 @@
-use std::io;
+#[cfg(feature = "asm")]
+fn main() {
+    use std::sync::atomic::Ordering;
+    if std::env::args().nth(1).map_or(false, |x| x == "bench") {
+        unsafe {
+            stro::init();
+        }
 
-use stro::movegen::{gen_moves, MoveBuf};
-use stro::position::{Board, Color};
-use stro::search::threads::SearchThreads;
-use stro::search::Search;
+        stro::search::Search::bench();
+        return;
+    }
 
+    unsafe {
+        stro::search::RUNNING.store(true, Ordering::Relaxed);
+        stro::asm::start_sysv();
+    }
+}
+
+#[cfg(not(feature = "asm"))]
+fn main() {
+    use std::io;
+    unsafe {
+        stro::init();
+    }
+
+    // Openbench compat
+    if std::env::args().nth(1).map_or(false, |x| x == "bench") {
+        stro::search::Search::bench();
+        return;
+    }
+
+    // Assume the first line is uci
+    let mut uci = String::new();
+    io::stdin().read_line(&mut uci).unwrap();
+
+    println!("id name STRO");
+    println!("id author ONE_RANDOM_HUMAN");
+
+    // Openbench compat
+    println!("option name Hash type spin default 16 min 1 max 131072");
+    println!("option name Threads type spin default 1 min 1 max 128");
+
+    println!("uciok");
+
+    uci_loop();
+}
+
+#[cfg(not(feature = "asm"))]
 fn uci_loop() {
+    use std::io;
+
+    use stro::movegen::{gen_moves, MoveBuf};
+    use stro::position::{Board, Color};
+    use stro::search::threads::SearchThreads;
+
     let mut search = SearchThreads::new(1);
 
     for line in io::stdin().lines() {
@@ -46,7 +93,7 @@ fn uci_loop() {
                 }
             }
         } else if line.starts_with("go") {
-            let start = std::time::Instant::now();
+            let start = stro::search::time_now();
             let (time, inc) = if search.game().position().side_to_move() == Color::White {
                 ("wtime", "winc")
             } else {
@@ -80,7 +127,9 @@ fn uci_loop() {
             let value = line[line.find("value").unwrap() + 5..].trim();
 
             match &*name {
-                "hash" => search.resize_tt_mb(value.parse().unwrap()),
+                "hash" => unsafe {
+                    search.resize_tt_mb(value.parse().unwrap());
+                }
                 "threads" => search.set_threads(value.parse().unwrap()),
                 _ => (),
             }
@@ -88,31 +137,4 @@ fn uci_loop() {
             break;
         }
     }
-}
-
-fn main() {
-    unsafe {
-        stro::init();
-    }
-
-    // Openbench compat
-    if std::env::args().nth(1).map_or(false, |x| x == "bench") {
-        Search::bench();
-        return;
-    }
-
-    // Assume the first line is uci
-    let mut uci = String::new();
-    io::stdin().read_line(&mut uci).unwrap();
-
-    println!("id name STRO");
-    println!("id author ONE_RANDOM_HUMAN");
-
-    // Openbench compat
-    println!("option name Hash type spin default 16 min 1 max 131072");
-    println!("option name Threads type spin default 1 min 1 max 128");
-
-    println!("uciok");
-
-    uci_loop();
 }
