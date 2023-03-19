@@ -108,7 +108,7 @@ start:
 
     ; clear Boards
     sub rdi, Search_size - 8
-    mov ecx, MAX_BOARDS + Board_size + Search_size - 8
+    mov ecx, MAX_BOARDS * Board_size + Search_size - 8
     rep stosb
 
     ; set search time - time elapsed cannot be greater

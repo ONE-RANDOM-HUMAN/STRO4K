@@ -1,4 +1,12 @@
 #[cfg(feature = "asm")]
+use jemallocator::Jemalloc;
+
+// Workaround for glibc not working the use of clone.
+#[global_allocator]
+#[cfg(feature = "asm")]
+static GLOBAL: Jemalloc = Jemalloc;
+
+#[cfg(feature = "asm")]
 fn main() {
     if std::env::args().nth(1).map_or(false, |x| x == "bench") {
         unsafe {
