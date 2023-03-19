@@ -10,6 +10,7 @@ use crate::moveorder::{self, HistoryTable, KillerTable};
 use crate::position::{Board, Move};
 use crate::tt::{Bound, TTData, self};
 
+#[no_mangle]
 pub static RUNNING: AtomicBool = AtomicBool::new(false);
 
 #[cfg(not(feature = "asm"))]
@@ -94,10 +95,14 @@ impl<'a> Search<'a> {
         self.ply.fill(PlyData::new());
     }
 
-    pub fn search(&mut self, time_ms: u32, _inc_ms: u32, print_info: bool) -> (Move, i32) {
+    pub fn search(&mut self, time_ms: u32, _inc_ms: u32, main_thread: bool) -> (Move, i32) {
         self.nodes = 0;
-        // self.search_time = std::time::Duration::from_millis(u64::from(time_ms / 30));
-        self.search_time = (time_ms as u64) * (1_000_000 / 30);
+
+        self.search_time = if main_thread {
+            (time_ms as u64) * (1_000_000 / 30)
+        } else {
+            u64::MAX
+        };
 
         self.ply[0].static_eval = evaluate::evaluate(self.game.position()) as i16;
 
@@ -148,7 +153,7 @@ impl<'a> Search<'a> {
 
             moves.sort_by_key(|x| cmp::Reverse(x.score));
 
-            if print_info {
+            if main_thread {
                 println!(
                     "info depth {} nodes {} nps {} score cp {} pv {}",
                     depth + 1,

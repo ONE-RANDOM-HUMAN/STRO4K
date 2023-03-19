@@ -1,8 +1,7 @@
-NUM_THREADS equ 1
+NUM_THREADS equ 4
 MAX_BOARDS equ 6144
-THREAD_STACK_SIZE equ 4 * 1024 * 1024
+THREAD_STACK_SIZE equ 8 * 1024 * 1024
 TT_SIZE_BYTES equ 16 * 1024 * 1024
-
 
 %ifdef EXPORT_SYSV
 global SHIFTS
@@ -65,18 +64,23 @@ struc Search
     .search_time:
         resq 1
     .history:
+    alignb 16
     .white_history:
         resq 64 * 64
     .black_history:
         resq 64 * 64
-        alignb 8
     .ply_data:
         resb PlyData_size * MAX_BOARDS
 endstruc
 
+%if Search_size % 16 != 0
+%error "Search should be a multiple of 16 bytes in size"
+%endif
+
 READ_SYSCALL equ 0
 WRITE_SYSCALL equ 1
 MMAP_SYSCALL equ 9
+CLONE_SYSCALL equ 56
 EXIT_SYSCALL equ 60
 CLOCK_GETTIME_SYSCALL equ 228
 
@@ -84,6 +88,10 @@ PROT_READ equ 1
 PROT_WRITE equ 2
 MAP_PRIVATE equ 2
 MAP_ANONYMOUS equ 20h
+
+CLONE_VM equ 00000100h
+CLONE_SIGHAND equ 00000800h
+CLONE_THREAD equ 00010000h
 
 CLOCK_MONOTONIC equ 1
 
@@ -129,6 +137,14 @@ BISHOP_SHIFTS:
     resq 2
 KNIGHT_SHIFTS:
     resq 4
+
+RUNNING_WORKER_THREADS:
+    ; the top bit will indicate whether the threads should continue running
+    resb 1
+
+alignb 4096
+THREAD_STACKS:
+    times NUM_THREADS resb THREAD_STACK_SIZE
 
 TT_MEM:
     resb TT_SIZE_BYTES

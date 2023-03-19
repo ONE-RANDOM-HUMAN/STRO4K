@@ -26,6 +26,7 @@ fn main() {
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/common.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/game.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/movegen.asm");
+        println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/search.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/uci.asm");
 
         println!("cargo:rustc-link-arg={out_dir}/combined.o");

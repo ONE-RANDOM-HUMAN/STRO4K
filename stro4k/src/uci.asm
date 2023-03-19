@@ -5,6 +5,7 @@ section .text
 extern root_search_sysv
 extern TT
 extern TT_LEN
+extern RUNNING
 global start_sysv
 
 start_sysv:
@@ -78,64 +79,58 @@ start:
     stosq
     loop .movegen_shifts_head
 
-%if NUM_THREADS > 1
-    push NUM_THREADS - 1
-    pop rbx
-.setup_threads:
-    ; set up threads for lazy smp
-    push MMAP_SYSCALL
-    pop rax
-
-    xor edi, edi
-
-    ; map memory for stack
-    mov esi, THREAD_STACK_SIZE
-    push PROT_READ | PROT_WRITE
-    pop rdx
-    push MAP_PRIVATE | MAP_ANONYMOUS
-    pop r10
-    push -1
-    pop r8
-    xor r9d, r9d
-
-    syscall
-
-    ; set up stack to top of Search
-    add rax, THREAD_STACK_SIZE - (MAX_BOARDS * Board_size + Search_size)
-
-    ; Set up pointer to positions
-    lea rbp, [rax + Search_size]
-    mov qword [rax], rbp
-
-    dec ebx
-    jnz .setup_threads
-    
-%endif
+    ; set up tt
     lea rdi, [TT_MEM]
     mov qword [TT], rdi
     mov qword [TT_LEN], TT_SIZE_BYTES / 8
-
-;     syscall
-
-    ; set up stack *SHOULD* already be zeroed
-    sub rsp, (MAX_BOARDS * Board_size + Search_size)
-    lea rdi, [rsp + Search_size]
-    mov qword [rsp], rdi
-    ; mov qword [rsp + Search.tt], rax
-
-    ; set up startpos
-    lea rsi, [STARTPOS]
-    push 116
-    pop rcx
-    rep movsb
 
     ; wait for uci
     call read_until_newline
 
     ; write uciok
-
     mov rdx, `uciok  \n`
     call write8
+
+    ; set up threads
+.setup_threads:
+    lea rbx, [THREAD_STACKS]
+    mov edx, THREAD_STACK_SIZE * NUM_THREADS
+    xor eax, eax
+.setup_threads_head:
+    ; rdi - boards
+    lea rdi, [rbx + rdx - (MAX_BOARDS * Board_size)]
+
+    ; rsi - search
+    lea rsi, [rdi - Search_size]
+
+    ; set up pointer to positions
+    mov qword [rsi], rdi
+
+    ; clear Boards
+    sub rdi, Search_size - 8
+    mov ecx, MAX_BOARDS + Board_size + Search_size - 8
+    rep stosb
+
+    ; set search time - time elapsed cannot be greater
+    ; without overflowing
+    mov qword [rsi + Search.search_time], -1
+
+    sub edx, THREAD_STACK_SIZE
+    jnz .setup_threads_head
+
+
+    ; switch to the stack of the first thread
+    push rsi
+    pop rsp
+
+    ; set up startpos
+    lea rdi, [rsi + Search_size]
+    lea rsi, [STARTPOS]
+    ; rdi already contains pointer to boards
+
+    push 116
+    pop rcx
+    rep movsb
 
 .uci_loop_head:
     call read1
@@ -146,7 +141,6 @@ start:
     ; isready
     mov rdx, `readyok\n`
     call write8
-.read_until_newline_end_loop:
     call read_until_newline
     jmp .uci_loop_head
 .not_isready_or_go:
@@ -173,11 +167,10 @@ start:
     xor eax, eax
     rep stosb
 
-    ; clear tt
-    lea rdi, [rsp + Search.history]
-    mov ecx, Search_size - Search.history
-    rep stosb
-    jmp .read_until_newline_end_loop
+    call read_until_newline
+
+    ; reset threads
+    jmp .setup_threads
 .go:
     mov eax, CLOCK_GETTIME_SYSCALL
     push CLOCK_MONOTONIC
@@ -228,6 +221,45 @@ start:
     jmp .go_read_until_newline_head
 
 .go_finish_read:
+    mov byte [RUNNING_WORKER_THREADS], 80h | (NUM_THREADS - 1)
+
+%ifdef EXPORT_SYSV
+    mov byte [RUNNING], 1
+%endif
+
+%if NUM_THREADS > 1
+    ; create threads
+    lea r8, [THREAD_STACKS + THREAD_STACK_SIZE - MAX_BOARDS * Board_size - Search_size]
+    mov ebx, THREAD_STACK_SIZE * (NUM_THREADS - 1)
+.create_thread_head:
+    ; copy the boards
+    lea rsi, [rsp + Search_size + 16]
+    mov rcx, qword [rsp + 16]
+    sub rcx, rsi
+
+    lea rdi, [r8 + rbx + Search_size]
+    rep movsb
+
+    mov qword [r8 + rbx], rdi
+    mov cl, 128
+    rep movsb ; copy the current position
+
+    ; clone the thread
+    push CLONE_SYSCALL
+    pop rax
+    
+    mov edi, CLONE_VM | CLONE_SIGHAND | CLONE_THREAD
+
+    ; new stack
+    lea rsi, [r8 + rbx]
+    syscall
+
+    test eax, eax
+    jz thread_search
+    
+    sub ebx, THREAD_STACK_SIZE
+    jnz .create_thread_head
+%endif
     ; temporary: link to non-asm
 %ifdef EXPORT_SYSV
     mov ecx, 1
@@ -235,15 +267,12 @@ start:
     pop rsi
     mov rdi, rsp
 
-    ; TEMP: align stack
-    push rbp
-    mov rbp, rsp
-    and rsp, -16
-
     call root_search_sysv
+    mov byte [RUNNING], 0
 
-    mov rsp, rbp
-    pop rbp
+.go_wait_for_threads:
+    lock and byte [RUNNING_WORKER_THREADS], 7Fh
+    jnz .go_wait_for_threads
 
     ; mov in ax
     push rax

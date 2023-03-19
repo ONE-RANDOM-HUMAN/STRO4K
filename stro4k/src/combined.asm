@@ -1,4 +1,5 @@
 %include "common.asm"
+%include "search.asm"
 %include "uci.asm"
 %include "movegen.asm"
 %include "game.asm"

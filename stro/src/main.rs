@@ -1,6 +1,5 @@
 #[cfg(feature = "asm")]
 fn main() {
-    use std::sync::atomic::Ordering;
     if std::env::args().nth(1).map_or(false, |x| x == "bench") {
         unsafe {
             stro::init();
@@ -11,7 +10,6 @@ fn main() {
     }
 
     unsafe {
-        stro::search::RUNNING.store(true, Ordering::Relaxed);
         stro::asm::start_sysv();
     }
 }
