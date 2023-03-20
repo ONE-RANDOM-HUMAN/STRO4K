@@ -1,10 +1,40 @@
 #[cfg(feature = "asm")]
-use jemallocator::Jemalloc;
+struct PageAllocator;
+
+#[cfg(feature = "asm")]
+unsafe impl std::alloc::GlobalAlloc for PageAllocator {
+    unsafe fn alloc(&self, layout: std::alloc::Layout) -> *mut u8 {
+        unsafe {
+            self.alloc_zeroed(layout)
+        }
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: std::alloc::Layout) {
+        unsafe {
+            libc::munmap(ptr.cast(), layout.size());
+        }
+    }
+
+    unsafe fn alloc_zeroed(&self, layout: std::alloc::Layout) -> *mut u8 {
+        assert!(layout.align() <= 4096);
+
+        unsafe {
+            libc::mmap(
+                std::ptr::null_mut(),
+                layout.size(),
+                libc::PROT_READ | libc::PROT_WRITE,
+                libc::MAP_ANONYMOUS | libc::MAP_PRIVATE,
+                -1,
+                0
+            ).cast()
+        }
+    }
+}
 
 // Workaround for glibc not working the use of clone.
 #[global_allocator]
 #[cfg(feature = "asm")]
-static GLOBAL: Jemalloc = Jemalloc;
+static GLOBAL: PageAllocator = PageAllocator;
 
 #[cfg(feature = "asm")]
 fn main() {

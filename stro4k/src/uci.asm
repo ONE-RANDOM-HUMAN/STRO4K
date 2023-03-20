@@ -248,7 +248,7 @@ start:
     push CLONE_SYSCALL
     pop rax
     
-    mov edi, CLONE_VM | CLONE_SIGHAND | CLONE_THREAD
+    mov edi, CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD
 
     ; new stack
     lea rsi, [r8 + rbx]
