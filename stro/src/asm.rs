@@ -2,7 +2,6 @@ use crate::position::Bitboard;
 use crate::position::{Board, Move};
 
 use crate::game::Game;
-use crate::search::Search;
 
 #[allow(improper_ctypes)]
 extern "C" {
@@ -19,16 +18,6 @@ extern "C" {
 pub struct SearchResult {
     mov: Move,
     score: i32
-}
-
-#[no_mangle]
-pub extern "C" fn root_search_sysv(search: &mut Search, time_ms: u32, inc_ms: u32, print_info: bool) -> SearchResult {
-    let (mov, score) = search.search(time_ms, inc_ms, print_info);
-
-    SearchResult {
-        mov,
-        score,
-    }
 }
 
 /// # Safety

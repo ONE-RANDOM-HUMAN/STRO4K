@@ -1,4 +1,5 @@
 %include "common.asm"
+%include "evaluate.asm"
 %include "search.asm"
 %include "uci.asm"
 %include "movegen.asm"

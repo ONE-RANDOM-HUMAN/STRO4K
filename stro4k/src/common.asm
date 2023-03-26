@@ -47,9 +47,17 @@ struc PlyData
     alignb 8
     .kt:
         resw 2
+    .static_eval:
+        resw 1
     .no_nmp:
         resb 1
+    alignb 8
 endstruc
+
+
+%if PlyData_size != 8
+%error "PlyData should be 8 bytes in size"
+%endif
 
 struc Search
     .game:
@@ -65,16 +73,28 @@ struc Search
         resq 1
     .history:
     alignb 16
+    .ply_data:
+        resb PlyData_size * MAX_BOARDS
     .white_history:
         resq 64 * 64
     .black_history:
         resq 64 * 64
-    .ply_data:
-        resb PlyData_size * MAX_BOARDS
 endstruc
 
 %if Search_size % 16 != 0
 %error "Search should be a multiple of 16 bytes in size"
+%endif
+
+struc SearchMove
+    alignb 4
+    .score:
+        resw 1
+    .move:
+        resw 1
+endstruc
+
+%if SearchMove_size != 4
+%error "SearchMove should be 4 bytes in size"
 %endif
 
 READ_SYSCALL equ 0

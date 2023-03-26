@@ -149,6 +149,7 @@ fn side_open_file(rook: Bitboard, side_pawns: Bitboard, enemy_pawns: Bitboard) -
     eval
 }
 
+#[no_mangle]
 pub fn evaluate(board: &Board) -> i32 {
     let mut eval = Eval(0, 0);
 

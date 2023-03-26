@@ -2,7 +2,6 @@ default rel
 section .text
 
 %ifdef EXPORT_SYSV
-extern root_search_sysv
 extern TT
 extern TT_LEN
 extern RUNNING
@@ -262,12 +261,16 @@ start:
 %endif
     ; temporary: link to non-asm
 %ifdef EXPORT_SYSV
-    mov ecx, 1
     pop rdx
     pop rsi
-    mov rdi, rsp
 
-    call root_search_sysv
+    mov rbx, rsp
+    imul rsi, rsi, 1000000 / 30
+    mov qword [rbx + Search.search_time], rsi
+
+    mov r12d, 1
+    call root_search
+
     mov byte [RUNNING], 0
 
 .go_wait_for_threads:

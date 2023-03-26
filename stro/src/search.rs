@@ -56,8 +56,8 @@ pub struct Search<'a> {
     nodes: u64,
     start: Time,
     search_time: u64, // search time in nanoseconds
-    history: [HistoryTable; 2],
     ply: [PlyData; 6144],
+    history: [HistoryTable; 2],
 }
 
 /// Automatically unmakes move and returns when `None` is received
@@ -83,16 +83,16 @@ impl<'a> Search<'a> {
             nodes: 0,
             start: time_now(),
             search_time: 0,
-            history: [HistoryTable::new(), HistoryTable::new()],
             ply: [PlyData::new(); 6144],
+            history: [HistoryTable::new(), HistoryTable::new()],
         }
     }
 
     pub fn new_game(&mut self) {
         // tt must be cleared seperately
+        self.ply.fill(PlyData::new());
         self.history[0].reset();
         self.history[1].reset();
-        self.ply.fill(PlyData::new());
     }
 
     pub fn search(&mut self, time_ms: u32, _inc_ms: u32, main_thread: bool) -> (Move, i32) {
@@ -113,7 +113,7 @@ impl<'a> Search<'a> {
             .iter()
             .filter(|&&mov| self.game.is_legal(mov))
             .map(|&mov| SearchMove {
-                score: MIN_EVAL,
+                score: MIN_EVAL as i16,
                 mov,
             })
             .collect::<Vec<_>>();
@@ -145,7 +145,7 @@ impl<'a> Search<'a> {
                     None => break 'a,
                 };
 
-                mov.score = score;
+                mov.score = score as i16;
                 alpha = cmp::max(alpha, score);
 
                 searched += 1;
@@ -166,7 +166,7 @@ impl<'a> Search<'a> {
         }
 
         moves[0..searched].sort_by_key(|x| cmp::Reverse(x.score));
-        (moves[0].mov, moves[0].score)
+        (moves[0].mov, moves[0].score as i32)
     }
 
     pub fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: i32, ply: usize) -> Option<i32> {
@@ -479,7 +479,7 @@ impl<'a> Search<'a> {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 struct SearchMove {
-    score: i32,
+    score: i16,
     mov: Move,
 }
 
@@ -499,4 +499,21 @@ impl PlyData {
             no_nmp: false,
         }
     }
+}
+
+#[no_mangle]
+fn search_alpha_beta_sysv(search: &mut Search, alpha: i32, beta: i32, depth: i32, ply: usize) -> i32 {
+    search.alpha_beta(alpha, beta, depth, ply).unwrap_or(i32::MIN)
+}
+
+#[no_mangle]
+fn search_print_info_sysv(search: &mut Search, depth: i32, mov: &SearchMove) {
+    println!(
+        "info depth {} nodes {} nps {} score cp {} pv {}",
+        depth,
+        search.nodes,
+        (search.nodes as f64 / (elapsed_nanos(&search.start) as f64 / 1_000_000_000.0)) as u64,
+        mov.score,
+        mov.mov,
+    )
 }
