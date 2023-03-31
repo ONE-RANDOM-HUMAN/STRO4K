@@ -37,7 +37,7 @@ const DOUBLED_PAWN_EVAL: [Eval; 8] = [
 #[rustfmt::skip]
 const PASSED_PAWN_EVAL: [Eval; 6] = [
     Eval( 0,  26),
-    Eval(-2,   7),
+    Eval( 0,   7),
     Eval(10,  35),
     Eval(55, 104),
     Eval(78, 152),
