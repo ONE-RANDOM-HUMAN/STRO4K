@@ -56,7 +56,7 @@ root_search:
     pop rbp ; End of moves
     pop rdi ; SearchData
 
-    mov eax, MIN_EVAL
+    mov eax, MIN_EVAL - 1
 .create_search_moves_head:
     stosw ; MIN_EVAL
     movsw ; move
@@ -82,6 +82,8 @@ root_search:
     ; edx - move
     movzx edx, word [rsp + r14 + SearchMove.move]
     call game_make_move
+    test al, al ; check legality
+    jz .root_search_moves_tail
 
 %ifdef EXPORT_SYSV
     mov rdi, rbx
@@ -113,6 +115,7 @@ root_search:
     cmp eax, ebp
     cmovg ebp, eax
 
+.root_search_moves_tail:
     add r14d, SearchMove_size
     cmp r14d, r15d
     jne .root_search_moves_head

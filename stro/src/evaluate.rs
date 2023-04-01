@@ -159,7 +159,6 @@ pub fn evaluate(board: &Board) -> i32 {
     evaluate_old(board)
 }
 
-// #[no_mangle]
 pub fn evaluate_old(board: &Board) -> i32 {
     let mut eval = Eval(0, 0);
 
