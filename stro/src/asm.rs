@@ -146,3 +146,36 @@ pub fn board_hash(board: &Board) -> u64 {
 
     result
 }
+
+#[allow(improper_ctypes)]
+pub fn evaluate(board: &Board) -> i32 {
+    let mut result;
+    unsafe {
+        std::arch::asm!(
+            r#"
+            push rbp
+            call evaluate
+            pop rbp 
+            "#,
+            inout ("rsi") board => _,
+            out("rax") result,
+            out("rcx") _,
+            out("rdx") _,
+            out("rdi") _,
+            out("r8") _,
+            out("r9") _,
+            out("r10") _,
+            out("r11") _,
+            out("xmm0") _,
+            out("xmm1") _,
+            out("xmm2") _,
+            out("xmm3") _,
+            out("xmm4") _,
+            out("xmm5") _,
+            out("xmm6") _,
+            options(pure, readonly, raw),
+        );
+    }
+
+    result
+}

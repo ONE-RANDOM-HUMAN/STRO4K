@@ -2,24 +2,8 @@ default rel
 section .text
 
 %ifdef EXPORT_SYSV
-    extern evaluate
     extern search_alpha_beta_sysv
     extern search_print_info_sysv
-
-; board - rsi
-evaluate_sysv:
-    push rsi
-    push rbp
-    mov rbp, rsp
-    and rsp, -16
-
-    mov rdi, rsi
-    call evaluate
-
-    mov rsp, rbp
-    pop rbp
-    pop rsi
-    ret
 %endif
 
 thread_search:
@@ -44,7 +28,9 @@ root_search:
 
     ; get static eval
     mov rsi, qword [rbx]
-    call evaluate_sysv
+    push rsi
+    call evaluate
+    pop rsi
     mov word [rbx + Search.ply_data + PlyData.static_eval], ax
 
     ; memory for 256 moves, with stack alignment

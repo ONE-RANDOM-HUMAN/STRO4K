@@ -8,7 +8,9 @@ extern RUNNING
 global start_sysv
 
 start_sysv:
-    jmp start
+    jmp _start
+%else
+global _start
 %endif
 
 default rel
@@ -61,7 +63,7 @@ write8:
 
 
 
-start:
+_start:
     ; set up shifts for movegen
     mov rax, 060A_0F11_0709_0108h
     push rax
@@ -79,9 +81,11 @@ start:
     loop .movegen_shifts_head
 
     ; set up tt
+%ifdef EXPORT_SYSV
     lea rdi, [TT_MEM]
     mov qword [TT], rdi
     mov qword [TT_LEN], TT_SIZE_BYTES / 8
+%endif
 
     ; wait for uci
     call read_until_newline
@@ -259,8 +263,7 @@ start:
     sub ebx, THREAD_STACK_SIZE
     jnz .create_thread_head
 %endif
-    ; temporary: link to non-asm
-%ifdef EXPORT_SYSV
+    ; Calculate time
     pop rdx
     pop rsi
 
@@ -268,10 +271,14 @@ start:
     imul rsi, rsi, 1000000 / 30
     mov qword [rbx + Search.search_time], rsi
 
-    mov r12d, 1
-    call root_search
 
+%ifdef EXPORT_SYSV
+    mov r12d, 1 ; indicate that this is the main thread
+    call root_search
     mov byte [RUNNING], 0
+%else
+    call root_search
+%endif
 
 .go_wait_for_threads:
     lock and byte [RUNNING_WORKER_THREADS], 7Fh
@@ -304,7 +311,6 @@ start:
     mov word [rsp + 6], ` \n`
     pop rdx
     call write8
-%endif
 
     jmp .uci_loop_head
 

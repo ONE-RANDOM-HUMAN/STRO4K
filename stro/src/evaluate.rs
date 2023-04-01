@@ -37,7 +37,7 @@ const DOUBLED_PAWN_EVAL: [Eval; 8] = [
 #[rustfmt::skip]
 const PASSED_PAWN_EVAL: [Eval; 6] = [
     Eval( 0,  26),
-    Eval(-2,   7),
+    Eval( 0,   7),
     Eval(10,  35),
     Eval(55, 104),
     Eval(78, 152),
@@ -149,8 +149,18 @@ fn side_open_file(rook: Bitboard, side_pawns: Bitboard, enemy_pawns: Bitboard) -
     eval
 }
 
-#[no_mangle]
+#[cfg(feature = "asm")]
 pub fn evaluate(board: &Board) -> i32 {
+    crate::asm::evaluate(board)
+}
+
+#[cfg(not(feature = "asm"))]
+pub fn evaluate(board: &Board) -> i32 {
+    evaluate_old(board)
+}
+
+// #[no_mangle]
+pub fn evaluate_old(board: &Board) -> i32 {
     let mut eval = Eval(0, 0);
 
     // material
