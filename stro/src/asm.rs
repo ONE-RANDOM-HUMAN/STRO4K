@@ -3,6 +3,8 @@ use crate::position::{Board, Move};
 
 use crate::game::Game;
 
+use crate::moveorder::HistoryTable;
+
 #[allow(improper_ctypes)]
 extern "C" {
     pub static mut SHIFTS: [u64; 8];
@@ -178,4 +180,75 @@ pub fn evaluate(board: &Board) -> i32 {
     }
 
     result
+}
+
+#[allow(improper_ctypes)]
+pub fn move_sort_history(moves: &mut [Move], history: &HistoryTable) {
+    unsafe {
+        std::arch::asm!(
+            r#"
+            lea r15, [rip + cmp_history]
+            call sort_moves
+            "#,
+            out("rax") _,
+            out("rcx") _ ,
+            out("rdx") _,
+            out("rdi") _,
+            in("r8") history,
+            out("r9") _,
+            out("r10") _,
+            in("r11") moves.as_mut_ptr(),
+            in("r12") moves.len(),
+            out("r13") _,
+            out("r15") _,
+            options(raw),
+        );
+    }
+}
+
+pub fn move_sort_flags(moves: &mut [Move]) {
+    unsafe {
+        std::arch::asm!(
+            r#"
+            lea r15, [rip + cmp_flags]
+            call sort_moves
+            "#,
+            out("rax") _,
+            out("rcx") _ ,
+            out("rdx") _,
+            out("rdi") _,
+            out("r8") _,
+            out("r9") _,
+            out("r10") _,
+            in("r11") moves.as_mut_ptr(),
+            in("r12") moves.len(),
+            out("r13") _,
+            out("r15") _,
+            options(raw),
+        );
+    }
+}
+
+pub fn move_sort_mvvlva(board: &Board, moves: &mut [Move]) {
+    unsafe {
+        std::arch::asm!(
+            r#"
+            lea r15, [rip + cmp_mvvlva]
+            call sort_moves
+            "#,
+            out("rax") _,
+            out("rcx") _ ,
+            out("rdx") _,
+            in("rsi") board,
+            out("rdi") _,
+            in("r8") board.pieces()[board.side_to_move() as usize].as_ptr(),
+            out("r9") _,
+            out("r10") _,
+            in("r11") moves.as_mut_ptr(),
+            in("r12") moves.len(),
+            out("r13") _,
+            out("r15") _,
+            options(raw),
+        );
+    }
 }

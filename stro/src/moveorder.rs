@@ -1,3 +1,4 @@
+#[cfg(not(feature = "asm"))]
 use std::cmp;
 
 use crate::position::{Board, Move};
@@ -52,11 +53,19 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     // promos and promo-captures by promo piece
     // regular captures
     // other moves
+    #[cfg(not(feature = "asm"))]
+    {
+        insertion_sort_flags(moves);
+    }
 
-    insertion_sort_flags(moves);
+    #[cfg(feature = "asm")]
+    {
+        crate::asm::move_sort_flags(moves);
 
-    // increases performance by about 3% but loses guaranteed reproducibility
-    // moves.sort_unstable_by_key(|mov| std::cmp::Reverse(mov.flags().0));
+        // increases performance by about 3% but loses guaranteed reproducibility
+        // moves.sort_unstable_by_key(|mov| std::cmp::Reverse(mov.flags().0));
+    }
+
 
     // find first non-promo move
     let promo = moves
@@ -70,10 +79,17 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
         .position(|x| !x.flags().is_capture())
         .map_or(moves.len(), |x| x + promo);
 
-    insertion_sort_by(&mut moves[promo..noisy], |lhs, rhs| {
-        cmp_mvv(position, lhs, rhs).then_with(|| cmp_lva(position, lhs, rhs))
-    });
+    #[cfg(not(feature = "asm"))]
+    {
+        insertion_sort_by(&mut moves[promo..noisy], |lhs, rhs| {
+            cmp_mvv(position, lhs, rhs).then_with(|| cmp_lva(position, lhs, rhs))
+        });
+    }
 
+    #[cfg(feature = "asm")]
+    {
+        crate::asm::move_sort_mvvlva(position, &mut moves[promo..noisy]);
+    }
     noisy
 }
 
@@ -90,14 +106,24 @@ pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable, history: &Hist
     }
 
     // sort by history
-    insertion_sort_by(moves, |lhs, rhs| {
-        history.get(lhs).cmp(&history.get(rhs)).reverse()
-    });
+    #[cfg(not(feature = "asm"))]
+    {
+        insertion_sort_by(moves, |lhs, rhs| {
+            history.get(lhs).cmp(&history.get(rhs)).reverse()
+        });
+    }
+
+    #[cfg(feature = "asm")]
+    {
+        crate::asm::move_sort_history(moves, history);
+    }
 
     len
 }
 
-pub fn insertion_sort_by<F>(moves: &mut [Move], mut cmp: F)
+#[cfg(not(feature = "asm"))]
+
+fn insertion_sort_by<F>(moves: &mut [Move], mut cmp: F)
 where
     F: FnMut(Move, Move) -> cmp::Ordering,
 {
@@ -119,7 +145,8 @@ where
 }
 
 /// Allows the use of a special comparison for flags
-pub fn insertion_sort_flags(moves: &mut [Move]) {
+#[cfg(not(feature = "asm"))]
+fn insertion_sort_flags(moves: &mut [Move]) {
     for i in 1..moves.len() {
         let mov = moves[i];
         let cmp = mov.0.get() & 0xF000;
@@ -138,19 +165,21 @@ pub fn insertion_sort_flags(moves: &mut [Move]) {
     }
 }
 
+#[cfg(not(feature = "asm"))]
 fn cmp_mvv(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
     // 0 is ep
     let lhs_v = position
         .get_piece(lhs.dest(), position.side_to_move().other())
-        .map_or(0, |x| x as u8);
+        .map_or(-1, |x| x as i8);
 
     let rhs_v = position
         .get_piece(rhs.dest(), position.side_to_move().other())
-        .map_or(0, |x| x as u8);
+        .map_or(-1, |x| x as i8);
 
     lhs_v.cmp(&rhs_v).reverse()
 }
 
+#[cfg(not(feature = "asm"))]
 fn cmp_lva(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
     let lhs_a = position
         .get_piece(lhs.origin(), position.side_to_move())
