@@ -142,11 +142,11 @@ fn cmp_mvv(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
     // 0 is ep
     let lhs_v = position
         .get_piece(lhs.dest(), position.side_to_move().other())
-        .map_or(0, |x| x as u8);
+        .map_or(-1, |x| x as i8);
 
     let rhs_v = position
         .get_piece(rhs.dest(), position.side_to_move().other())
-        .map_or(0, |x| x as u8);
+        .map_or(-1, |x| x as i8);
 
     lhs_v.cmp(&rhs_v).reverse()
 }
