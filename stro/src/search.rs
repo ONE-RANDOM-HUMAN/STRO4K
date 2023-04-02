@@ -205,8 +205,10 @@ impl<'a> Search<'a> {
         let static_eval = evaluate::evaluate(self.game.position());
         self.ply[ply].static_eval = static_eval as i16;
 
+        let pv_node = beta - alpha != 1;
+
         // Null Move Pruning
-        if !self.ply[ply].no_nmp && depth >= 4 && beta - alpha == 1 && !is_check {
+        if !self.ply[ply].no_nmp && depth >= 4 && !pv_node && !is_check {
             let r: i32 = if depth >= 6 { 3 } else { 2 };
             unsafe {
                 self.game.make_null_move();
@@ -235,7 +237,7 @@ impl<'a> Search<'a> {
         let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
 
         // Futility pruning
-        let f_prune = depth <= 3 && !is_check && beta - alpha == 1;
+        let f_prune = depth <= 3 && !is_check && !pv_node;
 
         const F_PRUNE_MARGIN: i32 = 320;
         let f_prune = f_prune
@@ -318,7 +320,7 @@ impl<'a> Search<'a> {
             } else {
                 let lmr_depth = if depth >= 3
                     && i >= 3
-                    && beta - alpha == 1
+                    && !pv_node
                     && !mov.flags().is_noisy()
                     && !is_check
                     && !gives_check
