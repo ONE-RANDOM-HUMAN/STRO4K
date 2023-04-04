@@ -29,9 +29,8 @@ impl TTData {
 
         TTData(
             NonZeroU64::new(
-                // u64::from(mov_pack(mov))
                 u64::from(mov.0.get())
-                    | (eval as i16 as u64) << 16
+                    | (eval as u16 as u64) << 16
                     | (bound as u64) << 32
                     | (depth as u64 & ((1 << 14) - 1)) << 34
                     | (hash & 0xFFFF_0000_0000_0000),
