@@ -95,6 +95,18 @@ impl<'a> Search<'a> {
         self.history[1].reset();
     }
 
+    pub fn search_asm(&mut self, time_ms: u32, _inc_ms: u32, main_thread: bool) -> Move {
+        self.search_time = if main_thread {
+            (time_ms as u64) * (1_000_000 / 30)
+        } else {
+            u64::MAX
+        };
+
+        unsafe {
+            crate::asm::root_search_sysv(self, main_thread)
+        }
+    }
+
     pub fn search(&mut self, time_ms: u32, _inc_ms: u32, main_thread: bool) -> (Move, i32) {
         self.nodes = 0;
 
@@ -446,6 +458,7 @@ impl<'a> Search<'a> {
         ];
 
         let mut duration = std::time::Duration::ZERO;
+        const BENCH_DEPTH: i32 = 9;
         for fen in fens {
             tt::clear();
             search.new_game();
@@ -456,23 +469,30 @@ impl<'a> Search<'a> {
             }
 
             let start = std::time::Instant::now();
+            search.alpha_beta(MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
+            duration += start.elapsed()
+        }
 
-            const BENCH_DEPTH: i32 = 9;
-            
-            #[cfg(not(feature = "asm"))]
-            {
-                search.alpha_beta(MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
+        let rust_node_count = search.nodes;
+
+
+        #[cfg(feature = "asm")]
+        for fen in fens {
+            tt::clear();
+            search.new_game();
+
+            unsafe {
+                search.game.reset(&start);
+                search.game.add_position(Board::from_fen(fen).unwrap());
             }
 
-            #[cfg(feature = "asm")]
-            {
-                crate::asm::alpha_beta(&mut search, MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
-            }
-
+            let start = std::time::Instant::now();
+            crate::asm::alpha_beta(&mut search, MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
             duration += start.elapsed()
         }
 
         RUNNING.store(false, Ordering::Relaxed);
+        assert_eq!(rust_node_count, search.nodes - rust_node_count);
 
         let nodes = search.nodes;
         let nps = (search.nodes as f64 / duration.as_secs_f64()) as u64;
@@ -512,11 +532,6 @@ impl PlyData {
             no_nmp: false,
         }
     }
-}
-
-#[no_mangle]
-fn search_alpha_beta_sysv(search: &mut Search, alpha: i32, beta: i32, depth: i32, ply: usize) -> i32 {
-    search.alpha_beta(alpha, beta, depth, ply).unwrap_or(i32::MIN)
 }
 
 #[no_mangle]

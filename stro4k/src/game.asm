@@ -1,33 +1,6 @@
 default rel
 section .text
 
-%ifdef EXPORT_SYSV
-global board_is_area_attacked_sysv
-global board_hash
-global game_is_repetition_sysv
-global game_make_move_sysv
-
-board_is_area_attacked_sysv:
-    xchg rdi, rsi
-    jmp board_is_area_attacked
-
-game_is_repetition_sysv:
-    push rbx
-    mov rbx, rdi
-    call game_is_repetition
-    pop rbx
-    ret
-
-game_make_move_sysv:
-    push rbx
-    mov rbx, rdi
-    mov rdx, rsi
-    call game_make_move
-    pop rbx
-    ret
-
-%endif
-; rbx - game
 ; rdx - move
 game_make_move:
     ; make copy of board

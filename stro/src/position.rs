@@ -1,6 +1,8 @@
 use std::fmt;
 use std::num::NonZeroU16;
 
+use crate::{movegen, consts};
+
 pub type Bitboard = u64;
 
 #[repr(align(128), C)]
@@ -312,13 +314,7 @@ impl Board {
 
         Some(position)
     }
-}
 
-#[cfg(not(feature = "asm"))]
-use crate::{consts, movegen};
-
-#[cfg(not(feature = "asm"))]
-impl Board {
     pub fn hash(&self) -> u64 {
         // SAFETY: aes-ni and 64 bit required for build
         unsafe {
@@ -377,17 +373,6 @@ impl Board {
         }
 
         false
-    }
-}
-
-#[cfg(feature = "asm")]
-impl Board {
-    pub fn hash(&self) -> u64 {
-        crate::asm::board_hash(self)
-    }
-
-    fn is_area_attacked(&self, area: Bitboard) -> bool {
-        unsafe { crate::asm::board_is_area_attacked_sysv(self, area) }
     }
 }
 

@@ -12,4 +12,5 @@ libc = { version = "0.2.140", optional = true, default-features = false }
 lto = "fat"
 
 [features]
+default = ["asm"]
 asm = ["libc"]

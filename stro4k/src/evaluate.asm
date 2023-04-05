@@ -47,10 +47,6 @@ PASSED_PAWN_EVAL:
 default rel
 section .text
 
-%ifdef EXPORT_SYSV
-    global evaluate
-%endif
-
 ; board - rsi
 evaluate:
     push rbx

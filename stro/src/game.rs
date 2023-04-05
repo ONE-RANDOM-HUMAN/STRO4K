@@ -150,14 +150,10 @@ impl<'a> Game<'a> {
     pub(crate) unsafe fn set_ptr(&mut self, ptr: *mut Board) {
         self.ptr = ptr;
     }
-}
 
-#[cfg(not(feature = "asm"))]
-impl Game<'_> {
     /// # Safety
     /// The total number of position stored must not exceed 6144
     #[must_use]
-    #[cfg(not(feature = "asm"))]
     pub unsafe fn make_move(&mut self, mov: Move) -> bool {
         let mut board = unsafe { self.ptr.read() };
 
@@ -218,30 +214,6 @@ impl Game<'_> {
                 }
             }
         }
-    }
-}
-
-#[cfg(feature = "asm")]
-impl Game<'_> {
-    /// # Safety
-    /// The total number of position stored must not exceed 6144
-    /// The current position must not be in check
-    #[must_use]
-    pub unsafe fn make_move(&mut self, mov: Move) -> bool {
-        unsafe { crate::asm::game_make_move_sysv(self, mov.0.get()) }
-    }
-
-    /// # Safety
-    /// The total number of position stored must not exceed 6144
-    /// The current position must not be in check
-    pub unsafe fn make_null_move(&mut self) -> bool {
-        unsafe { crate::asm::game_make_move_sysv(self, 0) }
-    }
-
-    #[must_use]
-    #[cfg(feature = "asm")]
-    pub fn is_repetition(&self) -> bool {
-        unsafe { crate::asm::game_is_repetition_sysv(self) }
     }
 }
 

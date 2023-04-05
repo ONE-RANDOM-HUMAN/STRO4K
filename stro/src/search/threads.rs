@@ -46,6 +46,7 @@ impl Drop for SearchThread {
 pub struct SearchThreads {
     threads: Vec<SearchThread>,
     main_thread: SearchThread,
+    asm: bool,
 }
 
 impl SearchThreads {
@@ -53,7 +54,6 @@ impl SearchThreads {
     /// The tt must not be accessed during the fuction call
     pub fn new(count: usize) -> Self {
         unsafe {
-            #[cfg(not(feature = "asm"))]
             tt::alloc((16 * 1024 * 1024).try_into().unwrap());
 
             Self {
@@ -63,6 +63,7 @@ impl SearchThreads {
                 .take(count - 1)
                 .collect(),
                 main_thread: SearchThread::new(),
+                asm: false,
             }
         }
     }
@@ -71,6 +72,10 @@ impl SearchThreads {
         self.threads.resize_with(count - 1, || unsafe {
             SearchThread::new()
         });
+    }
+
+    pub fn set_asm(&mut self, value: bool) {
+        self.asm = value;
     }
 
     pub fn game(&mut self) -> &Game {
@@ -114,7 +119,6 @@ impl SearchThreads {
     /// # Safety
     /// The tt must not be accessed during resize
     pub unsafe fn resize_tt_mb(&mut self, _size: u64) {
-        #[cfg(not(feature = "asm"))]
         unsafe {
             tt::alloc((_size * 1024 * 1024).max(1).try_into().unwrap());
         }
@@ -146,13 +150,23 @@ impl SearchThreads {
                 }
 
                 thread.search.start = start;
+
                 s.spawn(|| {
-                    thread.search.search(u32::MAX, u32::MAX, false);
+                    if self.asm {
+                        thread.search.search_asm(u32::MAX, u32::MAX, false);
+                    } else {
+                        thread.search.search(u32::MAX, u32::MAX, false);
+                    }
                 });
             }
 
             self.main_thread.search.start = start;
-            let result = self.main_thread.search.search(time, inc, true);
+            let result = if self.asm {
+                let mov = self.main_thread.search.search_asm(time, inc, true);
+                (mov, 0)    
+            } else {
+                self.main_thread.search.search(time, inc, true)
+            };
 
             RUNNING.store(false, Ordering::Relaxed);
             result
@@ -160,11 +174,20 @@ impl SearchThreads {
 
         // not really centipawns, but no scaling to remain consistent
         // with a possible binary version.
-        println!(
-            "info nodes {} nps {} score cp {score}",
-            self.main_thread.search.nodes,
-            (self.main_thread.search.nodes as f64 / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
-        );
+        if !self.asm {
+            println!(
+                "info nodes {} nps {} score cp {score}",
+                self.main_thread.search.nodes,
+                (self.main_thread.search.nodes as f64 / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
+            );
+        } else {
+            println!(
+                "info nodes {} nps {}",
+                self.main_thread.search.nodes,
+                (self.main_thread.search.nodes as f64 / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
+            );
+        }
+
         println!("bestmove {mov}")
     }
 }

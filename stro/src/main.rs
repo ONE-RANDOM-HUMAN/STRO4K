@@ -1,58 +1,3 @@
-#[cfg(feature = "asm")]
-struct PageAllocator;
-
-#[cfg(feature = "asm")]
-unsafe impl std::alloc::GlobalAlloc for PageAllocator {
-    unsafe fn alloc(&self, layout: std::alloc::Layout) -> *mut u8 {
-        unsafe {
-            self.alloc_zeroed(layout)
-        }
-    }
-
-    unsafe fn dealloc(&self, ptr: *mut u8, layout: std::alloc::Layout) {
-        unsafe {
-            libc::munmap(ptr.cast(), layout.size());
-        }
-    }
-
-    unsafe fn alloc_zeroed(&self, layout: std::alloc::Layout) -> *mut u8 {
-        assert!(layout.align() <= 4096);
-
-        unsafe {
-            libc::mmap(
-                std::ptr::null_mut(),
-                layout.size(),
-                libc::PROT_READ | libc::PROT_WRITE,
-                libc::MAP_ANONYMOUS | libc::MAP_PRIVATE,
-                -1,
-                0
-            ).cast()
-        }
-    }
-}
-
-// Workaround for glibc not working the use of clone.
-#[global_allocator]
-#[cfg(feature = "asm")]
-static GLOBAL: PageAllocator = PageAllocator;
-
-#[cfg(feature = "asm")]
-fn main() {
-    if std::env::args().nth(1).map_or(false, |x| x == "bench") {
-        unsafe {
-            stro::init();
-        }
-
-        stro::search::Search::bench();
-        return;
-    }
-
-    unsafe {
-        stro::asm::start_sysv();
-    }
-}
-
-#[cfg(not(feature = "asm"))]
 fn main() {
     use std::io;
     unsafe {
@@ -75,13 +20,13 @@ fn main() {
     // Openbench compat
     println!("option name Hash type spin default 16 min 1 max 131072");
     println!("option name Threads type spin default 1 min 1 max 128");
+    println!("option name asm type check default false");
 
     println!("uciok");
 
     uci_loop();
 }
 
-#[cfg(not(feature = "asm"))]
 fn uci_loop() {
     use std::io;
 
@@ -167,6 +112,13 @@ fn uci_loop() {
                     search.resize_tt_mb(value.parse().unwrap());
                 }
                 "threads" => search.set_threads(value.parse().unwrap()),
+                "asm" => {
+                    match &*value.to_ascii_lowercase() {
+                        "true" => search.set_asm(true),
+                        "false" => search.set_asm(false),
+                        _ => (),
+                    }
+                }
                 _ => (),
             }
         } else if line.starts_with("quit") {

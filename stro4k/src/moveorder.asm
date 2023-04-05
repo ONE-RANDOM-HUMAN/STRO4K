@@ -1,13 +1,6 @@
 default rel
 section .text
 
-%ifdef EXPORT_SYSV
-    global sort_moves
-    global cmp_history
-    global cmp_flags
-    global cmp_mvvlva
-%endif
-
 ; board - rsi
 ; moves - r11
 ; move count - r12

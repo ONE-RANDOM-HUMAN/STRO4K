@@ -1,17 +1,8 @@
 default rel
 section .text
 
-%ifdef EXPORT_SYSV
-extern TT
-extern TT_LEN
-extern RUNNING
-global start_sysv
-
-start_sysv:
-    jmp _start
-%else
+%ifndef EXPORT_SYSV
 global _start
-%endif
 
 default rel
 read1:
@@ -79,13 +70,6 @@ _start:
     lodsb
     stosq
     loop .movegen_shifts_head
-
-    ; set up tt
-%ifdef EXPORT_SYSV
-    lea rdi, [TT_MEM]
-    mov qword [TT], rdi
-    mov qword [TT_LEN], TT_SIZE_BYTES / 8
-%endif
 
     ; wait for uci
     call read_until_newline
@@ -226,10 +210,6 @@ _start:
 .go_finish_read:
     mov byte [RUNNING_WORKER_THREADS], 80h | (NUM_THREADS - 1)
 
-%ifdef EXPORT_SYSV
-    mov byte [RUNNING], 1
-%endif
-
 %if NUM_THREADS > 1
     ; create threads
     lea r8, [THREAD_STACKS + THREAD_STACK_SIZE - MAX_BOARDS * Board_size - Search_size]
@@ -271,14 +251,7 @@ _start:
     imul rsi, rsi, 1000000 / 30
     mov qword [rbx + Search.search_time], rsi
 
-
-%ifdef EXPORT_SYSV
-    mov r12d, 1 ; indicate that this is the main thread
     call root_search
-    mov byte [RUNNING], 0
-%else
-    call root_search
-%endif
 
 .go_wait_for_threads:
     lock and byte [RUNNING_WORKER_THREADS], 7Fh
@@ -398,4 +371,4 @@ _start:
     add rsp, 512
     jmp .uci_loop_head
 
-
+%endif

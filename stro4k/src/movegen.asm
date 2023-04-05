@@ -1,21 +1,6 @@
 section .text
 default rel
 
-%ifdef EXPORT_SYSV
-global gen_moves_sysv
-global knight_moves
-global bishop_moves
-global rook_moves
-global queen_moves
-global king_moves
-gen_moves_sysv:
-    xchg rdi, rsi
-    call gen_moves
-
-    mov rax, rdi
-    ret
-%endif
-
 ; rdi - buffer (allows the use of stosw)
 ; rsi - position
 gen_moves:

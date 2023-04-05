@@ -1,11 +1,18 @@
-NUM_THREADS equ 4
+%ifndef NUM_THREADS
+%define NUM_THREADS 4
+%endif
+
 MAX_BOARDS equ 6144
 THREAD_STACK_SIZE equ 8 * 1024 * 1024
+
+%ifndef EXPORT_SYSV
 TT_SIZE_BYTES equ 16 * 1024 * 1024
 TT_ENTRY_COUNT equ TT_SIZE_BYTES / 8
-
-%ifdef EXPORT_SYSV
+%else
 global SHIFTS
+extern TT_PTR
+extern TT_MASK
+extern RUNNING
 %endif
 
 ; TODO align 64 bytes and take advantage in addressing
@@ -163,14 +170,18 @@ BISHOP_SHIFTS:
 KNIGHT_SHIFTS:
     resq 4
 
+%ifndef EXPORT_SYSV
 RUNNING_WORKER_THREADS:
     ; the top bit will indicate whether the threads should continue running
     resb 1
+%endif
 
 alignb 4096
 THREAD_STACKS:
     times NUM_THREADS resb THREAD_STACK_SIZE
 
+%ifndef EXPORT_SYSV
 TT_MEM:
     resb TT_SIZE_BYTES
+%endif
 

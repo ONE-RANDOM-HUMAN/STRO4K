@@ -18,20 +18,31 @@ default rel
 section .text
 
 %ifdef EXPORT_SYSV
-    extern search_alpha_beta_sysv
     extern search_print_info_sysv
     global alpha_beta
-    global clear_tt_sysv
+    global root_search_sysv
 
-clear_tt_sysv:
-    lea rdi, [TT_MEM]
-    mov rcx, TT_ENTRY_COUNT
-    xor eax, eax
-    rep stosb
+root_search_sysv:
+    push r15
+    push r14
+    push r13
+    push r12
+    push rbx
+    push rbp
+
+    mov rbx, rdi
+    mov r12d, esi
+    call root_search
+
+    pop rbp
+    pop rbx
+    pop r12
+    pop r13
+    pop r14
+    pop r15
     ret
 
-%endif
-
+%else
 thread_search:
     push rsp
     pop rbx
@@ -46,7 +57,7 @@ thread_search:
     lock dec byte [RUNNING_WORKER_THREADS]
 
     syscall
-
+%endif
 ; search - rbx
 ; time should be calculated before calling root_search
 root_search:
@@ -111,24 +122,6 @@ root_search:
     test al, al ; check legality
     jz .root_search_moves_tail
 
-%ifdef EXPORT_SYSV
-    mov rdi, rbx
-
-    ; alpha
-    mov esi, MIN_EVAL
-
-    ; beta
-    mov edx, ebp
-    neg edx
-
-    ; depth
-    mov ecx, r13d
-
-    ; ply count
-    mov r8d, 1
-
-    call search_alpha_beta_sysv
-%else
     ; alpha
     mov esi, MIN_EVAL
 
@@ -143,7 +136,7 @@ root_search:
     push 1
     pop rdx
     call alpha_beta
-%endif
+
     ; unmake move
     add qword [rbx], -Board_size
 
@@ -164,14 +157,19 @@ root_search:
     call sort_search_moves
     inc r13d
 
+%ifdef EXPORT_SYSV
     test r12d, r12d
     jz .iterative_deepening_head
-%ifdef EXPORT_SYSV
+
     mov rdi, rbx
     mov esi, r13d
     mov rdx, rsp
 
+    push rbp
+    mov rbp, rsp
+    and rsp, -16
     call search_print_info_sysv
+    leave
 %endif
 
     jmp .iterative_deepening_head
@@ -264,8 +262,11 @@ alpha_beta:
     sub rsp, 512 + 128
 
     ; check if we should stop
-%if NUM_THREADS > 1
-    test byte[RUNNING_WORKER_THREADS], 80h
+%ifdef EXPORT_SYSV
+    test byte [RUNNING], 1
+    jz .stop_search
+%elif NUM_THREADS > 1
+    test byte [RUNNING_WORKER_THREADS], 80h
     jz .stop_search
 %endif
     ; nodes % 4096
@@ -389,8 +390,15 @@ alpha_beta:
 
     ; load tt_entry
     mov rcx, rdx
+
+%ifndef EXPORT_SYSV
     and rdx, TT_ENTRY_COUNT - 1
     lea rax, [TT_MEM]
+%else
+    and rdx, qword [TT_MASK]
+    mov rax, qword [TT_PTR]
+%endif
+
     mov rax, qword [rax + rdx * 8]
 
     test rax, rax
@@ -446,7 +454,6 @@ alpha_beta:
     ; check for cutoff
     cmp edx, dword [rbp + 8]
     jnge .no_tt_cutoff
-    ; jmp .no_tt_cutoff
 
     ; tt cutoffs
     sar eax, 16 ; eval
@@ -1061,9 +1068,14 @@ alpha_beta:
     xor rsi, rdi
 
     ; load tt pointer and index
+
+%ifndef EXPORT_SYSV
     lea r15, [TT_MEM]
     and rdi, TT_ENTRY_COUNT - 1
-
+%else
+    mov r15, qword [TT_PTR]
+    and rdi, qword [TT_MASK]
+%endif
     or rsi, rdx ; store move
 
     ; store eval

@@ -11,6 +11,8 @@ fn main() {
                 "dwarf",
                 "-d",
                 "EXPORT_SYSV",
+                "-d",
+                "NUM_THREADS=1",
                 "combined.asm",
                 "-o",
                 &format!("{out_dir}/combined.o"),
