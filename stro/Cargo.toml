@@ -6,9 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+libc = { version = "0.2.140", optional = true, default-features = false }
 
 [profile.release]
 lto = "fat"
 
 [features]
-asm = []
+default = ["asm"]
+asm = ["libc"]

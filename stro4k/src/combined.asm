@@ -1,4 +1,7 @@
 %include "common.asm"
+%include "evaluate.asm"
+%include "moveorder.asm"
+%include "search.asm"
 %include "uci.asm"
 %include "movegen.asm"
 %include "game.asm"

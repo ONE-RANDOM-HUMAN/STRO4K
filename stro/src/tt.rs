@@ -1,4 +1,4 @@
-use std::num::{NonZeroU64, NonZeroUsize};
+use std::{num::NonZeroU64, cell::UnsafeCell};
 
 use crate::position::Move;
 
@@ -54,79 +54,74 @@ impl TTData {
     }
 
     pub fn depth(self) -> i32 {
-        let value = (self.0.get() >> 34) as i32;
+        let value = (self.0.get() >> (34 - 18)) as i32;
 
-        // sign extend with arithmetic right shift
-        (value << 18) >> 18
+        value >> 18
     }
 }
 
-// Not copy to avoid accidental copies
-#[derive(Clone, Debug)]
-pub struct TT {
-    // size will be hard coded in 4k version
-    ptr: *mut u64,
-    size: usize,
+static mut DEFAULT_TT: UnsafeCell<u64> = UnsafeCell::new(0);
+
+// Const pointer required for compiler
+#[no_mangle]
+static mut TT_PTR: *const u64 = unsafe { DEFAULT_TT.get() };
+
+static mut TT_LEN: NonZeroU64 = unsafe { NonZeroU64::new_unchecked(1) };
+
+#[no_mangle]
+static mut TT_MASK: u64 = 0;
+
+/// # Safety
+/// The tt must not be accessed during allocation. The current tt must have been created by alloc.
+pub unsafe fn alloc(size_in_bytes: NonZeroU64) {
+    unsafe {
+        // make sure the old tt is deallocated first
+        dealloc();
+    
+        let size = size_in_bytes.get() as usize / std::mem::size_of::<u64>();
+
+        TT_PTR = Box::leak(vec![0; size].into_boxed_slice()).as_mut_ptr();
+        TT_LEN = (size as u64).try_into().unwrap();
+        TT_MASK = ((size + 1).next_power_of_two() >> 1) as u64 - 1;
+    }
 }
 
-unsafe impl Send for TT {}
-
-impl TT {
-    pub fn new(size_in_bytes: NonZeroUsize) -> TT {
-        let size = (size_in_bytes.get() / 8).max(1);
-
-        // SAFETY: All zeroes is valid for u64
-        unsafe {
-            TT {
-                ptr: Box::leak(Box::new_zeroed_slice(size).assume_init()).as_mut_ptr(),
-                size,
-            }
-        }
-    }
-
-    pub fn resize(&mut self, size_in_bytes: NonZeroUsize) {
-        std::mem::replace(
-            self,
-            TT {
-                ptr: std::ptr::null_mut(),
-                size: 0,
-            },
-        )
-        .dealloc();
-        *self = Self::new(size_in_bytes);
-    }
-
-    // Not drop for future smp implementation
-    pub fn dealloc(self) {
-        unsafe {
-            let slice = std::ptr::slice_from_raw_parts_mut(self.ptr, self.size);
+/// # Safety
+/// The tt must not be accessed during deallocation. The current tt must have been created by alloc.
+pub unsafe fn dealloc() {
+    unsafe {
+        if TT_PTR != DEFAULT_TT.get() {
+            let slice = std::ptr::slice_from_raw_parts_mut(TT_PTR.cast_mut(), TT_LEN.get() as usize);
             drop(Box::from_raw(slice));
+            TT_PTR = DEFAULT_TT.get();
+            TT_LEN = NonZeroU64::new(1).unwrap();
+            TT_MASK = 0;
         }
     }
+}
 
-    pub fn load(&self, hash: u64) -> Option<TTData> {
-        let index = (hash % self.size as u64) as usize;
+pub fn load(hash: u64) -> Option<TTData> {
+    let data = unsafe {
+        let index = (hash % TT_LEN) as usize;
+        std::intrinsics::atomic_load_unordered(TT_PTR.add(index))
+    };
 
-        let data = unsafe { std::intrinsics::atomic_load_unordered(self.ptr.add(index)) };
+    NonZeroU64::new(data)
+        .filter(|x| x.get() >> 48 == hash >> 48)
+        .map(TTData)
+}
 
-        NonZeroU64::new(data)
-            .filter(|x| x.get() >> 48 == hash >> 48)
-            .map(TTData)
+pub fn store(hash: u64, data: TTData) {
+    unsafe {
+        let index = (hash % TT_LEN) as usize;
+        std::intrinsics::atomic_store_unordered(TT_PTR.cast_mut().add(index), data.0.get());
     }
+}
 
-    pub fn store(&self, hash: u64, data: TTData) {
-        let index = (hash % self.size as u64) as usize;
-
-        unsafe {
-            std::intrinsics::atomic_store_unordered(self.ptr.add(index), data.0.get());
-        }
-    }
-
-    pub fn clear(&self) {
-        for i in 0..self.size {
-            unsafe {
-                std::intrinsics::atomic_store_unordered(self.ptr.add(i), 0);
-            }
+pub fn clear() {
+    unsafe {
+        for i in 0..TT_LEN.get() {
+            std::intrinsics::atomic_store_unordered(TT_PTR.cast_mut().add(i as usize), 0);
         }
     }
 }

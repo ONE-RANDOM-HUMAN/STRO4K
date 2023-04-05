@@ -11,6 +11,8 @@ fn main() {
                 "dwarf",
                 "-d",
                 "EXPORT_SYSV",
+                "-d",
+                "NUM_THREADS=1",
                 "combined.asm",
                 "-o",
                 &format!("{out_dir}/combined.o"),
@@ -24,8 +26,11 @@ fn main() {
         let manifest_path = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/combined.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/common.asm");
+        println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/evaluate.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/game.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/movegen.asm");
+        println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/moveorder.asm");
+        println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/search.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/uci.asm");
 
         println!("cargo:rustc-link-arg={out_dir}/combined.o");

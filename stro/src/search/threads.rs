@@ -1,12 +1,13 @@
 use std::ops::Add;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::{thread, time};
+use std::sync::atomic::Ordering;
+use std::thread;
 
 use crate::game::{Game, GameBuf, GameStart};
 use crate::position::{Board, Move};
-use crate::search::Search;
-use crate::tt::TT;
+use crate::search::RUNNING;
+use crate::tt;
+
+use super::{elapsed_nanos, Search, Time};
 
 struct SearchThread {
     start: GameStart<'static>,
@@ -15,9 +16,7 @@ struct SearchThread {
 }
 
 impl SearchThread {
-    /// # Safety
-    /// The TT must remain valid
-    unsafe fn new(tt: TT, running: Arc<AtomicBool>) -> Self {
+    unsafe fn new() -> Self {
         let buffer = Box::into_raw(Box::new(GameBuf::uninit()));
 
         // SAFETY: Buffer is a valid pointer because it was just created
@@ -25,8 +24,7 @@ impl SearchThread {
         // called. `Game` and `Search` do not require the buffer in drop.
         let (game, start) = unsafe { Game::startpos(&mut *buffer) };
 
-        // SAFETY: The tt must remain valid
-        let search = unsafe { Search::new(game, tt, running) };
+        let search = Search::new(game);
 
         Self {
             start,
@@ -48,29 +46,36 @@ impl Drop for SearchThread {
 pub struct SearchThreads {
     threads: Vec<SearchThread>,
     main_thread: SearchThread,
+    asm: bool,
 }
 
 impl SearchThreads {
+    /// # Safety
+    /// The tt must not be accessed during the fuction call
     pub fn new(count: usize) -> Self {
-        let tt = TT::new((16 * 1024 * 1024).try_into().unwrap());
-        let running = Arc::new(AtomicBool::new(false));
         unsafe {
+            tt::alloc((16 * 1024 * 1024).try_into().unwrap());
+
             Self {
                 threads: std::iter::repeat_with(|| {
-                    SearchThread::new(tt.clone(), Arc::clone(&running))
+                    SearchThread::new()
                 })
                 .take(count - 1)
                 .collect(),
-                main_thread: SearchThread::new(tt, running),
+                main_thread: SearchThread::new(),
+                asm: false,
             }
         }
     }
 
     pub fn set_threads(&mut self, count: usize) {
-        let search = &self.main_thread.search;
         self.threads.resize_with(count - 1, || unsafe {
-            SearchThread::new(search.tt.clone(), Arc::clone(&search.running))
+            SearchThread::new()
         });
+    }
+
+    pub fn set_asm(&mut self, value: bool) {
+        self.asm = value;
     }
 
     pub fn game(&mut self) -> &Game {
@@ -102,7 +107,7 @@ impl SearchThreads {
     }
 
     pub fn new_game(&mut self) {
-        self.main_thread.search.clear_tt();
+        tt::clear();
         self.main_thread.search.new_game();
 
         // Clear all threads
@@ -111,19 +116,15 @@ impl SearchThreads {
         }
     }
 
-    pub fn resize_tt_mb(&mut self, size: usize) {
-        self.main_thread
-            .search
-            .tt
-            .resize((size * 1024 * 1024).max(1).try_into().unwrap());
-
-        // set the size for all threads
-        for thread in &mut self.threads {
-            thread.search.tt = self.main_thread.search.tt.clone();
+    /// # Safety
+    /// The tt must not be accessed during resize
+    pub unsafe fn resize_tt_mb(&mut self, _size: u64) {
+        unsafe {
+            tt::alloc((_size * 1024 * 1024).max(1).try_into().unwrap());
         }
     }
 
-    pub fn search(&mut self, start: time::Instant, time: u32, inc: u32) {
+    pub fn search(&mut self, start: Time, time: u32, inc: u32) {
         // Get pointers to game of main thread
         let start_ptr = self.main_thread.start.as_mut_ptr();
 
@@ -137,10 +138,8 @@ impl SearchThreads {
         };
 
         let (mov, score) = thread::scope(|s| {
-            self.main_thread
-                .search
-                .running
-                .store(true, Ordering::Relaxed);
+            RUNNING.store(true, Ordering::Relaxed);
+
             for thread in &mut self.threads {
                 // Copy the position
                 let begin = thread.start.as_mut_ptr();
@@ -151,28 +150,44 @@ impl SearchThreads {
                 }
 
                 thread.search.start = start;
+
                 s.spawn(|| {
-                    thread.search.search(u32::MAX, u32::MAX, false);
+                    if self.asm {
+                        thread.search.search_asm(u32::MAX, u32::MAX, false);
+                    } else {
+                        thread.search.search(u32::MAX, u32::MAX, false);
+                    }
                 });
             }
 
             self.main_thread.search.start = start;
-            let result = self.main_thread.search.search(time, inc, true);
+            let result = if self.asm {
+                let mov = self.main_thread.search.search_asm(time, inc, true);
+                (mov, 0)    
+            } else {
+                self.main_thread.search.search(time, inc, true)
+            };
 
-            self.main_thread
-                .search
-                .running
-                .store(false, Ordering::Relaxed);
+            RUNNING.store(false, Ordering::Relaxed);
             result
         });
 
         // not really centipawns, but no scaling to remain consistent
         // with a possible binary version.
-        println!(
-            "info nodes {} nps {} score cp {score}",
-            self.main_thread.search.nodes,
-            (self.main_thread.search.nodes as f64 / start.elapsed().as_secs_f64()) as u64
-        );
+        if !self.asm {
+            println!(
+                "info nodes {} nps {} score cp {score}",
+                self.main_thread.search.nodes,
+                (self.main_thread.search.nodes as f64 / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
+            );
+        } else {
+            println!(
+                "info nodes {} nps {}",
+                self.main_thread.search.nodes,
+                (self.main_thread.search.nodes as f64 / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
+            );
+        }
+
         println!("bestmove {mov}")
     }
 }
