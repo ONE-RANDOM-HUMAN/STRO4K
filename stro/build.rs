@@ -27,6 +27,7 @@ fn main() {
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/evaluate.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/game.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/movegen.asm");
+        println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/moveorder.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/search.asm");
         println!("cargo:rerun-if-changed={manifest_path}/../stro4k/src/uci.asm");
 

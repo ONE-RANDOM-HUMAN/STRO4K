@@ -4,6 +4,7 @@ use crate::position::{Board, Move};
 use crate::game::Game;
 
 use crate::moveorder::HistoryTable;
+use crate::search::Search;
 
 #[allow(improper_ctypes)]
 extern "C" {
@@ -14,6 +15,7 @@ extern "C" {
     pub fn board_is_area_attacked_sysv(board: &Board, area: Bitboard) -> bool;
     pub fn game_is_repetition_sysv(game: &Game<'_>) -> bool;
     pub fn game_make_move_sysv(game: &Game<'_>, mov: u16) -> bool;
+    pub fn clear_tt_sysv();
 }
 
 #[repr(C)]
@@ -155,9 +157,7 @@ pub fn evaluate(board: &Board) -> i32 {
     unsafe {
         std::arch::asm!(
             r#"
-            push rbp
             call evaluate
-            pop rbp 
             "#,
             inout ("rsi") board => _,
             out("rax") result,
@@ -251,4 +251,27 @@ pub fn move_sort_mvvlva(board: &Board, moves: &mut [Move]) {
             options(raw),
         );
     }
+}
+
+pub fn alpha_beta(search: &mut Search, alpha: i32, beta: i32, depth: i32, ply: usize) -> Option<i32> {
+    let result: i32;
+    unsafe {
+        std::arch::asm!(
+            r#"
+            push rbx
+            mov rbx, r8
+            call alpha_beta
+            pop rbx
+            "#,
+            out("rax") result,
+            inout("rcx") depth => _,
+            in("rdx") ply,
+            in("rsi") alpha,
+            in("rdi") beta,
+            inout("r8") search => _,
+            options(raw),
+        );
+    }
+
+    (result != i32::MIN).then_some(result)
 }

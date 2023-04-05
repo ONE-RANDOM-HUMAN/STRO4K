@@ -54,6 +54,7 @@ section .text
 ; board - rsi
 evaluate:
     push rbx
+    push rbp
     lea rbp, [EVAL_WEIGHTS]
     mov r10, rsi
     lea r11, [rsi + Board.black_pieces]
@@ -303,6 +304,7 @@ evaluate:
     neg eax
 .white_to_move:
 
+    pop rbp
     pop rbx
     ret
 

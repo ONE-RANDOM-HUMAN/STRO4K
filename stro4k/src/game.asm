@@ -30,7 +30,6 @@ game_make_move_sysv:
 ; rbx - game
 ; rdx - move
 game_make_move:
-
     ; make copy of board
     mov ecx, Board_size
     mov rsi, qword [rbx] ; rsi old board
@@ -224,6 +223,16 @@ game_make_move:
 .end:
     ret
 
+; rbx - game
+; rdx - move
+game_is_move_legal:
+    call game_make_move
+    test al, al
+    jz .end ; illegal
+    add qword[rbx], -Board_size
+.end:
+    ret
+
 ; pieces - r8
 ; square - rdx
 board_get_piece:
@@ -294,6 +303,17 @@ board_is_area_attacked:
 .end:
     setnz al
     ret
+
+; rsi - board
+board_is_check:
+    movzx eax, byte [rsi + Board.side_to_move]
+    shl eax, 4
+    lea eax, [rax + 2 * rax] ; multiply by 48
+
+    mov rdi, qword [rsi + rax + 40] ; king
+
+    jmp board_is_area_attacked
+
 
 ; rsi - board
 board_hash:

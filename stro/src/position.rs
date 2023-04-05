@@ -3,7 +3,7 @@ use std::num::NonZeroU16;
 
 pub type Bitboard = u64;
 
-#[repr(C)]
+#[repr(align(128), C)]
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Board {
     pieces: [[Bitboard; 6]; 2],

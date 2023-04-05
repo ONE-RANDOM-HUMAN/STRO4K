@@ -31,7 +31,7 @@ impl TTData {
             NonZeroU64::new(
                 // u64::from(mov_pack(mov))
                 u64::from(mov.0.get())
-                    | (eval as i16 as u64) << 16
+                    | (eval as u16 as u64) << 16
                     | (bound as u64) << 32
                     | (depth as u64 & ((1 << 14) - 1)) << 34
                     | (hash & 0xFFFF_0000_0000_0000),
@@ -55,10 +55,9 @@ impl TTData {
     }
 
     pub fn depth(self) -> i32 {
-        let value = (self.0.get() >> 34) as i32;
+        let value = (self.0.get() >> (34 - 18)) as i32;
 
-        // sign extend with arithmetic right shift
-        (value << 18) >> 18
+        value >> 18
     }
 }
 
@@ -123,10 +122,18 @@ pub fn store(hash: u64, data: TTData) {
     }
 }
 
+#[cfg(not(feature = "asm"))]
 pub fn clear() {
     unsafe {
         for i in 0..TT_LEN.get() {
             std::intrinsics::atomic_store_unordered(TT.cast_mut().add(i as usize), 0);
         }
+    }
+}
+
+#[cfg(feature = "asm")]
+pub fn clear() {
+    unsafe {
+        crate::asm::clear_tt_sysv();
     }
 }

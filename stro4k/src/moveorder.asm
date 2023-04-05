@@ -12,18 +12,19 @@ section .text
 ; moves - r11
 ; move count - r12
 ; less function - r15
-; preserves rbx, rbp, r8, r11, r12, r14, r15
+; preserves rbx, rbp, r8, r11, r12, r13, r14, r15
 sort_moves:
     push rbx
+    push rbp
 
-    ; r13 - inner loop counter
-    mov r13d, 1
+    ; ebp - inner loop counter
+    mov ebp, 1
 .outer_loop_head:
-    cmp r13d, r12d
+    cmp ebp, r12d
     jae .end
 
-    movzx r10d, word [r11 + 2 * r13]
-    mov r9d, r13d
+    movzx r10d, word [r11 + 2 * rbp]
+    mov r9d, ebp
 .inner_loop_head:
     mov edx, r10d
     movzx edi, word [r11 + 2 * r9 - 2]
@@ -37,11 +38,12 @@ sort_moves:
     mov word [r11 + 2 * r9], bx
     dec r9d
     jnz .inner_loop_head
-.inner_loop_end
+.inner_loop_end:
     mov word [r11 + 2 * r9], r10w
-    inc r13d
+    inc ebp
     jmp .outer_loop_head
-.end
+.end:
+    pop rbp
     pop rbx
     ret
 
