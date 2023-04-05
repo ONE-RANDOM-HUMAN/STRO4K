@@ -4,23 +4,24 @@ A chess engine designed to fit into 4096 bytes. A successor to we4k.
 ## Current Plan
 STRO4K targets 2700 elo (CCRL) on a single thread, while actually scaling with multiple threads (unlike we4k). This target is very unlikely to be met.
 
-STRO is a non-4k version of STRO4K with more interface features, which is much easier to develop. STRO4K is a work in progress assembly port of STRO designed to fit into 4096 bytes. Assembly was chosen due to unpromising attempts at minification.
+STRO is a non-4k version of STRO4K with more interface features, which is much easier to develop.
 
+## Building
+Building STRO4K requires `nasm`, `xz` and [`sstrip`](https://github.com/aunali1/super-strip). A script is provided which attempts to download `sstrip` and build STRO3K.
 
-### Plan for STRO4K
-The current goal is to create an initial version of STRO4K as strong as we4k that will fit in 4096 bytes uncompressed. This goal is only slightly more likely than the 2700 elo goal. The approximate byte allocations for this are:
-* Movegen - ~850 bytes
-* Board Representation - ~650 bytes
-* Uci - ~500 bytes
-* Search - ~1400 bytes
-* Evaluation - ~600 bytes
+```
+./build4k
+```
 
-The ~1500 bytes of additional space given by compression will be used to increase the strength of STRO4K. Planned final byte allocations are approximately:
-* Uci and board representation - ~2000 bytes
-* Search - ~2000 bytes
-* Eval - ~1000 bytes
-* Something else - ~500 bytes
+STRO can be build using a Rust nightly compiler.
+```
+cargo build --release
+```
 
+## Current size
+```
+3739 bytes
+```
 ## Features
 * Search
     * Principal Variation Search
