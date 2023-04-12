@@ -2,8 +2,8 @@
 //! 850 bytes allocated for binary
 //!
 
-use crate::consts::{A_FILE, AB_FILE, H_FILE, ALL};
-use crate::position::{Bitboard, Board, Move, Square, Color, MoveFlags};
+use crate::consts::{AB_FILE, ALL, A_FILE, H_FILE};
+use crate::position::{Bitboard, Board, Color, Move, MoveFlags, Square};
 
 pub type MoveFn = fn(Bitboard, Bitboard) -> Bitboard;
 pub type MoveBuf = std::mem::MaybeUninit<[Move; 256]>;
@@ -49,13 +49,7 @@ pub fn gen_moves<'a>(position: &Board, buf: &'a mut MoveBuf) -> &'a mut [Move] {
     unsafe { std::slice::from_raw_parts_mut(start, ptr.offset_from(start) as usize) }
 }
 
-
-pub(super) fn dumb7fill(
-    gen: Bitboard,
-    l_mask: Bitboard,
-    occ: Bitboard,
-    shift: u32,
-) -> Bitboard {
+pub(super) fn dumb7fill(gen: Bitboard, l_mask: Bitboard, occ: Bitboard, shift: u32) -> Bitboard {
     let (mut l_gen, mut r_gen) = (gen, gen);
 
     // only 6 required for attacks
@@ -185,11 +179,7 @@ pub(super) unsafe fn gen_pawn(
 
 /// # Safety
 /// `ptr` must be valid for a sufficient number of writes.
-pub(super) unsafe fn gen_castle(
-    mut ptr: *mut Move,
-    position: &Board,
-    occ: Bitboard,
-) -> *mut Move {
+pub(super) unsafe fn gen_castle(mut ptr: *mut Move, position: &Board, occ: Bitboard) -> *mut Move {
     let (castle, occ, origin) = if position.side_to_move() == Color::White {
         (position.castling(), occ, Square::E1)
     } else {
@@ -294,4 +284,3 @@ pub(super) unsafe fn pawn_serialise(
 
     ptr
 }
-

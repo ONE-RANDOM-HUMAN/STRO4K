@@ -57,7 +57,6 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     // increases performance by about 3% but loses guaranteed reproducibility
     // moves.sort_unstable_by_key(|mov| std::cmp::Reverse(mov.flags().0));
 
-
     // find first non-promo move
     let promo = moves
         .iter()
@@ -70,7 +69,6 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
         .position(|x| !x.flags().is_capture())
         .map_or(moves.len(), |x| x + promo);
 
-    
     insertion_sort_by(&mut moves[promo..noisy], |lhs, rhs| {
         cmp_mvv(position, lhs, rhs).then_with(|| cmp_lva(position, lhs, rhs))
     });
@@ -94,10 +92,9 @@ pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable, history: &Hist
     insertion_sort_by(moves, |lhs, rhs| {
         history.get(lhs).cmp(&history.get(rhs)).reverse()
     });
-    
+
     len
 }
-
 
 fn insertion_sort_by<F>(moves: &mut [Move], mut cmp: F)
 where

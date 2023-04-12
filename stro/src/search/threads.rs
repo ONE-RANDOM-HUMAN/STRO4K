@@ -57,11 +57,9 @@ impl SearchThreads {
             tt::alloc((16 * 1024 * 1024).try_into().unwrap());
 
             Self {
-                threads: std::iter::repeat_with(|| {
-                    SearchThread::new()
-                })
-                .take(count - 1)
-                .collect(),
+                threads: std::iter::repeat_with(|| SearchThread::new())
+                    .take(count - 1)
+                    .collect(),
                 main_thread: SearchThread::new(),
                 asm: false,
             }
@@ -69,9 +67,8 @@ impl SearchThreads {
     }
 
     pub fn set_threads(&mut self, count: usize) {
-        self.threads.resize_with(count - 1, || unsafe {
-            SearchThread::new()
-        });
+        self.threads
+            .resize_with(count - 1, || unsafe { SearchThread::new() });
     }
 
     pub fn set_asm(&mut self, value: bool) {
@@ -163,7 +160,7 @@ impl SearchThreads {
             self.main_thread.search.start = start;
             let result = if self.asm {
                 let mov = self.main_thread.search.search_asm(time, inc, true);
-                (mov, 0)    
+                (mov, 0)
             } else {
                 self.main_thread.search.search(time, inc, true)
             };
@@ -178,13 +175,15 @@ impl SearchThreads {
             println!(
                 "info nodes {} nps {} score cp {score}",
                 self.main_thread.search.nodes,
-                (self.main_thread.search.nodes as f64 / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
+                (self.main_thread.search.nodes as f64
+                    / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
             );
         } else {
             println!(
                 "info nodes {} nps {}",
                 self.main_thread.search.nodes,
-                (self.main_thread.search.nodes as f64 / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
+                (self.main_thread.search.nodes as f64
+                    / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
             );
         }
 

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::num::NonZeroU16;
 
-use crate::{movegen, consts};
+use crate::{consts, movegen};
 
 pub type Bitboard = u64;
 

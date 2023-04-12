@@ -110,15 +110,13 @@ fn uci_loop() {
             match &*name {
                 "hash" => unsafe {
                     search.resize_tt_mb(value.parse().unwrap());
-                }
+                },
                 "threads" => search.set_threads(value.parse().unwrap()),
-                "asm" => {
-                    match &*value.to_ascii_lowercase() {
-                        "true" => search.set_asm(true),
-                        "false" => search.set_asm(false),
-                        _ => (),
-                    }
-                }
+                "asm" => match &*value.to_ascii_lowercase() {
+                    "true" => search.set_asm(true),
+                    "false" => search.set_asm(false),
+                    _ => (),
+                },
                 _ => (),
             }
         } else if line.starts_with("quit") {

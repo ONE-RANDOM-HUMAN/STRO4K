@@ -1,4 +1,4 @@
-use std::{num::NonZeroU64, cell::UnsafeCell};
+use std::{cell::UnsafeCell, num::NonZeroU64};
 
 use crate::position::Move;
 
@@ -77,7 +77,7 @@ pub unsafe fn alloc(size_in_bytes: NonZeroU64) {
     unsafe {
         // make sure the old tt is deallocated first
         dealloc();
-    
+
         let size = size_in_bytes.get() as usize / std::mem::size_of::<u64>();
 
         TT_PTR = Box::leak(vec![0; size].into_boxed_slice()).as_mut_ptr();
@@ -91,7 +91,8 @@ pub unsafe fn alloc(size_in_bytes: NonZeroU64) {
 pub unsafe fn dealloc() {
     unsafe {
         if TT_PTR != DEFAULT_TT.get() {
-            let slice = std::ptr::slice_from_raw_parts_mut(TT_PTR.cast_mut(), TT_LEN.get() as usize);
+            let slice =
+                std::ptr::slice_from_raw_parts_mut(TT_PTR.cast_mut(), TT_LEN.get() as usize);
             drop(Box::from_raw(slice));
             TT_PTR = DEFAULT_TT.get();
             TT_LEN = NonZeroU64::new(1).unwrap();

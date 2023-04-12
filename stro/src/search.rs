@@ -8,7 +8,7 @@ use crate::game::{Game, GameBuf};
 use crate::movegen::{gen_moves, MoveBuf};
 use crate::moveorder::{self, HistoryTable, KillerTable};
 use crate::position::{Board, Move};
-use crate::tt::{Bound, TTData, self};
+use crate::tt::{self, Bound, TTData};
 
 #[no_mangle]
 pub static RUNNING: AtomicBool = AtomicBool::new(false);
@@ -26,7 +26,6 @@ pub mod time {
     }
 }
 
-
 #[cfg(feature = "asm")]
 pub mod time {
     pub type Time = libc::timespec;
@@ -34,15 +33,17 @@ pub mod time {
     pub fn time_now() -> Time {
         unsafe {
             let mut time = std::mem::MaybeUninit::uninit();
-            assert_eq!(libc::clock_gettime(libc::CLOCK_MONOTONIC, time.as_mut_ptr()), 0);
+            assert_eq!(
+                libc::clock_gettime(libc::CLOCK_MONOTONIC, time.as_mut_ptr()),
+                0
+            );
             time.assume_init()
         }
     }
-    
+
     pub fn elapsed_nanos(start: &Time) -> u64 {
         let time = time_now();
-        let elapsed = (time.tv_sec - start.tv_sec) * 1_000_000_000
-            + time.tv_nsec - start.tv_nsec;
+        let elapsed = (time.tv_sec - start.tv_sec) * 1_000_000_000 + time.tv_nsec - start.tv_nsec;
 
         elapsed as u64
     }
@@ -102,9 +103,7 @@ impl<'a> Search<'a> {
             u64::MAX
         };
 
-        unsafe {
-            crate::asm::root_search_sysv(self, main_thread)
-        }
+        unsafe { crate::asm::root_search_sysv(self, main_thread) }
     }
 
     pub fn search(&mut self, time_ms: u32, _inc_ms: u32, main_thread: bool) -> (Move, i32) {
@@ -170,7 +169,8 @@ impl<'a> Search<'a> {
                     "info depth {} nodes {} nps {} score cp {} pv {}",
                     depth + 1,
                     self.nodes,
-                    (self.nodes as f64 / (elapsed_nanos(&self.start) as f64 / 1_000_000_000.0)) as u64,
+                    (self.nodes as f64 / (elapsed_nanos(&self.start) as f64 / 1_000_000_000.0))
+                        as u64,
                     moves[0].score,
                     moves[0].mov,
                 )
@@ -475,7 +475,6 @@ impl<'a> Search<'a> {
 
         let rust_node_count = search.nodes;
 
-
         #[cfg(feature = "asm")]
         for fen in fens {
             tt::clear();
@@ -498,14 +497,11 @@ impl<'a> Search<'a> {
         let nps = (search.nodes as f64 / duration.as_secs_f64()) as u64;
         println!("{nodes} nodes {nps} nps");
 
-        unsafe {
-            tt::dealloc()
-        }
+        unsafe { tt::dealloc() }
     }
 
     fn should_stop(&self) -> bool {
-        !RUNNING.load(Ordering::Relaxed)
-            || elapsed_nanos(&self.start) > self.search_time
+        !RUNNING.load(Ordering::Relaxed) || elapsed_nanos(&self.start) > self.search_time
     }
 }
 

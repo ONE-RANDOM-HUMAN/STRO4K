@@ -1,4 +1,4 @@
-use crate::{search::Search, position::Move};
+use crate::{position::Move, search::Search};
 
 #[allow(improper_ctypes)]
 extern "C" {
@@ -13,8 +13,13 @@ pub(crate) unsafe fn init() {
     ONCE.call_once(|| unsafe { SHIFTS = [8, 1, 9, 7, 17, 15, 10, 6] })
 }
 
-
-pub fn alpha_beta(search: &mut Search, alpha: i32, beta: i32, depth: i32, ply: usize) -> Option<i32> {
+pub fn alpha_beta(
+    search: &mut Search,
+    alpha: i32,
+    beta: i32,
+    depth: i32,
+    ply: usize,
+) -> Option<i32> {
     let result: i32;
     unsafe {
         std::arch::asm!(
