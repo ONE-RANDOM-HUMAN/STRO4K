@@ -223,15 +223,14 @@ struc ABLocals
         resd 1
     .bound:
         resb 1
-    .is_check:
-        resb 1
-    .improving:
-        resb 1
-    .pv_node:
-        resb 1
-    .f_prune:
+    .flags:
         resb 1
 endstruc
+
+IS_CHECK_FLAG equ 0001b
+IMPROVING_FLAG equ 0010b
+PV_NODE_FLAG equ 0100b
+F_PRUNE_FLAG equ 1000b
 
 %if ABLocals_size > 128
 %error "Alpha-Beta locals too large"
@@ -311,7 +310,9 @@ alpha_beta:
     mov rsi, qword [rbx]
     ; determine if we are in check
     call board_is_check
-    mov byte [rbp - 128 + ABLocals.is_check], al
+
+    ; IS_CHECK_FLAG = 1
+    mov byte [rbp - 128 + ABLocals.flags], al
 
     ; check extension
     movzx ecx, al
@@ -354,7 +355,7 @@ alpha_beta:
 .no_legal_moves:
     ; no legal moves
     xor eax, eax
-    test byte [rbp - 128 + ABLocals.is_check], 1
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG
     jz .stalemated
     mov eax, MIN_EVAL
 .stalemated:
@@ -460,7 +461,7 @@ alpha_beta:
     shr r12, 32 ; bound
     test r12b, 11b
     jz .no_tt_cutoff ; No bound
-    jpe .tt_cutoff ; Exact bound
+    jpe .end ; Exact bound
 
     ; upper or lower bound
     test r12b, BOUND_LOWER
@@ -468,15 +469,17 @@ alpha_beta:
 
     ; lower bound - check against beta
     cmp eax, dword [rbp + 32]
-    jge .tt_cutoff
+    jge .end
     jmp .tt_end
 .tt_upper_bound:
     ; check against alpha
     cmp eax, dword [rbp + 24]
     jnle .tt_end
 
-.tt_cutoff:
-    jmp .end ; reduces the number of non-short jumps required
+    ; would reduce the number of non-short jumps required,
+    ; but is larger after compression
+; .tt_cutoff: 
+    jmp .end 
 .tt_end:
 .no_tt_cutoff:
 .tt_miss:
@@ -497,8 +500,10 @@ alpha_beta:
     mov edx, dword [rbp + 32]
     sub edx, dword [rbp + 24]
     dec edx
-    setnz dl
-    mov byte [rbp - 128 + ABLocals.pv_node], dl
+
+    jz .no_pv_node
+    or byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
+.no_pv_node:
 
     ; Null move pruning
     test byte [r13 + PlyData.no_nmp], 1
@@ -508,12 +513,8 @@ alpha_beta:
     cmp dword [rbp + 8], 4
     jnge .no_null_move
 
-    ; check pv node
-    test dl, dl
-    jnz .no_null_move
-    
-    ; check if we are in check
-    test byte [rbp - 128 + ABLocals.is_check], 1
+    ; check if we are in check or in a pv node
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_null_move
 
     ; null move pruning
@@ -521,7 +522,7 @@ alpha_beta:
     xor edx, edx
     call game_make_move
 
-    ; call alpha_beta
+    ; call alpha beta
     mov byte [r13 + PlyData_size + PlyData.no_nmp], 1
 
     ; edx - ply count
@@ -625,12 +626,15 @@ alpha_beta:
     movsx ecx, word [r13 + PlyData.static_eval]
 
     ; calculate the improving variable
-    xor eax, eax
+    xor eax, eax ; eax - improving
+
     cmp dword [rbp + 16], 2
     jnae .not_improving
     cmp cx, word [r13 - 2 * PlyData_size + PlyData.static_eval]
-    setg al
-    mov byte [rbp - 128 + ABLocals.improving], al
+    jng .not_improving
+
+    or byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
+    inc eax
 .not_improving:
     ; edx - depth
     mov edx, dword [rbp + 8]
@@ -641,11 +645,7 @@ alpha_beta:
     cmp edx, 3
     jnle .no_fprune
 
-    test byte [rbp - 128 + ABLocals.is_check], 1
-    jnz .no_fprune
-
-    ; pv node
-    test byte [rbp - 128 + ABLocals.pv_node], 1
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_fprune
     
     ; depth + improving
@@ -660,9 +660,9 @@ alpha_beta:
     ; check if margin + static_eval is less than alpha
     add esi, ecx
     cmp esi, dword [rbp + 24]
-    setle al
+    jnle .no_fprune
 
-    mov byte [rbp - 128 + ABLocals.f_prune], al
+    or byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
 .no_fprune:
     ; eax - best eval
     mov eax, MIN_EVAL
@@ -777,7 +777,7 @@ alpha_beta:
 %endif
     ; delta pruning
     ; check that futility pruning is enabled
-    test byte [rbp - 128 + ABLocals.f_prune], 1
+    test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
     jz .no_delta_prune
 
     ; check that we are in qsearch
@@ -846,7 +846,7 @@ alpha_beta:
     jnz .no_fprune_move
     test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
     jnz .no_fprune_move
-    test byte [rbp - 128 + ABLocals.f_prune], 1
+    test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
     jz .no_fprune_move
 
     ; prune
@@ -883,8 +883,8 @@ alpha_beta:
     cmp r15d, 3
     jnge .no_lmr_reduction
 
-    ; non-pv node
-    test byte [rbp - 128 + ABLocals.pv_node], 1
+    ; non-pv node and is check
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_lmr_reduction
 
     ; quiet move
@@ -894,11 +894,6 @@ alpha_beta:
     ; gives check
     test r8d, r8d
     jnz .no_lmr_reduction
-
-    ; is check
-    test byte [rbp - 128 + ABLocals.is_check], 1
-    jnz .no_lmr_reduction
-
 
     ; calculate lmr depth
     ; depth / 4

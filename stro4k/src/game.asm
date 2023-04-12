@@ -288,22 +288,6 @@ board_is_check:
     jmp board_is_area_attacked
 
 
-; rsi - board
-board_hash:
-    mov eax, dword [rsi + Board.side_to_move]
-    and eax, 00FFFFFFh
-    vmovd xmm0, eax
-
-    mov eax, 12
-.loop_head:
-    vaesenc xmm0, xmm0, oword [rsi + Board.pieces + 8 * rax]
-    dec eax
-    jns .loop_head
-
-    vmovq rax, xmm0
-    ret
-    
-
 ; game - rbx
 game_is_repetition:
     ; rdi - current position
