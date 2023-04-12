@@ -11,27 +11,90 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(264, 268),
-    Eval(816, 816).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(846, 818).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1335, 1338).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2640, 2626).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(264, 269),
+    Eval(815, 815).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(846, 815).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1332, 1330).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2644, 2612).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(29, 21), Eval(28, 21), Eval(27, 22), Eval(23, 17)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(29, 20), Eval(28, 20), Eval(27, 22), Eval(24, 16)];
 
-const BISHOP_PAIR_EVAL: Eval = Eval(188, 154);
+const BISHOP_PAIR_EVAL: Eval = Eval(189, 154);
 
 #[rustfmt::skip]
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
     Eval(-40, -24),
-    Eval(  7,  -4),
-    Eval(-37, -10),
-    Eval(-34, -16),
-    Eval(-48, -20),
-    Eval(-63, -22),
-    Eval( -3, -19),
-    Eval(-51, -43),
+    Eval(  1,  -8),
+    Eval(-40, -10),
+    Eval(-35, -17),
+    Eval(-45, -20),
+    Eval(-61, -21),
+    Eval( -5, -23),
+    Eval(-50, -42),
+];
+
+const PST: [[Eval; 8]; 6] = [
+    [
+        Eval(12, 8),
+        Eval(21, 15),
+        Eval(-9, -3),
+        Eval(-11, -9),
+        Eval(15, 20),
+        Eval(17, 14),
+        Eval(10, 27),
+        Eval(12, 22),
+    ],
+    [
+        Eval(-83, -21),
+        Eval(-47, -21),
+        Eval(-63, -13),
+        Eval(27, -16),
+        Eval(38, 8),
+        Eval(44, -21),
+        Eval(2, 2),
+        Eval(6, 2),
+    ],
+    [
+        Eval(-61, -16),
+        Eval(-32, -14),
+        Eval(14, 5),
+        Eval(27, -1),
+        Eval(33, 21),
+        Eval(30, -30),
+        Eval(-2, 3),
+        Eval(3, 12),
+    ],
+    [
+        Eval(-31, -16),
+        Eval(25, -15),
+        Eval(9, 12),
+        Eval(21, 2),
+        Eval(23, 47),
+        Eval(33, 47),
+        Eval(24, 55),
+        Eval(25, 46),
+    ],
+    [
+        Eval(-24, -9),
+        Eval(4, -19),
+        Eval(-23, 4),
+        Eval(22, -7),
+        Eval(14, 12),
+        Eval(1, 8),
+        Eval(0, 7),
+        Eval(8, 11),
+    ],
+    [
+        Eval(22, -2),
+        Eval(-19, -20),
+        Eval(12, 36),
+        Eval(11, 28),
+        Eval(9, 28),
+        Eval(-7, -42),
+        Eval(2, 7),
+        Eval(2, 8),
+    ],
 ];
 
 #[rustfmt::skip]
@@ -44,7 +107,9 @@ const PASSED_PAWN_EVAL: [Eval; 6] = [
     Eval(95, 212),
 ];
 
-const OPEN_FILE_EVAL: Eval = Eval(76, 14);
+const OPEN_FILE_EVAL: Eval = Eval(68, 12);
+
+// Tuned as (54, -1), but negative values need to be avoided
 const SEMI_OPEN_FILE_EVAL: Eval = Eval(53, 0);
 
 impl Eval {
@@ -77,6 +142,25 @@ fn resolve(board: &Board, eval: Eval) -> i32 {
     } else {
         -score
     }
+}
+
+/// Mirrored Quarter PSTs
+/// Each entry in the pst represents a 2x2 square, and the values
+/// are mirrored across the D/E file
+fn side_pst(pieces: &[Bitboard; 6], row_mask: u8) -> Eval {
+    let mut eval = Eval(0, 0);
+    for (i, mut pieces) in pieces.iter().copied().enumerate() {
+        while pieces != 0 {
+            let piece_index = pieces.trailing_zeros();
+            let row = (piece_index / 16) ^ row_mask as u32;
+            let column = ((piece_index / 2) & 0b11).count_zeros() & 0b1;
+            
+            eval.accum(PST[i][(2 * row + column) as usize], 1);
+            pieces &= pieces - 1;
+        }
+    }
+
+    eval
 }
 
 fn side_mobility(pieces: &[Bitboard; 6], occ: Bitboard, mask: Bitboard) -> Eval {
@@ -171,6 +255,10 @@ pub fn evaluate(board: &Board) -> i32 {
     {
         eval.accum(BISHOP_PAIR_EVAL, -1);
     }
+
+    // psts
+    eval.accum(side_pst(&board.pieces()[0], 0), 1);
+    eval.accum(side_pst(&board.pieces()[1], 3), -1);
 
     // mobility
     let occ = board.white() | board.black();
