@@ -96,6 +96,7 @@ impl<'a> Search<'a> {
         self.history[1].reset();
     }
 
+    #[cfg(feature = "asm")]
     pub fn search_asm(&mut self, time_ms: u32, _inc_ms: u32, main_thread: bool) -> Move {
         self.search_time = if main_thread {
             (time_ms as u64) * (1_000_000 / 30)
@@ -473,25 +474,29 @@ impl<'a> Search<'a> {
             duration += start.elapsed()
         }
 
-        let rust_node_count = search.nodes;
 
         #[cfg(feature = "asm")]
-        for fen in fens {
-            tt::clear();
-            search.new_game();
+        {
+            let rust_node_count = search.nodes;
 
-            unsafe {
-                search.game.reset(&start);
-                search.game.add_position(Board::from_fen(fen).unwrap());
+            for fen in fens {
+                tt::clear();
+                search.new_game();
+     
+                unsafe {
+                    search.game.reset(&start);
+                    search.game.add_position(Board::from_fen(fen).unwrap());
+                }
+     
+                let start = std::time::Instant::now();
+                crate::asm::alpha_beta(&mut search, MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
+                duration += start.elapsed()
             }
 
-            let start = std::time::Instant::now();
-            crate::asm::alpha_beta(&mut search, MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
-            duration += start.elapsed()
+            assert_eq!(rust_node_count, search.nodes - rust_node_count);
         }
 
         RUNNING.store(false, Ordering::Relaxed);
-        assert_eq!(rust_node_count, search.nodes - rust_node_count);
 
         let nodes = search.nodes;
         let nps = (search.nodes as f64 / duration.as_secs_f64()) as u64;

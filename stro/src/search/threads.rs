@@ -149,21 +149,29 @@ impl SearchThreads {
                 thread.search.start = start;
 
                 s.spawn(|| {
+                    #[cfg(feature = "asm")]
                     if self.asm {
                         thread.search.search_asm(u32::MAX, u32::MAX, false);
                     } else {
                         thread.search.search(u32::MAX, u32::MAX, false);
                     }
+
+                    #[cfg(not(feature = "asm"))]
+                    thread.search.search(u32::MAX, u32::MAX, false);
                 });
             }
 
             self.main_thread.search.start = start;
+            #[cfg(feature = "asm")]
             let result = if self.asm {
                 let mov = self.main_thread.search.search_asm(time, inc, true);
                 (mov, 0)
             } else {
                 self.main_thread.search.search(time, inc, true)
             };
+
+            #[cfg(not(feature = "asm"))]
+            let result = self.main_thread.search.search(time, inc, true);
 
             RUNNING.store(false, Ordering::Relaxed);
             result
