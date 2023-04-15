@@ -1,45 +1,48 @@
 MAX_EVAL equ 128 * 256 - 1
 MIN_EVAL equ -MAX_EVAL
 
-MG_BISHOP_PAIR equ 74
-EG_BISHOP_PAIR equ 175
+MG_BISHOP_PAIR equ 72
+EG_BISHOP_PAIR equ 173
 
-MG_OPEN_FILE equ 86
+MG_OPEN_FILE equ 79
 EG_OPEN_FILE equ 0
-MG_SEMI_OPEN_FILE equ 33
+MG_SEMI_OPEN_FILE equ 39
 EG_SEMI_OPEN_FILE equ 0
+
+MG_TEMPO equ 54
+EG_TEMPO equ 4
 
 section .rodata
 EVAL_WEIGHTS:
 MATERIAL_EVAL:
-    dw 316, 276
-    dw 748 - 4 * 29, 645 - 4 * 25
-    dw 849 - 6 * 25, 673 - 6 * 15
-    dw 1116 - 7 * 21, 1201 - 7 * 4
-    dw 2434 - 13 * 16, 2135 - 13 * 1
+    dw 318, 273
+    dw 751 - 4 * 28, 647 - 4 * 23
+    dw 853 - 6 * 24, 673 - 6 * 13
+    dw 1119 - 7 * 23, 1202 - 7 * 0
+    dw 2461 - 13 * 15, 2143 - 13 * 2
 
 MOBILITY_EVAL:
-    db 29, 25
-    db 25, 15
-    db 21,  4
-    db 16,  1
+    db 28, 23
+    db 24, 13
+    db 23,  0
+    db 15,  2
 
 DOUBLED_PAWN_EVAL:
-    db -79,  20
-    db -34,  24
-    db -60,  24
-    db -60,   5
-    db -41, -12
-    db -31,  -4
-    db   5, -17
-    db -20, -38
+    db -83,  15
+    db -42,  24
+    db -65,   6
+    db -40, -16
+    db -27, -11
+    db   7, -13
+    db  24,   1
+    db -24, -41
 
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
-    db 107, 219
-    db 108, 132
-    db  37, 73
-    db  0,  12
+    db 110, 222
+    db 108, 133
+    db  37, 66
+    db  0,   8
     db  0,   0
     db  0,   0
 
@@ -59,8 +62,17 @@ evaluate:
     mov r9, qword [rsi + Board.white]
     or r9, qword [rsi + Board.black]
 
-    mov ecx, 4
     xor ebx, ebx
+
+    ; tempo
+    mov eax, (EG_TEMPO << 16) + MG_TEMPO
+
+    cmp r10, r11
+    sbb bl, bl ; -1 if white, 0 if black
+    add bl, byte [rsi + Board.side_to_move] ; 0 if color is not side to move
+    cmovnz ebx, eax
+
+    mov ecx, 4
 .material_eval_head:
     popcnt rax, qword [r10 + 8 * rcx]
 

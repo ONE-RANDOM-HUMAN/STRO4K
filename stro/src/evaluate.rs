@@ -11,41 +11,43 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(316, 276),
-    Eval(748, 645).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(849, 673).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1116, 1201).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2434, 2135).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(318, 273),
+    Eval(751, 647).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(853, 673).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1119, 1202).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2461, 2143).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(29, 25), Eval(25, 15), Eval(21, 4), Eval(16, 1)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(28, 23), Eval(24, 13), Eval(23, 0), Eval(15, 2)];
 
-const BISHOP_PAIR_EVAL: Eval = Eval(74, 175);
+const BISHOP_PAIR_EVAL: Eval = Eval(72, 173);
 
 #[rustfmt::skip]
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-79,  20),
-    Eval(-34,  24),
-    Eval(-60,  24),
-    Eval(-60,   5),
-    Eval(-41, -12),
-    Eval(-31,  -4),
-    Eval(  5, -17),
-    Eval(-20, -38),
+    Eval(-83,  15),
+    Eval(-42,  24),
+    Eval(-65,   6),
+    Eval(-40, -16),
+    Eval(-27, -11),
+    Eval(  7, -13),
+    Eval( 24,   1),
+    Eval(-24, -41),
 ];
 
 #[rustfmt::skip]
 const PASSED_PAWN_EVAL: [Eval; 6] = [
     Eval( 0,   0),
     Eval( 0,   0),
-    Eval( 0,  12),
-    Eval( 37, 73),
-    Eval(108, 132),
-    Eval(107, 219),
+    Eval( 0,   8),
+    Eval( 37, 66),
+    Eval(108, 133),
+    Eval(110, 222),
 ];
 
-const OPEN_FILE_EVAL: Eval = Eval(86, 0);
-const SEMI_OPEN_FILE_EVAL: Eval = Eval(33, 0);
+const OPEN_FILE_EVAL: Eval = Eval(79, 0);
+const SEMI_OPEN_FILE_EVAL: Eval = Eval(39, 0);
+
+const TEMPO: Eval = Eval(54, 4);
 
 impl Eval {
     fn accum(&mut self, eval: Eval, count: i16) {
@@ -151,6 +153,12 @@ fn side_open_file(rook: Bitboard, side_pawns: Bitboard, enemy_pawns: Bitboard) -
 
 pub fn evaluate(board: &Board) -> i32 {
     let mut eval = Eval(0, 0);
+
+    if board.side_to_move() == Color::White {
+        eval.accum(TEMPO, 1);
+    } else {
+        eval.accum(TEMPO, -1);
+    }
 
     // material
     #[allow(clippy::needless_range_loop)]
