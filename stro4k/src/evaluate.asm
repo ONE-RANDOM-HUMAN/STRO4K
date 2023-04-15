@@ -1,47 +1,147 @@
 MAX_EVAL equ 128 * 256 - 1
 MIN_EVAL equ -MAX_EVAL
 
-MG_BISHOP_PAIR equ 188
-EG_BISHOP_PAIR equ 154
+MG_BISHOP_PAIR equ 90
+EG_BISHOP_PAIR equ 163
 
-MG_OPEN_FILE equ 76
-EG_OPEN_FILE equ 14
-MG_SEMI_OPEN_FILE equ 53
+MG_OPEN_FILE equ 68
+EG_OPEN_FILE equ 0
+MG_SEMI_OPEN_FILE equ 30
 EG_SEMI_OPEN_FILE equ 0
 
 section .rodata
 EVAL_WEIGHTS:
 MATERIAL_EVAL:
-    dw 264, 268
-    dw 816 - 4 * 29, 816 - 4 * 21
-    dw 846 - 6 * 28, 818 - 6 * 21
-    dw 1335 - 7 * 27, 1338 - 7 * 22
-    dw 2640 - 13 * 23, 2626 - 13 * 17
+    dw 331, 297
+    dw 788 - 4 * 33, 693 - 4 * 19
+    dw 885 - 6 * 21, 709 - 6 * 10
+    dw 1210 - 7 * 16, 1251 - 7 * 2
+    dw 2484 - 13 * 11, 2260 - 13 * 0
 
 MOBILITY_EVAL:
-    db 29, 21
-    db 28, 21
-    db 27, 22
-    db 23, 17
+    db 33, 19
+    db 21, 10
+    db 16,  2
+    db 11,  0
 
 DOUBLED_PAWN_EVAL:
-    db -40, -24
-    db 7, -4
-    db -37, -10
-    db -34, -16
-    db -48, -20
-    db -63, -22
-    db -3, -19
-    db -51, -43
+    db -84,  16
+    db -39,  24
+    db -45,  11
+    db -25,  -7
+    db -10,   2
+    db  24, -14
+    db  24,  -2
+    db -38, -39
 
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
-    db 95, 212
-    db 78, 152
-    db 55, 104
-    db 10, 35
-    db 0, 7 ; 0 instead of -2 so that signed byte is not required.
-    db 0, 26
+    db 80, 141
+    db 91, 104
+    db 17,  46
+    db  0,  28
+    db  0,   0
+    db  0,   0
+
+PST_MG:
+    db  -7
+    db -54
+    db -14
+    db -33
+    db  30
+    db  41
+    db  38
+    db  41
+    db -32
+    db -38
+    db -26
+    db -46
+    db  61
+    db  35
+    db  11
+    db  36
+    db  20
+    db -39
+    db   7
+    db -14
+    db   9
+    db  36
+    db  -8
+    db  -2
+    db -69
+    db -16
+    db -41
+    db -32
+    db  22
+    db  35
+    db  41
+    db  55
+    db -19
+    db  -7
+    db -19
+    db -31
+    db  27
+    db  11
+    db   9
+    db  29
+    db  47
+    db -58
+    db -16
+    db -21
+    db  14
+    db  21
+    db  10
+    db  12
+
+PST_EG:
+    db -20
+    db  10
+    db -31
+    db -41
+    db   4
+    db -30
+    db  75
+    db  59
+    db -22
+    db -40
+    db  -2
+    db -14
+    db  23
+    db  14
+    db   2
+    db  13
+    db -19
+    db -23
+    db  -3
+    db   3
+    db  16
+    db   5
+    db   2
+    db   4
+    db -43
+    db -48
+    db -18
+    db -10
+    db  11
+    db  21
+    db  27
+    db  33
+    db -33
+    db -75
+    db  -2
+    db   8
+    db   8
+    db  44
+    db  -3
+    db  33
+    db -62
+    db -39
+    db -16
+    db   7
+    db  26
+    db  47
+    db   9
+    db  26
 
 
 default rel
@@ -167,6 +267,46 @@ evaluate:
     shr ebx, 16
     add eax, esi
     add ebx, edi
+
+    ; pst eval
+    ; ebx - eg
+    ; eax - mg
+
+    ; side to move
+    cmp r11, r10 ; sets CF if r11 < r10
+    sbb edi, edi ; -1 if black pieces
+    and edi, 11b
+
+    mov esi, 5
+.pst_piece_head:
+    mov r8, qword [r10 + 8 * rsi]
+.pst_square_head:
+    xor edx, edx
+    tzcnt rcx, r8
+    jc .pst_tail
+    btr r8, rcx
+
+    ; dl - column
+    test cl, 110b
+    setpo dl
+
+    ; cl - row
+    shr ecx, 4
+    xor ecx, edi ; flip vertically for black pieces
+
+    ; ecx - index
+    lea ecx, [rdx + 2 * rcx]
+    lea ecx, [rcx + 8 * rsi]
+
+    movsx edx, byte [rbp + PST_MG - EVAL_WEIGHTS + rcx]
+    add eax, edx
+
+    movsx edx, byte [rbp + PST_EG - EVAL_WEIGHTS + rcx]
+    add ebx, edx
+    jmp .pst_square_head
+.pst_tail:
+    dec esi
+    jns .pst_piece_head
 
     ; switch white and black
     xchg r10, r11
