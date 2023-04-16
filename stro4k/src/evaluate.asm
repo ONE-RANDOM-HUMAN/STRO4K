@@ -1,47 +1,47 @@
 MAX_EVAL equ 128 * 256 - 1
 MIN_EVAL equ -MAX_EVAL
 
-MG_BISHOP_PAIR equ 74
-EG_BISHOP_PAIR equ 175
+MG_BISHOP_PAIR equ 75
+EG_BISHOP_PAIR equ 166
 
-MG_OPEN_FILE equ 86
+MG_OPEN_FILE equ 81
 EG_OPEN_FILE equ 0
-MG_SEMI_OPEN_FILE equ 33
+MG_SEMI_OPEN_FILE equ 51
 EG_SEMI_OPEN_FILE equ 0
 
 section .rodata
 EVAL_WEIGHTS:
 MATERIAL_EVAL:
-    dw 316, 276
-    dw 748 - 4 * 29, 645 - 4 * 25
-    dw 849 - 6 * 25, 673 - 6 * 15
-    dw 1116 - 7 * 21, 1201 - 7 * 4
-    dw 2434 - 13 * 16, 2135 - 13 * 1
+    dw 294, 277
+    dw 751 - 4 * 28, 659 - 4 * 21
+    dw 856 - 6 * 25, 686 - 6 * 13
+    dw 1124 - 7 * 22, 1215 - 7 * 2
+    dw 2439 - 13 * 14, 2202 - 13 * 0
 
 MOBILITY_EVAL:
-    db 29, 25
-    db 25, 15
-    db 21,  4
-    db 16,  1
+    db 28, 21
+    db 25, 13
+    db 22,  2
+    db 14,  0
 
 DOUBLED_PAWN_EVAL:
-    db -79,  20
-    db -34,  24
-    db -60,  24
-    db -60,   5
-    db -41, -12
-    db -31,  -4
-    db   5, -17
-    db -20, -38
+    db -88, -70
+    db -51, -38
+    db -88, -53
+    db -66, -42
+    db -61, -50
+    db -85, -74
+    db -27, -51
+    db -92, -84
 
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
-    db 107, 219
-    db 108, 132
-    db  37, 73
-    db  0,  12
-    db  0,   0
-    db  0,   0
+    db 108, 219
+    db 106, 125
+    db  36,  61
+    db  0,    0
+    db  0,    0
+    db  0,    0
 
 default rel
 section .text

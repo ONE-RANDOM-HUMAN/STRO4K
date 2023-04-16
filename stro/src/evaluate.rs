@@ -11,41 +11,41 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(316, 276),
-    Eval(748, 645).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(849, 673).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1116, 1201).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2434, 2135).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(294, 277),
+    Eval(751, 659).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(856, 686).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1124, 1215).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2439, 2202).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(29, 25), Eval(25, 15), Eval(21, 4), Eval(16, 1)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(28, 21), Eval(25, 13), Eval(22, 2), Eval(14, 0)];
 
-const BISHOP_PAIR_EVAL: Eval = Eval(74, 175);
+const BISHOP_PAIR_EVAL: Eval = Eval(75, 166);
 
 #[rustfmt::skip]
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-79,  20),
-    Eval(-34,  24),
-    Eval(-60,  24),
-    Eval(-60,   5),
-    Eval(-41, -12),
-    Eval(-31,  -4),
-    Eval(  5, -17),
-    Eval(-20, -38),
+    Eval(-88, -70),
+    Eval(-51, -38),
+    Eval(-88, -53),
+    Eval(-66, -42),
+    Eval(-61, -50),
+    Eval(-85, -74),
+    Eval(-27, -51),
+    Eval(-92, -84),
 ];
 
 #[rustfmt::skip]
 const PASSED_PAWN_EVAL: [Eval; 6] = [
-    Eval( 0,   0),
-    Eval( 0,   0),
-    Eval( 0,  12),
-    Eval( 37, 73),
-    Eval(108, 132),
-    Eval(107, 219),
+    Eval( 0,    0),
+    Eval( 0,    0),
+    Eval( 0,    0),
+    Eval( 36,  61),
+    Eval(106, 125),
+    Eval(108, 219),
 ];
 
-const OPEN_FILE_EVAL: Eval = Eval(86, 0);
-const SEMI_OPEN_FILE_EVAL: Eval = Eval(33, 0);
+const OPEN_FILE_EVAL: Eval = Eval(81, 0);
+const SEMI_OPEN_FILE_EVAL: Eval = Eval(51, 0);
 
 impl Eval {
     fn accum(&mut self, eval: Eval, count: i16) {
