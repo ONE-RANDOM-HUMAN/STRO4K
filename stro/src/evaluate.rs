@@ -11,27 +11,38 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(316, 276),
-    Eval(748, 645).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(849, 673).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1116, 1201).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2434, 2135).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(296, 279),
+    Eval(771, 661).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(877, 697).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1156, 1228).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2487, 2222).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(29, 25), Eval(25, 15), Eval(21, 4), Eval(16, 1)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(29, 25), Eval(26, 12), Eval(23, 3), Eval(15, 1)];
 
-const BISHOP_PAIR_EVAL: Eval = Eval(74, 175);
+const BISHOP_PAIR_EVAL: Eval = Eval(80, 179);
 
 #[rustfmt::skip]
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-79,  20),
-    Eval(-34,  24),
-    Eval(-60,  24),
-    Eval(-60,   5),
-    Eval(-41, -12),
-    Eval(-31,  -4),
-    Eval(  5, -17),
-    Eval(-20, -38),
+    Eval(-49,  21),
+    Eval(-48,  24),
+    Eval(-44,  14),
+    Eval(-12, -11),
+    Eval( -8,   5),
+    Eval( 24,  -6),
+    Eval( 24, -29),
+    Eval(-20, -31),
+];
+
+const ISOLATED_PAWN_EVAL: [Eval; 8] = [
+    Eval( -34, -11),
+    Eval( -33, -22),
+    Eval( -49, -34),
+    Eval( -78, -29),
+    Eval( -82, -46),
+    Eval( -48, -44),
+    Eval( -35, -27),
+    Eval(-102, -29),
 ];
 
 #[rustfmt::skip]
@@ -98,11 +109,18 @@ fn side_mobility(pieces: &[Bitboard; 6], occ: Bitboard, mask: Bitboard) -> Eval 
     eval
 }
 
-fn side_doubled_pawn(pawns: Bitboard) -> Eval {
+fn side_pawn_structure(pawns: Bitboard) -> Eval {
     let mut eval = Eval(0, 0);
     let mut file = consts::A_FILE;
-    for doubled in DOUBLED_PAWN_EVAL {
-        eval.accum(doubled, popcnt(pawns & file).max(1) - 1);
+    for i in 0..8 {
+        let count = popcnt(pawns & file);
+        eval.accum(DOUBLED_PAWN_EVAL[i], count.saturating_sub(1));
+
+        let adjacent = ((file << 1) & !consts::A_FILE) | ((file & !consts::A_FILE) >> 1);
+        if pawns & adjacent == 0 {
+            eval.accum(ISOLATED_PAWN_EVAL[i], count);
+        }
+
         file <<= 1;
     }
 
@@ -178,8 +196,8 @@ pub fn evaluate(board: &Board) -> i32 {
     eval.accum(side_mobility(&board.pieces()[1], occ, consts::ALL), -1);
 
     // doubled pawns
-    eval.accum(side_doubled_pawn(board.pieces()[0][0]), 1);
-    eval.accum(side_doubled_pawn(board.pieces()[1][0]), -1);
+    eval.accum(side_pawn_structure(board.pieces()[0][0]), 1);
+    eval.accum(side_pawn_structure(board.pieces()[1][0]), -1);
 
     // passed pawns
     eval.accum(
