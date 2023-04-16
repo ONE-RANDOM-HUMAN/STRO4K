@@ -1,47 +1,57 @@
 MAX_EVAL equ 128 * 256 - 1
 MIN_EVAL equ -MAX_EVAL
 
-MG_BISHOP_PAIR equ 75
-EG_BISHOP_PAIR equ 166
+MG_BISHOP_PAIR equ 80
+EG_BISHOP_PAIR equ 182
 
-MG_OPEN_FILE equ 81
-EG_OPEN_FILE equ 0
-MG_SEMI_OPEN_FILE equ 51
+MG_OPEN_FILE equ 83
+EG_OPEN_FILE equ 3
+MG_SEMI_OPEN_FILE equ 41
 EG_SEMI_OPEN_FILE equ 0
 
 section .rodata
 EVAL_WEIGHTS:
 MATERIAL_EVAL:
-    dw 294, 277
-    dw 751 - 4 * 28, 659 - 4 * 21
-    dw 856 - 6 * 25, 686 - 6 * 13
-    dw 1124 - 7 * 22, 1215 - 7 * 2
-    dw 2439 - 13 * 14, 2202 - 13 * 0
+    dw 289, 278
+    dw 747 - 4 * 30, 647 - 4 * 26
+    dw 866 - 6 * 25, 679 - 6 * 13
+    dw 1131 - 7 * 22, 1197 - 7 * 4
+    dw 2518 - 13 * 16, 2119 - 13 * 0
 
 MOBILITY_EVAL:
-    db 28, 21
+    db 30, 26
     db 25, 13
-    db 22,  2
-    db 14,  0
+    db 22,  4
+    db 16,  0
 
 DOUBLED_PAWN_EVAL:
-    db -88, -70
-    db -51, -38
-    db -88, -53
-    db -66, -42
-    db -61, -50
-    db -85, -74
-    db -27, -51
-    db -92, -84
+    db -79, -54
+    db -46, -33
+    db -64, -26
+    db -37, -17
+    db -34, -21
+    db -43, -39
+    db -28, -43
+    db -37, -44
+
+ISOLATED_PAWN_EVAL:
+    db -15, -23
+    db -18, -11
+    db -41, -24
+    db -63, -37
+    db -89, -32
+    db -44, -30
+    db -37, -31
+    db -94, -27
 
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
-    db 108, 219
-    db 106, 125
-    db  36,  61
-    db  0,    0
-    db  0,    0
-    db  0,    0
+    db 111, 235
+    db 124, 145
+    db  53,  81
+    db   0,  23
+    db   0,   0
+    db   0,   0
 
 default rel
 section .text
@@ -118,12 +128,12 @@ evaluate:
     dec edi
     jnz .mobility_head
 
-    ; doubled pawns and open file
+    ; doubled and isolated pawns and open file
     ; r9 - file
     mov r9, 0101010101010101h
     xor ecx, ecx ; loop counter
-    xor esi, esi ; mg doubled pawns
-    xor edi, edi ; eg doubled pawns
+    xor esi, esi ; mg doubled and isolated pawns
+    xor edi, edi ; eg doubled and isolated pawns
 .doubled_pawns_head:
     mov r8, qword [r10] ; side pawns
     and r8, r9
@@ -142,7 +152,31 @@ evaluate:
     imul eax, edx
     add ebx, eax
 .no_semi_open_file:
+    ; isolated pawns
+    ; rdx - adjacent files
+    mov rdx, r9
+    mov rax, r9
+
+    shr rax, 1
+    and rax, qword [NOT_H_FILE] ; potential opportunity to save bytes here
+    and rdx, qword [NOT_H_FILE]
+    lea rdx, [rax + 2 * rdx]
+
+    ; rax - number of pawns on file
     popcnt rax, r8
+
+    test rdx, qword [r10]
+    jnz .no_isolated_pawns
+
+    movsx edx, byte [rbp + ISOLATED_PAWN_EVAL - EVAL_WEIGHTS + 2 * rcx]
+    imul edx, eax
+    add esi, edx
+
+    movsx edx, byte [rbp + ISOLATED_PAWN_EVAL - EVAL_WEIGHTS + 2 * rcx + 1]
+    imul edx, eax
+    add edi, edx
+
+.no_isolated_pawns:
 
     ; saturating subtraction
     sub al, 1
