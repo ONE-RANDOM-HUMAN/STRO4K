@@ -307,6 +307,7 @@ impl<'a> Search<'a> {
 
         // first quiet, non-tt move
         let first_quiet = ordered_moves;
+        let mut legals = 0;
 
         for i in 0..moves.len() {
             if i == ordered_moves {
@@ -352,6 +353,7 @@ impl<'a> Search<'a> {
                 }
             }
 
+            legals += 1;
             let gives_check = self.game.position().is_check();
 
             if f_prune && !mov.flags().is_noisy() && !gives_check {
@@ -367,13 +369,13 @@ impl<'a> Search<'a> {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
             } else {
                 let lmr_depth = if depth >= 3
-                    && i >= 3
+                    && legals > 3
                     && !pv_node
                     && !mov.flags().is_noisy()
                     && !is_check
                     && !gives_check
                 {
-                    cmp::max(1, depth - depth / 4 - (i / 8) as i32 - 1)
+                    cmp::max(1, depth - depth / 4 - legals / 8- 1)
                 } else {
                     depth - 1
                 };

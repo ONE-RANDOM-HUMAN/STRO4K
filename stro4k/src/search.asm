@@ -227,6 +227,8 @@ struc ABLocals
         resd 1 ; lower bits are ignored
     .alpha:
         resd 1
+    .legals:
+        resd 1
     .bound:
         resb 1
     .flags:
@@ -841,6 +843,8 @@ alpha_beta:
     test al, al
     jz .main_search_tail
 
+    inc dword [rbp - 128 + ABLocals.legals]
+
     ; rsi is a pointer to the current board
     call board_is_check
 
@@ -885,9 +889,9 @@ alpha_beta:
     cmp edx, 3
     jnge .no_lmr_reduction
 
-    ; move num
-    cmp r15d, 3
-    jnge .no_lmr_reduction
+    ; num legals
+    cmp dword [rbp - 128 + ABLocals.legals], 3
+    jng .no_lmr_reduction
 
     ; non-pv node and is check
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
@@ -905,8 +909,8 @@ alpha_beta:
     ; depth / 4
     shr edx, 2
 
-    ; + i / 8
-    mov eax, r15d
+    ; + legals / 8
+    mov eax, dword [rbp - 128 + ABLocals.legals]
     shr eax, 3
     add eax, edx
 
