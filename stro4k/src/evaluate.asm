@@ -2,47 +2,47 @@ MAX_EVAL equ 128 * 256 - 1
 MIN_EVAL equ -MAX_EVAL
 
 MG_BISHOP_PAIR equ 80
-EG_BISHOP_PAIR equ 182
+EG_BISHOP_PAIR equ 178
 
-MG_OPEN_FILE equ 83
-EG_OPEN_FILE equ 3
-MG_SEMI_OPEN_FILE equ 41
+MG_OPEN_FILE equ 103
+EG_OPEN_FILE equ 4
+MG_SEMI_OPEN_FILE equ 56
 EG_SEMI_OPEN_FILE equ 0
 
 section .rodata
 EVAL_WEIGHTS:
 MATERIAL_EVAL:
-    dw 289, 278
-    dw 747 - 4 * 30, 647 - 4 * 26
-    dw 866 - 6 * 25, 679 - 6 * 13
-    dw 1131 - 7 * 22, 1197 - 7 * 4
-    dw 2518 - 13 * 16, 2119 - 13 * 0
+    dw 259, 280
+    dw 782 - 4 * 26, 659 - 4 * 25
+    dw 890 - 6 * 29, 685 - 6 * 9
+    dw 1123 - 7 * 26, 1104 - 7 * 1
+    dw 2539 - 13 * 20, 2115 - 13 * 0
 
 MOBILITY_EVAL:
-    db 30, 26
-    db 25, 13
-    db 22,  4
-    db 16,  0
+    db 26, 25
+    db 29,  9
+    db 26,  1
+    db 20,  0
 
 
 ; doubled and isolated pawn eval
 ; first two in each row are isolated mg and eg
 ; second two are doubled mg and eg
 DOUBLED_ISOLATED_PAWN_EVAL:
-    db 15, 23, 79, 54
-    db 18, 11, 46, 33
-    db 41, 24, 64, 26
-    db 63, 37, 37, 17
-    db 89, 32, 34, 21
-    db 44, 30, 43, 39
-    db 37, 31, 28, 43
-    db 94, 27, 37, 44
+    db 18, 20, 67, 52
+    db 27, 12, 48, 32
+    db 38, 25, 65, 24
+    db 68, 37, 45, 20
+    db 94, 33, 44, 24
+    db 43, 30, 44, 42
+    db 42, 29, 23, 42
+    db 95, 24, 29, 44
 
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
-    db 111, 235
-    db 124, 145
-    db  53,  81
+    db 107, 235
+    db 125, 144
+    db  45,  76
     db   0,  23
     db   0,   0
     db   0,   0
@@ -51,14 +51,14 @@ default rel
 section .text
 
 ; board - rsi
+; preserves rbx, rbp, r14, r15
 evaluate:
     push rbx
     push rbp
     lea rbp, [EVAL_WEIGHTS]
     mov r10, rsi
     lea r11, [rsi + Board.black_pieces]
-
-    mov r12, 0101010101010101h
+    mov r13, qword [NOT_A_FILE]
 
     ; r9 - occ
 .side_eval_head:
@@ -96,18 +96,31 @@ evaluate:
     ; rsi - move fns
     lea rsi, qword [move_fns + 6]
 .mobility_head:
-    ; rcx - piece
-    mov rcx, qword [r10 + 8 * rdi]
+    ; r12 - piece
+    mov r12, qword [r10 + 8 * rdi]
 
 .mobility_piece_head:
-    blsi r8, rcx
+    blsi r8, r12
     jz .mobility_end_piece
-    xor rcx, r8
+    xor r12, r8
+
+    ; mask
+    mov rdx, qword [r11] ; enemy pawns
+    lea rax, [rdx + rdx]
+    and rax, r13
+    and rdx, r13
+    shr rdx, 1
+    or rax, rdx
+
+    ; Based on alignment, 8 if white to move, 56 otherwise
+    lea ecx, [r10 + 8]
+    ror rax, cl
+    xchg rax, rcx
+    not rcx
 
     call rsi
 
-    ; currently mask is all squares
-    ; and rax, mask
+    and rax, rcx
 
     popcnt rax, rax
 
@@ -123,6 +136,9 @@ evaluate:
     sub rsi, 2
     dec edi
     jnz .mobility_head
+
+    mov r12, r13
+    not r12
 
     ; doubled and isolated pawns and open file
     ; r9 - file
@@ -148,11 +164,12 @@ evaluate:
 .no_semi_open_file:
     ; isolated pawns
     ; rax - adjacent files
-    lea rdx, [r9 + r9]
-    andn rdx, r12, rdx
-    andn rax, r12, r9
-    shr rax, 1
-    add rax, rdx
+    mov rdx, r9
+    lea rax, [rdx + rdx]
+    and rax, r13
+    and rdx, r13
+    shr rdx, 1
+    or rax, rdx
 
     ; rdx - number of pawns on file
     popcnt rdx, r8
@@ -211,10 +228,11 @@ evaluate:
 
     ; attack spans
     mov rcx, rax
+    mov rdx, rax
 
     shr rcx, 7
-    andn rcx, r12, rcx
-    andn rdx, r12, rax
+    and rcx, r13
+    and rdx, r13
     shr rdx, 9
 
     or rax, rdx

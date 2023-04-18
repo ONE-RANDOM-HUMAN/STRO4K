@@ -11,38 +11,38 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(289, 278),
-    Eval(747, 647).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(866, 679).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1131, 1197).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2518, 2119).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(259, 280),
+    Eval(782, 659).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(890, 685).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1123, 1104).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2539, 2115).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(30, 26), Eval(25, 13), Eval(22, 4), Eval(16, 0)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(26, 25), Eval(29, 9), Eval(26, 1), Eval(20, 0)];
 
-const BISHOP_PAIR_EVAL: Eval = Eval(80, 182);
+const BISHOP_PAIR_EVAL: Eval = Eval(80, 178);
 
 #[rustfmt::skip]
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-79, -54),
-    Eval(-46, -33),
-    Eval(-64, -26),
-    Eval(-37, -17),
-    Eval(-34, -21),
-    Eval(-43, -39),
-    Eval(-28, -43),
-    Eval(-37, -44),
+    Eval(-67, -52),
+    Eval(-48, -32),
+    Eval(-65, -24),
+    Eval(-45, -20),
+    Eval(-44, -24),
+    Eval(-44, -42),
+    Eval(-23, -42),
+    Eval(-29, -44),
 ];
 
 const ISOLATED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-15, -23),
-    Eval(-18, -11),
-    Eval(-41, -24),
-    Eval(-63, -37),
-    Eval(-89, -32),
-    Eval(-44, -30),
-    Eval(-37, -31),
-    Eval(-94, -27),
+    Eval(-18, -20),
+    Eval(-27, -12),
+    Eval(-38, -25),
+    Eval(-68, -37),
+    Eval(-94, -33),
+    Eval(-43, -30),
+    Eval(-42, -29),
+    Eval(-95, -24),
 ];
 
 #[rustfmt::skip]
@@ -50,13 +50,13 @@ const PASSED_PAWN_EVAL: [Eval; 6] = [
     Eval( 0,    0),
     Eval( 0,    0),
     Eval( 0,   23),
-    Eval( 53,  81),
-    Eval(124, 145),
-    Eval(111, 235),
+    Eval( 45,  76),
+    Eval(125, 144),
+    Eval(107, 235),
 ];
 
-const OPEN_FILE_EVAL: Eval = Eval(83, 3);
-const SEMI_OPEN_FILE_EVAL: Eval = Eval(41, 0);
+const OPEN_FILE_EVAL: Eval = Eval(103, 4);
+const SEMI_OPEN_FILE_EVAL: Eval = Eval(56, 0);
 
 impl Eval {
     fn accum(&mut self, eval: Eval, count: i16) {
@@ -191,9 +191,13 @@ pub fn evaluate(board: &Board) -> i32 {
 
     // mobility
     let occ = board.white() | board.black();
-    eval.accum(side_mobility(&board.pieces()[0], occ, consts::ALL), 1);
-    eval.accum(side_mobility(&board.pieces()[1], occ, consts::ALL), -1);
+    let black_pawn_attacks = ((board.pieces()[1][0] >> 7) & !consts::A_FILE) 
+        | ((board.pieces()[1][0] & !consts::A_FILE) >> 9);
+    eval.accum(side_mobility(&board.pieces()[0], occ, !black_pawn_attacks), 1);
 
+    let white_pawn_attacks = ((board.pieces()[0][0] << 9) & !consts::A_FILE) 
+        | ((board.pieces()[0][0] & !consts::A_FILE) << 7);
+    eval.accum(side_mobility(&board.pieces()[1], occ, !white_pawn_attacks), -1);
     // doubled pawns
     eval.accum(side_pawn_structure(board.pieces()[0][0]), 1);
     eval.accum(side_pawn_structure(board.pieces()[1][0]), -1);
