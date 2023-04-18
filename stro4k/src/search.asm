@@ -66,7 +66,13 @@ root_search:
     ; get static eval
     mov rsi, qword [rbx]
     push rsi
+%ifdef EXPORT_SYSV
+    push r12
     call evaluate
+    pop r12
+%else
+    call evaluate
+%endif
     pop rsi
     mov word [rbx + Search.ply_data + PlyData.static_eval], ax
 

@@ -24,25 +24,19 @@ MOBILITY_EVAL:
     db 22,  4
     db 16,  0
 
-DOUBLED_PAWN_EVAL:
-    db -79, -54
-    db -46, -33
-    db -64, -26
-    db -37, -17
-    db -34, -21
-    db -43, -39
-    db -28, -43
-    db -37, -44
 
-ISOLATED_PAWN_EVAL:
-    db -15, -23
-    db -18, -11
-    db -41, -24
-    db -63, -37
-    db -89, -32
-    db -44, -30
-    db -37, -31
-    db -94, -27
+; doubled and isolated pawn eval
+; first two in each row are isolated mg and eg
+; second two are doubled mg and eg
+DOUBLED_ISOLATED_PAWN_EVAL:
+    db 15, 23, 79, 54
+    db 18, 11, 46, 33
+    db 41, 24, 64, 26
+    db 63, 37, 37, 17
+    db 89, 32, 34, 21
+    db 44, 30, 43, 39
+    db 37, 31, 28, 43
+    db 94, 27, 37, 44
 
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
@@ -63,6 +57,8 @@ evaluate:
     lea rbp, [EVAL_WEIGHTS]
     mov r10, rsi
     lea r11, [rsi + Board.black_pieces]
+
+    mov r12, 0101010101010101h
 
     ; r9 - occ
 .side_eval_head:
@@ -130,10 +126,8 @@ evaluate:
 
     ; doubled and isolated pawns and open file
     ; r9 - file
-    mov r9, 0101010101010101h
+    mov r9, r12
     xor ecx, ecx ; loop counter
-    xor esi, esi ; mg doubled and isolated pawns
-    xor edi, edi ; eg doubled and isolated pawns
 .doubled_pawns_head:
     mov r8, qword [r10] ; side pawns
     and r8, r9
@@ -153,44 +147,34 @@ evaluate:
     add ebx, eax
 .no_semi_open_file:
     ; isolated pawns
-    ; rdx - adjacent files
-    mov rdx, r9
-    mov rax, r9
-
+    ; rax - adjacent files
+    lea rdx, [r9 + r9]
+    andn rdx, r12, rdx
+    andn rax, r12, r9
     shr rax, 1
-    and rax, qword [NOT_H_FILE] ; potential opportunity to save bytes here
-    and rdx, qword [NOT_H_FILE]
-    lea rdx, [rax + 2 * rdx]
+    add rax, rdx
 
-    ; rax - number of pawns on file
-    popcnt rax, r8
+    ; rdx - number of pawns on file
+    popcnt rdx, r8
 
-    test rdx, qword [r10]
+    ; load isolated and doubled pawns and SWAR-multiply by rdx
+    vpmovzxbw xmm0, qword [rbp + DOUBLED_ISOLATED_PAWN_EVAL - EVAL_WEIGHTS + rcx * 4]
+    vmovq rdi, xmm0
+    mulx rdx, rsi, rdi ; rdx is implicit source
+
+    test rax, qword [r10]
     jnz .no_isolated_pawns
 
-    movsx edx, byte [rbp + ISOLATED_PAWN_EVAL - EVAL_WEIGHTS + 2 * rcx]
-    imul edx, eax
-    add esi, edx
-
-    movsx edx, byte [rbp + ISOLATED_PAWN_EVAL - EVAL_WEIGHTS + 2 * rcx + 1]
-    imul edx, eax
-    add edi, edx
-
+    ; these subtractions cannot overlow because the penalty for doubled
+    ; and isolated pawns is less than the value of a pawn
+    sub ebx, esi
 .no_isolated_pawns:
+    sub rsi, rdi
+    jc .no_doubled_pawns
 
-    ; saturating subtraction
-    sub al, 1
-    adc al, 0
-
-    ; doubled pawns
-    movsx edx, byte [rbp + DOUBLED_PAWN_EVAL - EVAL_WEIGHTS + 2 * rcx]
-    imul edx, eax
-    add esi, edx
-
-    movsx edx, byte [rbp + DOUBLED_PAWN_EVAL - EVAL_WEIGHTS + 2 * rcx + 1]
-    imul edx, eax
-    add edi, edx
-
+    shr rsi, 32
+    sub ebx, esi
+.no_doubled_pawns:
     inc ecx
     shl r9, 1
     jnc .doubled_pawns_head
@@ -198,8 +182,6 @@ evaluate:
     ; add up mg and eg
     movzx eax, bx
     shr ebx, 16
-    add eax, esi
-    add ebx, edi
 
     ; switch white and black
     xchg r10, r11
@@ -229,11 +211,10 @@ evaluate:
 
     ; attack spans
     mov rcx, rax
-    mov rdx, rax
 
     shr rcx, 7
-    and rcx, qword [NOT_A_FILE]
-    and rdx, qword [NOT_A_FILE]
+    andn rcx, r12, rcx
+    andn rdx, r12, rax
     shr rdx, 9
 
     or rax, rdx
@@ -242,7 +223,7 @@ evaluate:
     ; rax - passed pawns
     andn rax, rax, r8
 
-    mov rcx, 0101010101010101h
+    mov rcx, r12
     xor esi, esi ; mg eval
     xor edi, edi ; eg eval
 .passed_pawn_files_head:
