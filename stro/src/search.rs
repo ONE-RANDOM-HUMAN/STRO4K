@@ -214,6 +214,7 @@ impl<'a> Search<'a> {
         let mut ordered_moves = 0;
         let mut hash = 0;
 
+        let pv_node = beta - alpha != 1;
         if depth > 0 {
             // Probe tt
             hash = self.game.position().hash();
@@ -230,7 +231,7 @@ impl<'a> Search<'a> {
                 moves.swap(0, index);
                 ordered_moves = 1;
 
-                if tt_data.depth() >= depth {
+                if !pv_node && tt_data.depth() >= depth {
                     let eval = tt_data.eval();
                     match tt_data.bound() {
                         Bound::None => (),
@@ -252,8 +253,6 @@ impl<'a> Search<'a> {
 
         let static_eval = evaluate::evaluate(self.game.position());
         self.ply[ply].static_eval = static_eval as i16;
-
-        let pv_node = beta - alpha != 1;
 
         // Null Move Pruning
         if !self.ply[ply].no_nmp && depth >= 4 && !pv_node && !is_check {
