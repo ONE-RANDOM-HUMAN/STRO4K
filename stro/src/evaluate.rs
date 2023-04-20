@@ -21,7 +21,7 @@ const LAYER_2_BIAS: usize = LAYER_2_WEIGHTS + 4 * 4;
 const LAYER_3_WEIGHTS: usize = LAYER_2_BIAS + 4;
 const LAYER_3_BIAS: usize = LAYER_3_WEIGHTS + 4;
 
-const EVAL_SCALE: f32 = 192.0;
+const EVAL_SCALE: f32 = 256.0 / 0.75;
 
 fn apply_ft(pieces: &[Bitboard; 6], mask: u32) -> (__m256, __m256) {
     unsafe {
@@ -131,6 +131,7 @@ pub fn evaluate(board: &Board) -> i32 {
         let acc = _mm_dp_ps::<0b11110001>(acc, _mm_loadu_ps(NN.as_ptr().add(LAYER_3_WEIGHTS)));
         let eval = _mm_cvtss_f32(acc);
 
-        ((eval + NN[LAYER_3_BIAS]) * EVAL_SCALE) as i32
+        (((eval + NN[LAYER_3_BIAS]) * EVAL_SCALE) as i32)
+            .clamp(-64 * 256, 64 * 256) // just in case
     }
 }
