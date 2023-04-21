@@ -20,7 +20,7 @@ cargo build --release
 
 ## Current size
 ```
-3755 bytes
+3759 bytes
 ```
 ## Features
 * Search

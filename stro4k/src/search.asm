@@ -377,6 +377,15 @@ alpha_beta:
     cmp byte [rsi - Board_size + Board.fifty_moves], 100
     jge .fifty_move_draw
 
+    ; determine if this is a pv node
+    mov edx, dword [rbp + 32]
+    sub edx, dword [rbp + 24]
+    dec edx
+
+    jz .no_pv_node
+    or byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
+.no_pv_node:
+
     ; probe the tt
 
     ; check depth
@@ -464,6 +473,9 @@ alpha_beta:
     cmp edx, dword [rbp + 8]
     jnge .no_tt_cutoff
 
+    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
+    jnz .no_tt_cutoff
+
     ; tt cutoffs
     sar eax, 16 ; eval
     shr r12, 32 ; bound
@@ -503,15 +515,6 @@ alpha_beta:
 
     ; store the static eval
     mov word [r13 + PlyData.static_eval], ax
-
-    ; determine if this is a pv node
-    mov edx, dword [rbp + 32]
-    sub edx, dword [rbp + 24]
-    dec edx
-
-    jz .no_pv_node
-    or byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
-.no_pv_node:
 
     ; Null move pruning
     test byte [r13 + PlyData.no_nmp], 1
