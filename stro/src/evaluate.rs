@@ -10,7 +10,7 @@ pub const MAX_EVAL: i32 = 128 * 256 - 1;
 pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 const NN: [f32; 6333] = unsafe {
-    std::mem::transmute(*include_bytes!("../../nn-13f172599bc152d5.nnue"))
+    std::mem::transmute(*include_bytes!("../../nn-7ea3423c81571dd7.nnue"))
 };
 
 const FT_BIAS_OFFSET: usize = 16 * 6 * 64;
@@ -22,6 +22,14 @@ const LAYER_3_WEIGHTS: usize = LAYER_2_BIAS + 4;
 const LAYER_3_BIAS: usize = LAYER_3_WEIGHTS + 4;
 
 const EVAL_SCALE: f32 = 256.0 / 0.75;
+
+const MATERIAL: [i16; 5] = [
+    288,
+    730,
+    771,
+    1296,
+    2378,
+];
 
 fn apply_ft(pieces: &[Bitboard; 6], mask: u32) -> (__m256, __m256) {
     unsafe {
@@ -44,6 +52,20 @@ fn apply_ft(pieces: &[Bitboard; 6], mask: u32) -> (__m256, __m256) {
 }
 
 pub fn evaluate(board: &Board) -> i32 {
+    let material = {
+        let mut material = 0;
+        for (i, weight) in MATERIAL.into_iter().enumerate() {
+            let count = board.pieces()[0][i].count_ones() as i16 - board.pieces()[1][i].count_ones() as i16;
+            material += weight * count;
+        }
+
+        if board.side_to_move() == Color::White {
+            material as i32
+        } else {
+            -material as i32
+        }
+    };
+
     let (v0, v1, v2, v3) = if board.side_to_move() == Color::White {
         let (v0, v1) = apply_ft(&board.pieces()[0], 0);
         let (v2, v3) = apply_ft(&board.pieces()[1], 56);
@@ -131,7 +153,7 @@ pub fn evaluate(board: &Board) -> i32 {
         let acc = _mm_dp_ps::<0b11110001>(acc, _mm_loadu_ps(NN.as_ptr().add(LAYER_3_WEIGHTS)));
         let eval = _mm_cvtss_f32(acc);
 
-        (((eval + NN[LAYER_3_BIAS]) * EVAL_SCALE) as i32)
+        (((eval + NN[LAYER_3_BIAS]) * EVAL_SCALE) as i32 + material)
             .clamp(-64 * 256, 64 * 256) // just in case
     }
 }
