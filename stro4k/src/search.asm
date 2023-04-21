@@ -842,7 +842,12 @@ alpha_beta:
 
     ; check legality
     test al, al
-    jz .main_search_tail
+    jnz .not_illegal
+
+    ; exclude move from history reduction
+    mov word [rsp + 2 * r15], 0
+    jmp .main_search_tail
+.not_illegal:
 
     ; rsi is a pointer to the current board
     call board_is_check

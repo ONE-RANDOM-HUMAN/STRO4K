@@ -347,6 +347,9 @@ impl<'a> Search<'a> {
 
             unsafe {
                 if !self.game.make_move(mov) {
+                    // Exclude the move from history reduction
+                    moves[i] = Move(0xFFFF.try_into().unwrap());
+
                     continue; // the move was illegal
                 }
             }
