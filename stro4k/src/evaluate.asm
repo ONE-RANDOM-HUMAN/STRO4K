@@ -1,35 +1,35 @@
 MAX_EVAL equ 128 * 256 - 1
 MIN_EVAL equ -MAX_EVAL
 
-MG_BISHOP_PAIR equ 80
-EG_BISHOP_PAIR equ 182
+MG_BISHOP_PAIR equ 106
+EG_BISHOP_PAIR equ 160
 
-MG_OPEN_FILE equ 83
-EG_OPEN_FILE equ 3
-MG_SEMI_OPEN_FILE equ 41
+MG_OPEN_FILE equ 73
+EG_OPEN_FILE equ 0
+MG_SEMI_OPEN_FILE equ 40
 EG_SEMI_OPEN_FILE equ 0
 
 section .rodata
 EVAL_WEIGHTS:
 MATERIAL_EVAL:
-    dw 331, 297
-    dw 788 - 4 * 33, 693 - 4 * 19
-    dw 885 - 6 * 21, 709 - 6 * 10
-    dw 1210 - 7 * 16, 1251 - 7 * 2
-    dw 2484 - 13 * 11, 2260 - 13 * 0
+    dw 319, 304
+    dw 793 - 4 * 35, 723 - 4 * 17
+    dw 891 - 6 * 22, 747 - 6 * 9
+    dw 1237 - 7 * 16, 1283 - 7 * 2
+    dw 2519 - 13 * 13, 2339 - 13 * 0
 
 MOBILITY_EVAL:
-    db 33, 19
-    db 21, 10
+    db 35, 17
+    db 22,  9
     db 16,  2
-    db 11,  0
+    db 13,  0
 
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
-    db 111, 235
-    db 124, 145
-    db  53,  81
-    db   0,  23
+    db  88, 162
+    db 100, 117
+    db  24,  57
+    db   0,  43
     db   0,   0
     db   0,   0
 
@@ -37,114 +37,134 @@ PASSED_PAWN_EVAL:
 ; first two in each row are isolated mg and eg
 ; second two are doubled mg and eg
 DOUBLED_ISOLATED_PAWN_EVAL:
-    db 15, 23, 79, 54
-    db 18, 11, 46, 33
-    db 41, 24, 64, 26
-    db 63, 37, 37, 17
-    db 89, 32, 34, 21
-    db 44, 30, 43, 39
-    db 37, 31, 28, 43
-    db 94, 27, 37, 44
+    db 26, 18, 65, 45
+    db 15, 15, 37, 34
+    db 54, 32, 75, 30
+    db 32, 43, 54, 24
+    db 68, 40, 56, 22
+    db 92, 37, 52, 47
+    db 48, 29, 13, 39
+    db 36, 32, 34, 43
 
 PST_MG:
-    db  -7
-    db -54
-    db -14
-    db -33
-    db  30
-    db  41
-    db  38
-    db  41
-    db -32
     db -38
-    db -26
-    db -46
-    db  61
-    db  35
-    db  11
-    db  36
-    db  20
-    db -39
-    db   7
-    db -14
-    db   9
-    db  36
-    db  -8
-    db  -2
-    db -69
-    db -16
+    db -42
     db -41
-    db -32
-    db  22
-    db  35
-    db  41
-    db  55
-    db -19
-    db  -7
-    db -19
-    db -31
-    db  27
-    db  11
-    db   9
-    db  29
-    db  47
-    db -58
-    db -16
-    db -21
+    db -17
     db  14
-    db  21
+    db  61
+    db  42
+    db  45
+          
+          
+    db -33
+    db -39
+    db -24
+    db -45
+    db  60
+    db  39
+    db   7
+    db  32
+          
+          
+    db  26
+    db -34
     db  10
+    db -10
     db  12
+    db  36
+    db -10
+    db  -5
+          
+          
+    db -65
+    db -12
+    db -39
+    db -31
+    db  29
+    db  37
+    db  43
+    db  56
+          
+          
+    db -21
+    db  -4
+    db -16
+    db -33
+    db  26
+    db  12
+    db   6
+    db  30
+          
+          
+    db  49
+    db -58
+    db -13
+    db -19
+    db  15
+    db  20
+    db   9
+    db  13
 
 PST_EG:
-    db -20
-    db  10
-    db -31
-    db -41
-    db   4
-    db -30
-    db  75
-    db  59
-    db -22
-    db -40
-    db  -2
-    db -14
-    db  23
+    db -24
     db  14
-    db   2
-    db  13
-    db -19
-    db -23
-    db  -3
-    db   3
-    db  16
-    db   5
-    db   2
+    db -35
+    db -32
     db   4
-    db -43
-    db -48
+    db -22
+    db  77
+    db  65
+          
+          
+    db -28
+    db -45
+    db  -1
     db -18
-    db -10
-    db  11
-    db  21
-    db  27
-    db  33
-    db -33
-    db -75
-    db  -2
-    db   8
-    db   8
-    db  44
+    db  20
+    db  17
+    db  -0
+    db  14
+          
+          
+    db -24
+    db -22
+    db  -7
+    db   5
+    db  16
+    db   6
     db  -3
-    db  33
-    db -62
+    db   4
+          
+          
+    db -45
+    db -50
+    db -17
+    db  -7
+    db  15
+    db  20
+    db  31
+    db  34
+          
+          
+    db -38
+    db -78
+    db  -0
+    db   6
+    db  10
+    db  45
+    db  -2
+    db  34
+          
+          
+    db -61
     db -39
-    db -16
-    db   7
-    db  26
-    db  47
-    db   9
-    db  26
+    db -13
+    db   6
+    db  29
+    db  48
+    db   8
+    db  24
 
 
 default rel
