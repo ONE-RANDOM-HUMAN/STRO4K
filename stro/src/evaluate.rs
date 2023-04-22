@@ -10,7 +10,7 @@ pub const MAX_EVAL: i32 = 128 * 256 - 1;
 pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 const NN: [f32; 6333] = unsafe {
-    std::mem::transmute(*include_bytes!("../../nn-13f172599bc152d5.nnue"))
+    std::mem::transmute(*include_bytes!("../../nn-419c151bb0486730.nnue"))
 };
 
 const FT_BIAS_OFFSET: usize = 16 * 6 * 64;
