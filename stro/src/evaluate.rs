@@ -9,6 +9,12 @@ struct Eval(i16, i16);
 pub const MAX_EVAL: i32 = 128 * 256 - 1;
 pub const MIN_EVAL: i32 = -MAX_EVAL;
 
+#[cfg(feature = "nn_path")]
+const NN: [f32; 6333] = unsafe {
+    std::mem::transmute(*include_bytes!(env!("NN_PATH")))
+};
+
+#[cfg(not(feature = "nn_path"))]
 const NN: [f32; 6333] = unsafe {
     std::mem::transmute(*include_bytes!("../../nn-13f172599bc152d5.nnue"))
 };

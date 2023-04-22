@@ -14,3 +14,4 @@ lto = "fat"
 [features]
 # default = ["asm"]
 asm = ["libc"]
+nn_path = []
