@@ -473,7 +473,6 @@ impl<'a> Search<'a> {
             duration += start.elapsed()
         }
 
-
         #[cfg(feature = "asm")]
         {
             let rust_node_count = search.nodes;
@@ -481,12 +480,12 @@ impl<'a> Search<'a> {
             for fen in fens {
                 tt::clear();
                 search.new_game();
-     
+
                 unsafe {
                     search.game.reset(&start);
                     search.game.add_position(Board::from_fen(fen).unwrap());
                 }
-     
+
                 let start = std::time::Instant::now();
                 crate::asm::alpha_beta(&mut search, MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
                 duration += start.elapsed()

@@ -11,52 +11,115 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(289, 278),
-    Eval(747, 647).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(866, 679).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1131, 1197).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2518, 2119).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(319, 304),
+    Eval(793, 723).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(891, 747).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1237, 1283).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2519, 2339).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(30, 26), Eval(25, 13), Eval(22, 4), Eval(16, 0)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(35, 17), Eval(22, 9), Eval(16, 2), Eval(13, 0)];
 
-const BISHOP_PAIR_EVAL: Eval = Eval(80, 182);
+const BISHOP_PAIR_EVAL: Eval = Eval(106, 160);
+
+const PST: [[Eval; 8]; 6] = [
+    [
+        Eval(-38, -24),
+        Eval(-42,  14),
+        Eval(-41, -35),
+        Eval(-17, -32),
+        Eval( 14,   4),
+        Eval( 61, -22),
+        Eval( 42,  77),
+        Eval( 45,  65),
+    ],
+    [
+        Eval(-33, -28),
+        Eval(-39, -45),
+        Eval(-24,  -1),
+        Eval(-45, -18),
+        Eval( 60,  20),
+        Eval( 39,  17),
+        Eval(  7,  -0),
+        Eval( 32,  14),
+    ],
+    [
+        Eval( 26, -24),
+        Eval(-34, -22),
+        Eval( 10,  -7),
+        Eval(-10,   5),
+        Eval( 12,  16),
+        Eval( 36,   6),
+        Eval(-10,  -3),
+        Eval( -5,   4),
+    ],
+    [
+        Eval(-65, -45),
+        Eval(-12, -50),
+        Eval(-39, -17),
+        Eval(-31,  -7),
+        Eval( 29,  15),
+        Eval( 37,  20),
+        Eval( 43,  31),
+        Eval( 56,  34),
+    ],
+    [
+        Eval(-21, -38),
+        Eval( -4, -78),
+        Eval(-16,  -0),
+        Eval(-33,   6),
+        Eval( 26,  10),
+        Eval( 12,  45),
+        Eval(  6,  -2),
+        Eval( 30,  34),
+    ],
+    [
+        Eval( 49, -61),
+        Eval(-58, -39),
+        Eval(-13, -13),
+        Eval(-19,   6),
+        Eval( 15,  29),
+        Eval( 20,  48),
+        Eval(  9,   8),
+        Eval( 13,  24),
+    ],
+];
 
 #[rustfmt::skip]
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-79, -54),
-    Eval(-46, -33),
-    Eval(-64, -26),
-    Eval(-37, -17),
-    Eval(-34, -21),
-    Eval(-43, -39),
-    Eval(-28, -43),
-    Eval(-37, -44),
+    Eval(-65, -45),
+    Eval(-37, -34),
+    Eval(-75, -30),
+    Eval(-54, -24),
+    Eval(-56, -22),
+    Eval(-52, -47),
+    Eval(-13, -39),
+    Eval(-34, -43),
 ];
 
 const ISOLATED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-15, -23),
-    Eval(-18, -11),
-    Eval(-41, -24),
-    Eval(-63, -37),
-    Eval(-89, -32),
-    Eval(-44, -30),
-    Eval(-37, -31),
-    Eval(-94, -27),
+    Eval(-26, -18),
+    Eval(-15, -15),
+    Eval(-54, -32),
+    Eval(-32, -43),
+    Eval(-68, -40),
+    Eval(-92, -37),
+    Eval(-48, -29),
+    Eval(-36, -32),
 ];
 
 #[rustfmt::skip]
 const PASSED_PAWN_EVAL: [Eval; 6] = [
-    Eval( 0,    0),
-    Eval( 0,    0),
-    Eval( 0,   23),
-    Eval( 53,  81),
-    Eval(124, 145),
-    Eval(111, 235),
+    Eval(  0,   0),
+    Eval(  0,   0),
+    Eval(  0,  43),
+    Eval( 24,  57),
+    Eval(100, 117),
+    Eval( 88, 162),
 ];
 
-const OPEN_FILE_EVAL: Eval = Eval(83, 3);
-const SEMI_OPEN_FILE_EVAL: Eval = Eval(41, 0);
+const OPEN_FILE_EVAL: Eval = Eval(73, 0);
+const SEMI_OPEN_FILE_EVAL: Eval = Eval(40, 0);
 
 impl Eval {
     fn accum(&mut self, eval: Eval, count: i16) {
@@ -88,6 +151,25 @@ fn resolve(board: &Board, eval: Eval) -> i32 {
     } else {
         -score
     }
+}
+
+/// Mirrored Quarter PSTs
+/// Each entry in the pst represents a 2x2 square, and the values
+/// are mirrored across the D/E file
+fn side_pst(pieces: &[Bitboard; 6], row_mask: u8) -> Eval {
+    let mut eval = Eval(0, 0);
+    for (i, mut pieces) in pieces.iter().copied().enumerate() {
+        while pieces != 0 {
+            let piece_index = pieces.trailing_zeros();
+            let row = (piece_index / 16) ^ row_mask as u32;
+            let column = ((piece_index / 2) & 0b11).count_ones() & 0b1;
+
+            eval.accum(PST[i][(2 * row + column) as usize], 1);
+            pieces &= pieces - 1;
+        }
+    }
+
+    eval
 }
 
 fn side_mobility(pieces: &[Bitboard; 6], occ: Bitboard, mask: Bitboard) -> Eval {
@@ -188,6 +270,10 @@ pub fn evaluate(board: &Board) -> i32 {
     {
         eval.accum(BISHOP_PAIR_EVAL, -1);
     }
+
+    // psts
+    eval.accum(side_pst(&board.pieces()[0], 0), 1);
+    eval.accum(side_pst(&board.pieces()[1], 3), -1);
 
     // mobility
     let occ = board.white() | board.black();
