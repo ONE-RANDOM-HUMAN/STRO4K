@@ -10,20 +10,20 @@ pub const MAX_EVAL: i32 = 128 * 256 - 1;
 pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 #[cfg(feature = "nn_path")]
-const NN: [f32; 6333] = unsafe {
+const NN: [f32; 6481] = unsafe {
     std::mem::transmute(*include_bytes!(concat!("../", env!("NN_PATH"))))
 };
 
 #[cfg(not(feature = "nn_path"))]
-const NN: [f32; 6333] = unsafe {
-    std::mem::transmute(*include_bytes!("../../nn-13f172599bc152d5.nnue"))
+const NN: [f32; 6481] = unsafe {
+    std::mem::transmute(*include_bytes!("../../nn-72bee0bb01c8694b.nnue"))
 };
 
 const FT_BIAS_OFFSET: usize = 16 * 6 * 64;
 const LAYER_1_WEIGHTS: usize = FT_BIAS_OFFSET + 32;
-const LAYER_1_BIAS: usize = LAYER_1_WEIGHTS + 4 * 32;
-const LAYER_2_WEIGHTS: usize = LAYER_1_BIAS + 4;
-const LAYER_2_BIAS: usize = LAYER_2_WEIGHTS + 4 * 4;
+const LAYER_1_BIAS: usize = LAYER_1_WEIGHTS + 8 * 32;
+const LAYER_2_WEIGHTS: usize = LAYER_1_BIAS + 8;
+const LAYER_2_BIAS: usize = LAYER_2_WEIGHTS + 8 * 4;
 const LAYER_3_WEIGHTS: usize = LAYER_2_BIAS + 4;
 const LAYER_3_BIAS: usize = LAYER_3_WEIGHTS + 4;
 
@@ -78,56 +78,57 @@ pub fn evaluate(board: &Board) -> i32 {
         let mut a2 = _mm256_setzero_ps();
         let mut a3 = _mm256_setzero_ps();
 
-        let mut perm = _mm256_set1_epi32(0b11100100);
+        let mut perm = _mm256_set1_epi32(0o76543210);
 
         // let v0
-        for i in 0..4 {
+        for i in 0..8 {
             a0 = _mm256_fmadd_ps(
-                _mm256_permutevar_ps(v0, perm),
+                _mm256_permutevar8x32_ps(v0, perm),
                 _mm256_loadu_ps(NN.as_ptr().add(LAYER_1_WEIGHTS + i * 32)),
                 a0,
             );
 
             a1 = _mm256_fmadd_ps(
-                _mm256_permutevar_ps(v1, perm),
+                _mm256_permutevar8x32_ps(v1, perm),
                 _mm256_loadu_ps(NN.as_ptr().add(LAYER_1_WEIGHTS + i * 32 + 8)),
                 a1,
             );
 
             a2 = _mm256_fmadd_ps(
-                _mm256_permutevar_ps(v2, perm),
+                _mm256_permutevar8x32_ps(v2, perm),
                 _mm256_loadu_ps(NN.as_ptr().add(LAYER_1_WEIGHTS + i * 32 + 16)),
                 a2,
             );
 
             a3 = _mm256_fmadd_ps(
-                _mm256_permutevar_ps(v3, perm),
+                _mm256_permutevar8x32_ps(v3, perm),
                 _mm256_loadu_ps(NN.as_ptr().add(LAYER_1_WEIGHTS + i * 32 + 24)),
                 a3,
             );
 
-            perm = _mm256_srli_epi32::<2>(perm);
+            perm = _mm256_srli_epi32::<3>(perm);
         }
 
         let a0 = _mm256_add_ps(a0, a1);
         let a1 = _mm256_add_ps(a2, a3);
         let acc = _mm256_add_ps(a0, a1);
+
+        let acc = _mm256_add_ps(acc, _mm256_loadu_ps(NN.as_ptr().add(LAYER_1_BIAS)));
+        let acc = _mm256_max_ps(acc, _mm256_setzero_ps());
+
+        let a0 = _mm256_dp_ps::<0b11110001>(acc, _mm256_loadu_ps(NN.as_ptr().add(LAYER_2_WEIGHTS)));
+        let a1 = _mm256_dp_ps::<0b11110010>(acc, _mm256_loadu_ps(NN.as_ptr().add(LAYER_2_WEIGHTS + 8)));
+        let a2 = _mm256_dp_ps::<0b11110100>(acc, _mm256_loadu_ps(NN.as_ptr().add(LAYER_2_WEIGHTS + 16)));
+        let a3 = _mm256_dp_ps::<0b11111000>(acc, _mm256_loadu_ps(NN.as_ptr().add(LAYER_2_WEIGHTS + 24)));
+
+        let acc = _mm256_or_ps(
+            _mm256_or_ps(a0, a1),
+            _mm256_or_ps(a2, a3),
+        );
+        
         let acc = _mm_add_ps(
             _mm256_castps256_ps128(acc),
-            _mm256_extractf128_ps(acc, 1)
-        );
-
-        let acc = _mm_add_ps(acc, _mm_loadu_ps(NN.as_ptr().add(LAYER_1_BIAS)));
-        let acc = _mm_max_ps(acc, _mm_setzero_ps());
-
-        let a0 = _mm_dp_ps::<0b11110001>(acc, _mm_loadu_ps(NN.as_ptr().add(LAYER_2_WEIGHTS)));
-        let a1 = _mm_dp_ps::<0b11110010>(acc, _mm_loadu_ps(NN.as_ptr().add(LAYER_2_WEIGHTS + 4)));
-        let a2 = _mm_dp_ps::<0b11110100>(acc, _mm_loadu_ps(NN.as_ptr().add(LAYER_2_WEIGHTS + 8)));
-        let a3 = _mm_dp_ps::<0b11111000>(acc, _mm_loadu_ps(NN.as_ptr().add(LAYER_2_WEIGHTS + 12)));
-
-        let acc = _mm_or_ps(
-            _mm_or_ps(a0, a1),
-            _mm_or_ps(a2, a3),
+            _mm256_extractf128_ps(acc, 1),
         );
 
     
