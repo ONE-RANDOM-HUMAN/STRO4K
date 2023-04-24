@@ -735,6 +735,7 @@ alpha_beta:
     ; ecx - number of unordered moves
     mov ecx, r14d
     sub ecx, edx
+    jz .order_killer_moves_tail
 
     repne scasw
     jne .order_killer_moves_tail
