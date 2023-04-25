@@ -498,9 +498,16 @@ alpha_beta:
     ; but is larger after compression
 ; .tt_cutoff: 
     jmp .end 
+.tt_miss:
+    ; iir
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
+    jnz .tt_end
+
+    cmp dword [rbp + 8], 6
+    adc dword [rbp + 8], -1
+
 .tt_end:
 .no_tt_cutoff:
-.tt_miss:
 .no_tt_probe:
 
     ; get the static evaluation
