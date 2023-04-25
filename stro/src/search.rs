@@ -253,10 +253,7 @@ impl<'a> Search<'a> {
                 tt_success = true;
             }
 
-            if !tt_success
-                && !pv_node
-                && !is_check
-                && depth > 5
+            if !tt_success && depth > 5
             {
                 depth -= 1;
             }

@@ -500,9 +500,6 @@ alpha_beta:
     jmp .end 
 .tt_miss:
     ; iir
-    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
-    jnz .tt_end
-
     cmp dword [rbp + 8], 6
     adc dword [rbp + 8], -1
 
