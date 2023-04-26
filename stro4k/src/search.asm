@@ -500,7 +500,7 @@ alpha_beta:
     jmp .end 
 .tt_miss:
     ; iir
-    cmp dword [rbp + 8], 6
+    cmp dword [rbp + 8], 5
     adc dword [rbp + 8], -1
 
 .tt_end:

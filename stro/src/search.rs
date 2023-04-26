@@ -253,7 +253,7 @@ impl<'a> Search<'a> {
                 tt_success = true;
             }
 
-            if !tt_success && depth > 5
+            if !tt_success && depth > 4
             {
                 depth -= 1;
             }
