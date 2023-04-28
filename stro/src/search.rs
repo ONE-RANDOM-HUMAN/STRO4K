@@ -209,7 +209,7 @@ impl<'a> Search<'a> {
         }
 
         // Check extension
-        let depth = if is_check { depth + 1 } else { depth };
+        let mut depth = if is_check { depth + 1 } else { depth };
 
         let mut ordered_moves = 0;
         let mut hash = 0;
@@ -218,6 +218,7 @@ impl<'a> Search<'a> {
         if depth > 0 {
             // Probe tt
             hash = self.game.position().hash();
+            let mut tt_success = false;
 
             'tt: {
                 let Some(tt_data) = tt::load(hash) else { break 'tt };
@@ -248,6 +249,13 @@ impl<'a> Search<'a> {
                         Bound::Exact => return Some(eval),
                     }
                 }
+
+                tt_success = true;
+            }
+
+            if !tt_success && depth > 5
+            {
+                depth -= 1;
             }
         }
 
@@ -473,7 +481,6 @@ impl<'a> Search<'a> {
             duration += start.elapsed()
         }
 
-
         #[cfg(feature = "asm")]
         {
             let rust_node_count = search.nodes;
@@ -481,12 +488,12 @@ impl<'a> Search<'a> {
             for fen in fens {
                 tt::clear();
                 search.new_game();
-     
+
                 unsafe {
                     search.game.reset(&start);
                     search.game.add_position(Board::from_fen(fen).unwrap());
                 }
-     
+
                 let start = std::time::Instant::now();
                 crate::asm::alpha_beta(&mut search, MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
                 duration += start.elapsed()

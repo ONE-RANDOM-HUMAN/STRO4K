@@ -20,7 +20,7 @@ cargo build --release
 
 ## Current size
 ```
-3755 bytes
+3923 bytes
 ```
 ## Features
 * Search
@@ -46,11 +46,11 @@ A neural network is planned.
 ## Questions
 ### Why is it called STRO4K?
 ```
-Score of STRO-005ec0b21fbee26675b3efb3696e3de5e8427504 vs we4k-tcec: 223 - 169 - 108  [0.554] 500
-...      STRO-005ec0b21fbee26675b3efb3696e3de5e8427504 playing White: 116 - 88 - 46  [0.556] 250
-...      STRO-005ec0b21fbee26675b3efb3696e3de5e8427504 playing Black: 107 - 81 - 62  [0.552] 250
-...      White vs Black: 197 - 195 - 108  [0.502] 500
-Elo difference: 37.7 +/- 27.1, LOS: 99.7 %, DrawRatio: 21.6 %
+Score of STRO4K-f261aa061f4626d48f923c19961ef040f343980d vs we4k-tcec: 120 - 46 - 34  [0.685] 200
+...      STRO4K-f261aa061f4626d48f923c19961ef040f343980d playing White: 64 - 20 - 16  [0.720] 100
+...      STRO4K-f261aa061f4626d48f923c19961ef040f343980d playing Black: 56 - 26 - 18  [0.650] 100
+...      White vs Black: 90 - 76 - 34  [0.535] 200
+Elo difference: 135.0 +/- 46.8, LOS: 100.0 %, DrawRatio: 17.0 %
 Finished match
 ```
 
