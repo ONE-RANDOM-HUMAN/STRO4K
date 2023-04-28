@@ -9,6 +9,8 @@ EG_OPEN_FILE equ 0
 MG_SEMI_OPEN_FILE equ 40
 EG_SEMI_OPEN_FILE equ 0
 
+PAWNLESS_DRAW_THRESHOLD equ 1000
+
 section .rodata
 EVAL_WEIGHTS:
 MATERIAL_EVAL:
@@ -171,6 +173,7 @@ default rel
 section .text
 
 ; board - rsi
+; preserves rbx, rbp, r13, r14, r15
 evaluate:
     push rbx
     push rbp
@@ -468,11 +471,33 @@ evaluate:
     shr rcx, 63
     add eax, ecx
 
+    ; ecx - squared eval shorter than taking abs to be compared
+    ; against the squared draw threshold. 4 bytes shorter than abs.
+    mov ecx, eax
+    imul ecx, ecx
+
     ; return side to move relative eval
     test byte [r10 + Board.side_to_move], 1
     jz .white_to_move
     neg eax
 .white_to_move:
+
+    ; recognise pawnless draws
+    cmp qword [r10], 0
+    jne .no_pawnless_draw
+    cmp qword [r10 + 48], 0
+    jne .no_pawnless_draw
+
+    ; compare squared eval against squared threshold
+    cmp ecx, PAWNLESS_DRAW_THRESHOLD * PAWNLESS_DRAW_THRESHOLD
+    jg .no_pawnless_draw
+
+    ; divide eval by 16
+    lea ecx, [rax + 15]
+    test eax, eax
+    cmovs eax, ecx
+    sar eax, 4
+.no_pawnless_draw:
 
     pop rbp
     pop rbx

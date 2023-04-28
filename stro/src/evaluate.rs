@@ -121,6 +121,8 @@ const PASSED_PAWN_EVAL: [Eval; 6] = [
 const OPEN_FILE_EVAL: Eval = Eval(73, 0);
 const SEMI_OPEN_FILE_EVAL: Eval = Eval(40, 0);
 
+const PAWNLESS_DRAW_THRESHOLD: i32 = 1000;
+
 impl Eval {
     fn accum(&mut self, eval: Eval, count: i16) {
         *self = self.accum_to(eval, count);
@@ -317,5 +319,13 @@ pub fn evaluate(board: &Board) -> i32 {
         -1,
     );
 
-    resolve(board, eval)
+    let eval = resolve(board, eval);
+    if board.pieces()[0][0] != 0
+        || board.pieces()[1][0] != 0
+        || eval > PAWNLESS_DRAW_THRESHOLD
+    {
+        eval
+    } else {
+        eval / 16
+    }
 }
