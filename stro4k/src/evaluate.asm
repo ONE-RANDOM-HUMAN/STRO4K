@@ -1,35 +1,35 @@
 MAX_EVAL equ 128 * 256 - 1
 MIN_EVAL equ -MAX_EVAL
 
-MG_BISHOP_PAIR equ 106
-EG_BISHOP_PAIR equ 160
+MG_BISHOP_PAIR equ 112
+EG_BISHOP_PAIR equ 161
 
 MG_OPEN_FILE equ 73
 EG_OPEN_FILE equ 0
-MG_SEMI_OPEN_FILE equ 40
-EG_SEMI_OPEN_FILE equ 0
+MG_SEMI_OPEN_FILE equ 38
+EG_SEMI_OPEN_FILE equ 1
 
 section .rodata
 EVAL_WEIGHTS:
 MATERIAL_EVAL:
-    dw 319, 304
-    dw 793 - 4 * 35, 723 - 4 * 17
-    dw 891 - 6 * 22, 747 - 6 * 9
-    dw 1237 - 7 * 16, 1283 - 7 * 2
-    dw 2519 - 13 * 13, 2339 - 13 * 0
+    dw 318, 311
+    dw 814 - 4 * 37, 747 - 4 * 21
+    dw 914 - 6 * 24, 783 - 6 * 10
+    dw 1265 - 7 * 17, 1344 - 7 * 1
+    dw 2603 - 13 * 12, 2442 - 13 * 4
 
 MOBILITY_EVAL:
-    db 35, 17
-    db 22,  9
-    db 16,  2
-    db 13,  0
+    db 37, 21
+    db 24, 10
+    db 17,  1
+    db 12,  4
 
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
-    db  88, 162
-    db 100, 117
-    db  24,  57
-    db   0,  43
+    db 102, 193
+    db 102, 126
+    db  29,  58
+    db   0,  41
     db   0,   0
     db   0,   0
 
@@ -37,134 +37,230 @@ PASSED_PAWN_EVAL:
 ; first two in each row are isolated mg and eg
 ; second two are doubled mg and eg
 DOUBLED_ISOLATED_PAWN_EVAL:
-    db 26, 18, 65, 45
-    db 15, 15, 37, 34
-    db 54, 32, 75, 30
-    db 32, 43, 54, 24
-    db 68, 40, 56, 22
-    db 92, 37, 52, 47
-    db 48, 29, 13, 39
-    db 36, 32, 34, 43
+    db 33, 20, 59, 53
+    db 22, 22, 34, 41
+    db 58, 29, 61, 30
+    db 64, 41, 38, 16
+    db 87, 45, 61, 25
+    db 41, 39, 51, 47
+    db 27, 21, 19, 36
+    db 88, 31, 41, 48
 
 PST_MG:
-    db -38
-    db -42
-    db -41
-    db -17
-    db  14
-    db  61
-    db  42
-    db  45
-          
-          
-    db -33
-    db -39
-    db -24
-    db -45
-    db  60
-    db  39
-    db   7
-    db  32
-          
-          
-    db  26
-    db -34
-    db  10
-    db -10
-    db  12
-    db  36
-    db -10
-    db  -5
-          
-          
-    db -65
-    db -12
-    db -39
-    db -31
-    db  29
-    db  37
-    db  43
-    db  56
-          
-          
-    db -21
-    db  -4
-    db -16
-    db -33
-    db  26
-    db  12
-    db   6
-    db  30
-          
-          
-    db  49
-    db -58
-    db -13
-    db -19
-    db  15
-    db  20
-    db   9
-    db  13
-
-PST_EG:
-    db -24
-    db  14
-    db -35
-    db -32
-    db   4
-    db -22
-    db  77
-    db  65
-          
-          
-    db -28
-    db -45
-    db  -1
-    db -18
-    db  20
-    db  17
+    db -53
+    db -74
     db  -0
-    db  14
+    db  -7
+    db -55
+    db -19
+    db  -3
+    db  -9
+    db  -1
+    db  43
+    db  75
+    db  38
+    db  41
+    db  40
+    db  16
+    db   5
           
           
     db -24
+    db -38
+    db -24
     db -22
-    db  -7
-    db   5
-    db  16
-    db   6
-    db  -3
-    db   4
-          
-          
-    db -45
-    db -50
-    db -17
-    db  -7
-    db  15
+    db -30
+    db -43
+    db -48
+    db   8
+    db  39
+    db  49
+    db  28
+    db  70
+    db   2
+    db  23
     db  20
+    db   5
+          
+          
+    db  22
+    db -37
+    db -29
+    db  24
+    db   6
+    db   1
+    db -23
+    db  11
+    db   4
+    db  29
+    db  27
+    db  22
+    db  -7
+    db  -0
+    db   2
+    db  -6
+          
+          
+    db -60
+    db  -4
+    db -20
+    db -51
+    db -49
+    db -23
+    db -22
+    db  -5
+    db  13
+    db  28
+    db  29
+    db  29
+    db  30
+    db  46
+    db  34
+    db  33
+          
+          
+    db -18
+    db  -4
+    db -15
+    db -19
+    db -31
+    db -34
+    db -15
+    db  16
+    db -17
+    db  -3
+    db  31
+    db  60
+    db -17
+    db  13
     db  31
     db  34
           
           
-    db -38
-    db -78
-    db  -0
-    db   6
-    db  10
-    db  45
-    db  -2
-    db  34
-          
-          
-    db -61
-    db -39
-    db -13
-    db   6
-    db  29
+    db  42
+    db -20
+    db -75
     db  48
-    db   8
+    db   5
+    db  -4
+    db -16
+    db -17
+    db  11
+    db  12
+    db   9
+    db   6
+    db   6
+    db   9
+    db  11
+    db   5
+
+PST_EG:
+    db   2
+    db  19
+    db   6
+    db -40
+    db -14
+    db -31
+    db -26
+    db -56
+    db  34
+    db  -9
+    db -26
+    db -15
+    db  75
+    db  56
+    db  33
+    db  29
+          
+          
+    db -19
+    db -33
+    db -33
+    db  -7
+    db  -4
+    db -13
+    db -20
+    db   9
+    db  13
+    db   9
+    db  23
+    db  29
+    db   4
+    db  14
+    db  12
+    db   1
+          
+          
+    db -16
+    db -24
+    db -16
+    db -18
+    db   4
+    db   2
+    db   4
+    db  -6
+    db  11
+    db   6
+    db  15
+    db  16
+    db   3
+    db   7
+    db   3
+    db  -5
+          
+          
+    db -35
+    db -38
+    db -47
+    db -43
+    db -12
+    db  -3
+    db  -9
+    db -19
+    db  23
+    db  31
+    db  20
+    db  10
+    db  38
+    db  44
+    db  33
+    db  31
+          
+          
+    db -22
+    db -47
+    db -46
+    db -21
+    db  -7
+    db   3
+    db  -1
+    db  -1
+    db  -5
+    db  25
+    db  37
     db  24
+    db  -2
+    db  23
+    db  31
+    db  12
+          
+          
+    db -30
+    db -38
+    db -38
+    db -68
+    db  -6
+    db   6
+    db  -3
+    db -21
+    db  22
+    db  40
+    db  42
+    db  23
+    db   7
+    db  22
+    db  28
+    db  14
 
 
 default rel
@@ -310,28 +406,23 @@ evaluate:
     ; side to move
     cmp r11, r10 ; sets CF if r11 < r10
     sbb edi, edi ; -1 if black pieces
-    and edi, 11b
+    and edi, 1100b
 
-    mov esi, 5
+    mov esi, 40
 .pst_piece_head:
-    mov r8, qword [r10 + 8 * rsi]
+    mov r8, qword [r10 + rsi]
 .pst_square_head:
     xor edx, edx
     tzcnt rcx, r8
     jc .pst_tail
     btr r8, rcx
 
-    ; dl - column
-    test cl, 110b
-    setpo dl
-
-    ; cl - row
-    shr ecx, 4
-    xor ecx, edi ; flip vertically for black pieces
-
     ; ecx - index
-    lea ecx, [rdx + 2 * rcx]
-    lea ecx, [rcx + 8 * rsi]
+    mov edx, 110110b
+    pext ecx, ecx, edx
+    xor ecx, edi
+
+    lea ecx, [rcx + 2 * rsi]
 
     movsx edx, byte [rbp + PST_MG - EVAL_WEIGHTS + rcx]
     add eax, edx
@@ -340,7 +431,7 @@ evaluate:
     add ebx, edx
     jmp .pst_square_head
 .pst_tail:
-    dec esi
+    sub esi, 8
     jns .pst_piece_head
 
     ; switch white and black
