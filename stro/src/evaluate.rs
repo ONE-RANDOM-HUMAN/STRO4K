@@ -11,163 +11,178 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 // Material eval adjusted to average mobility
 const MATERIAL_EVAL: [Eval; 5] = [
-    Eval(318, 311),
-    Eval(814, 747).accum_to(MOBILITY_EVAL[0], -4),
-    Eval(914, 783).accum_to(MOBILITY_EVAL[1], -6),
-    Eval(1265, 1344).accum_to(MOBILITY_EVAL[2], -7),
-    Eval(2603, 2442).accum_to(MOBILITY_EVAL[3], -13),
+    Eval(325, 309),
+    Eval(824, 754).accum_to(MOBILITY_EVAL[0], -4),
+    Eval(906, 789).accum_to(MOBILITY_EVAL[1], -6),
+    Eval(1275, 1342).accum_to(MOBILITY_EVAL[2], -7),
+    Eval(2594, 2451).accum_to(MOBILITY_EVAL[3], -13),
 ];
 
-const MOBILITY_EVAL: [Eval; 4] = [Eval(37, 21), Eval(24, 10), Eval(17, 1), Eval(12, 4)];
+const MOBILITY_EVAL: [Eval; 4] = [Eval(36, 19), Eval(24, 10), Eval(14, 3), Eval(11, 2)];
 
-const BISHOP_PAIR_EVAL: Eval = Eval(112, 161);
+const BISHOP_PAIR_EVAL: Eval = Eval(109, 160);
 
-const PST: [[Eval; 16]; 6] = [
+const RANK_PST: [[Eval; 8]; 6] = [
     [
-        Eval(-53,   2),
-        Eval(-74,  19),
-        Eval( -0,   6),
-        Eval( -7, -40),
-        Eval(-55, -14),
-        Eval(-19, -31),
-        Eval( -3, -26),
-        Eval( -9, -56),
-        Eval( -1,  34),
-        Eval( 43,  -9),
-        Eval( 75, -26),
-        Eval( 38, -15),
-        Eval( 41,  75),
-        Eval( 40,  56),
-        Eval( 16,  33),
-        Eval(  5,  29),
+        Eval(  0,   0),
+        Eval(-44,  -9),
+        Eval(-49, -34),
+        Eval(-10, -43),
+        Eval( 35, -21),
+        Eval( 69,  35),
+        Eval( 72,  91),
+        Eval(  0,   0),
     ],
     [
-        Eval(-24, -19),
-        Eval(-38, -33),
-        Eval(-24, -33),
-        Eval(-22,  -7),
-        Eval(-30,  -4),
-        Eval(-43, -13),
-        Eval(-48, -20),
-        Eval(  8,   9),
-        Eval( 39,  13),
-        Eval( 49,   9),
-        Eval( 28,  23),
-        Eval( 70,  29),
-        Eval(  2,   4),
-        Eval( 23,  14),
-        Eval( 20,  12),
-        Eval(  5,   1),
-    ],
-    [
-        Eval( 22, -16),
-        Eval(-37, -24),
-        Eval(-29, -16),
-        Eval( 24, -18),
-        Eval(  6,   4),
-        Eval(  1,   2),
-        Eval(-23,   4),
-        Eval( 11,  -6),
-        Eval(  4,  11),
-        Eval( 29,   6),
-        Eval( 27,  15),
-        Eval( 22,  16),
+        Eval(-34, -33),
+        Eval(-28, -37),
+        Eval(-49, -28),
+        Eval( -6,  15),
+        Eval( 39,  29),
+        Eval( 68,  10),
+        Eval( 38,  15),
         Eval( -7,   3),
-        Eval( -0,   7),
-        Eval(  2,   3),
-        Eval( -6,  -5),
     ],
     [
-        Eval(-60, -35),
-        Eval( -4, -38),
-        Eval(-20, -47),
-        Eval(-51, -43),
-        Eval(-49, -12),
-        Eval(-23,  -3),
-        Eval(-22,  -9),
-        Eval( -5, -19),
-        Eval( 13,  23),
-        Eval( 28,  31),
-        Eval( 29,  20),
-        Eval( 29,  10),
-        Eval( 30,  38),
-        Eval( 46,  44),
-        Eval( 34,  33),
-        Eval( 33,  31),
+        Eval(-13, -24),
+        Eval(  0, -19),
+        Eval(  9,  -3),
+        Eval( -3,   9),
+        Eval( 11,  15),
+        Eval( 49,   6),
+        Eval( -0,   0),
+        Eval( -6,   4),
     ],
     [
-        Eval(-18, -22),
-        Eval( -4, -47),
-        Eval(-15, -46),
-        Eval(-19, -21),
-        Eval(-31,  -7),
-        Eval(-34,   3),
-        Eval(-15,  -1),
-        Eval( 16,  -1),
-        Eval(-17,  -5),
-        Eval( -3,  25),
-        Eval( 31,  37),
-        Eval( 60,  24),
-        Eval(-17,  -2),
-        Eval( 13,  23),
-        Eval( 31,  31),
-        Eval( 34,  12),
+        Eval(-27, -45),
+        Eval(-71, -32),
+        Eval(-47, -20),
+        Eval(-27,   4),
+        Eval( 19,  23),
+        Eval( 43,  26),
+        Eval( 57,  44),
+        Eval( 39,  23),
     ],
     [
-        Eval( 42, -30),
-        Eval(-20, -38),
-        Eval(-75, -38),
-        Eval( 48, -68),
-        Eval(  5,  -6),
-        Eval( -4,   6),
-        Eval(-16,  -3),
-        Eval(-17, -21),
-        Eval( 11,  22),
-        Eval( 12,  40),
-        Eval(  9,  42),
-        Eval(  6,  23),
-        Eval(  6,   7),
-        Eval(  9,  22),
-        Eval( 11,  28),
-        Eval(  5,  14),
+        Eval(-17, -51),
+        Eval( -9, -59),
+        Eval(-29, -14),
+        Eval(-27,  13),
+        Eval( -2,  27),
+        Eval( 42,  32),
+        Eval( 22,  34),
+        Eval( 31,  10),
+    ],
+    [
+        Eval( 11, -80),
+        Eval(-32, -28),
+        Eval(-36, -11),
+        Eval(  2,  15),
+        Eval( 17,  39),
+        Eval( 19,  52),
+        Eval( 15,  36),
+        Eval(  8,   9),
+    ],
+];
+
+const FILE_PST: [[Eval; 8]; 6] = [
+    [
+        Eval(-44,  25),
+        Eval(-25,  37),
+        Eval(-31,  22),
+        Eval(  4,   2),
+        Eval( 20,   6),
+        Eval( 59,   2),
+        Eval( 43, -13),
+        Eval(  3, -17),
+    ],
+    [
+        Eval(  2,  -2),
+        Eval(  3,  -3),
+        Eval(-20,  -8),
+        Eval(  1,  -1),
+        Eval( -5,  -0),
+        Eval( -6, -17),
+        Eval( 20,   9),
+        Eval( 22,  -2),
+    ],
+    [
+        Eval( 13,  -2),
+        Eval( 21,  -1),
+        Eval( -6,  -1),
+        Eval(-16,   4),
+        Eval(-17,   4),
+        Eval(-13,  -1),
+        Eval( 34,  -4),
+        Eval( 30, -10),
+    ],
+    [
+        Eval(-35,  10),
+        Eval(-28,  12),
+        Eval( 11,  12),
+        Eval( 35,   3),
+        Eval( 31, -10),
+        Eval(  3,  -2),
+        Eval( -5,   2),
+        Eval(-32,  -3),
+    ],
+    [
+        Eval(-17, -28),
+        Eval(-19, -10),
+        Eval( -1,  -2),
+        Eval( -4,   5),
+        Eval(-11,  12),
+        Eval( -1,  10),
+        Eval( 24,   4),
+        Eval( 40,   3),
+    ],
+    [
+        Eval( 14, -17),
+        Eval( 56,   6),
+        Eval( 18,  11),
+        Eval(-62,  13),
+        Eval(-45,  12),
+        Eval(-79,  20),
+        Eval( 62, -11),
+        Eval( 24, -34),
     ],
 ];
 
 #[rustfmt::skip]
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-59, -53),
-    Eval(-34, -41),
-    Eval(-61, -30),
-    Eval(-38, -16),
-    Eval(-61, -25),
-    Eval(-51, -47),
-    Eval(-19, -36),
-    Eval(-41, -48),
+    Eval(-52, -51),
+    Eval(-39, -38),
+    Eval(-45, -29),
+    Eval(-41, -13),
+    Eval(-53, -23),
+    Eval(-76, -47),
+    Eval(-38, -40),
+    Eval(-38, -44),
 ];
 
 const ISOLATED_PAWN_EVAL: [Eval; 8] = [
-    Eval(-33, -20),
-    Eval(-22, -22),
-    Eval(-58, -29),
-    Eval(-64, -41),
-    Eval(-87, -45),
-    Eval(-41, -39),
+    Eval(-29, -11),
     Eval(-27, -21),
-    Eval(-88, -31),
+    Eval(-46, -32),
+    Eval(-81, -34),
+    Eval(-71, -48),
+    Eval(-45, -38),
+    Eval(-33, -33),
+    Eval(-76, -28),
 ];
 
 #[rustfmt::skip]
 const PASSED_PAWN_EVAL: [Eval; 6] = [
     Eval(  0,   0),
     Eval(  0,   0),
-    Eval(  0,  41),
-    Eval( 29,  58),
-    Eval(102, 126),
-    Eval(102, 193),
+    Eval(  0,  47),
+    Eval( 37,  73),
+    Eval( 80,  88),
+    Eval( 80, 161),
 ];
 
-const OPEN_FILE_EVAL: Eval = Eval(73, 0);
-const SEMI_OPEN_FILE_EVAL: Eval = Eval(38, 1);
+const OPEN_FILE_EVAL: Eval = Eval(70, 0);
+const SEMI_OPEN_FILE_EVAL: Eval = Eval(37, 1);
 
 impl Eval {
     fn accum(&mut self, eval: Eval, count: i16) {
@@ -208,10 +223,9 @@ fn side_pst(pieces: &[Bitboard; 6], row_mask: u8) -> Eval {
     let mut eval = Eval(0, 0);
     for (i, mut pieces) in pieces.iter().copied().enumerate() {
         while pieces != 0 {
-            let piece_index = pieces.trailing_zeros();
-            let index = ((piece_index / 2) & 0b11) | ((piece_index / 4) & 0b1100);
-
-            eval.accum(PST[i][(index as u8 ^ row_mask) as usize], 1);
+            let index = pieces.trailing_zeros();
+            eval.accum(FILE_PST[i][(index & 0b111) as usize], 1);
+            eval.accum(RANK_PST[i][((index as u8 >> 3) ^ row_mask) as usize], 1);
             pieces &= pieces - 1;
         }
     }
@@ -320,7 +334,7 @@ pub fn evaluate(board: &Board) -> i32 {
 
     // psts
     eval.accum(side_pst(&board.pieces()[0], 0), 1);
-    eval.accum(side_pst(&board.pieces()[1], 0b1100), -1);
+    eval.accum(side_pst(&board.pieces()[1], 0b111), -1);
 
     // mobility
     let occ = board.white() | board.black();

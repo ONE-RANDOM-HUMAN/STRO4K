@@ -1,35 +1,35 @@
 MAX_EVAL equ 128 * 256 - 1
 MIN_EVAL equ -MAX_EVAL
 
-MG_BISHOP_PAIR equ 112
-EG_BISHOP_PAIR equ 161
+MG_BISHOP_PAIR equ 109
+EG_BISHOP_PAIR equ 160
 
-MG_OPEN_FILE equ 73
+MG_OPEN_FILE equ 70
 EG_OPEN_FILE equ 0
-MG_SEMI_OPEN_FILE equ 38
+MG_SEMI_OPEN_FILE equ 37
 EG_SEMI_OPEN_FILE equ 1
 
 section .rodata
 EVAL_WEIGHTS:
 MATERIAL_EVAL:
-    dw 318, 311
-    dw 814 - 4 * 37, 747 - 4 * 21
-    dw 914 - 6 * 24, 783 - 6 * 10
-    dw 1265 - 7 * 17, 1344 - 7 * 1
-    dw 2603 - 13 * 12, 2442 - 13 * 4
+    dw 325, 309
+    dw 824 - 4 * 36, 754 - 4 * 19
+    dw 906 - 6 * 24, 789 - 6 * 10
+    dw 1275 - 7 * 14, 1342 - 7 * 3
+    dw 2594 - 13 * 11, 2451 - 13 * 2
 
 MOBILITY_EVAL:
-    db 37, 21
+    db 36, 19
     db 24, 10
-    db 17,  1
-    db 12,  4
+    db 14,  3
+    db 11,  2
 
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
-    db 102, 193
-    db 102, 126
-    db  29,  58
-    db   0,  41
+    db  80, 161
+    db  80,  88
+    db  37,  73
+    db   0,  47
     db   0,   0
     db   0,   0
 
@@ -37,231 +37,136 @@ PASSED_PAWN_EVAL:
 ; first two in each row are isolated mg and eg
 ; second two are doubled mg and eg
 DOUBLED_ISOLATED_PAWN_EVAL:
-    db 33, 20, 59, 53
-    db 22, 22, 34, 41
-    db 58, 29, 61, 30
-    db 64, 41, 38, 16
-    db 87, 45, 61, 25
-    db 41, 39, 51, 47
-    db 27, 21, 19, 36
-    db 88, 31, 41, 48
+    db 29, 11, 52, 51
+    db 27, 21, 39, 38
+    db 46, 32, 45, 29
+    db 81, 34, 41, 13
+    db 71, 48, 53, 23
+    db 45, 38, 76, 47
+    db 33, 33, 38, 40
+    db 76, 28, 38, 44
 
-PST_MG:
-    db -53
-    db -74
-    db  -0
-    db  -7
-    db -55
-    db -19
-    db  -3
-    db  -9
-    db  -1
-    db  43
-    db  75
-    db  38
-    db  41
-    db  40
-    db  16
-    db   5
-          
-          
-    db -24
-    db -38
-    db -24
-    db -22
-    db -30
-    db -43
-    db -48
-    db   8
-    db  39
-    db  49
-    db  28
-    db  70
-    db   2
-    db  23
-    db  20
-    db   5
-          
-          
-    db  22
-    db -37
-    db -29
-    db  24
-    db   6
-    db   1
-    db -23
-    db  11
-    db   4
-    db  29
-    db  27
-    db  22
-    db  -7
-    db  -0
-    db   2
-    db  -6
-          
-          
-    db -60
-    db  -4
-    db -20
-    db -51
-    db -49
-    db -23
-    db -22
-    db  -5
-    db  13
-    db  28
-    db  29
-    db  29
-    db  30
-    db  46
-    db  34
-    db  33
-          
-          
-    db -18
-    db  -4
-    db -15
-    db -19
-    db -31
-    db -34
-    db -15
-    db  16
-    db -17
-    db  -3
-    db  31
-    db  60
-    db -17
-    db  13
-    db  31
-    db  34
-          
-          
-    db  42
-    db -20
-    db -75
-    db  48
-    db   5
-    db  -4
-    db -16
-    db -17
-    db  11
-    db  12
-    db   9
-    db   6
-    db   6
-    db   9
-    db  11
-    db   5
+FILE_PST:
+    db -44,  25
+    db -25,  37
+    db -31,  22
+    db   4,   2
+    db  20,   6
+    db  59,   2
+    db  43, -13
+    db   3, -17
+               
+               
+    db   2,  -2
+    db   3,  -3
+    db -20,  -8
+    db   1,  -1
+    db  -5,  -0
+    db  -6, -17
+    db  20,   9
+    db  22,  -2
+               
+               
+    db  13,  -2
+    db  21,  -1
+    db  -6,  -1
+    db -16,   4
+    db -17,   4
+    db -13,  -1
+    db  34,  -4
+    db  30, -10
+               
+               
+    db -35,  10
+    db -28,  12
+    db  11,  12
+    db  35,   3
+    db  31, -10
+    db   3,  -2
+    db  -5,   2
+    db -32,  -3
+               
+               
+    db -17, -28
+    db -19, -10
+    db  -1,  -2
+    db  -4,   5
+    db -11,  12
+    db  -1,  10
+    db  24,   4
+    db  40,   3
+               
+               
+    db  14, -17
+    db  56,   6
+    db  18,  11
+    db -62,  13
+    db -45,  12
+    db -79,  20
+    db  62, -11
+    db  24, -34
+    
 
-PST_EG:
-    db   2
-    db  19
-    db   6
-    db -40
-    db -14
-    db -31
-    db -26
-    db -56
-    db  34
-    db  -9
-    db -26
-    db -15
-    db  75
-    db  56
-    db  33
-    db  29
-          
-          
-    db -19
-    db -33
-    db -33
-    db  -7
-    db  -4
-    db -13
-    db -20
-    db   9
-    db  13
-    db   9
-    db  23
-    db  29
-    db   4
-    db  14
-    db  12
-    db   1
-          
-          
-    db -16
-    db -24
-    db -16
-    db -18
-    db   4
-    db   2
-    db   4
-    db  -6
-    db  11
-    db   6
-    db  15
-    db  16
-    db   3
-    db   7
-    db   3
-    db  -5
-          
-          
-    db -35
-    db -38
-    db -47
-    db -43
-    db -12
-    db  -3
-    db  -9
-    db -19
-    db  23
-    db  31
-    db  20
-    db  10
-    db  38
-    db  44
-    db  33
-    db  31
-          
-          
-    db -22
-    db -47
-    db -46
-    db -21
-    db  -7
-    db   3
-    db  -1
-    db  -1
-    db  -5
-    db  25
-    db  37
-    db  24
-    db  -2
-    db  23
-    db  31
-    db  12
-          
-          
-    db -30
-    db -38
-    db -38
-    db -68
-    db  -6
-    db   6
-    db  -3
-    db -21
-    db  22
-    db  40
-    db  42
-    db  23
-    db   7
-    db  22
-    db  28
-    db  14
-
+RANK_PST:
+    db   0,   0
+    db -44,  -9
+    db -49, -34
+    db -10, -43
+    db  35, -21
+    db  69,  35
+    db  72,  91
+    db   0,   0
+               
+               
+    db -34, -33
+    db -28, -37
+    db -49, -28
+    db  -6,  15
+    db  39,  29
+    db  68,  10
+    db  38,  15
+    db  -7,   3
+               
+               
+    db -13, -24
+    db   0, -19
+    db   9,  -3
+    db  -3,   9
+    db  11,  15
+    db  49,   6
+    db  -0,   0
+    db  -6,   4
+               
+               
+    db -27, -45
+    db -71, -32
+    db -47, -20
+    db -27,   4
+    db  19,  23
+    db  43,  26
+    db  57,  44
+    db  39,  23
+               
+               
+    db -17, -51
+    db  -9, -59
+    db -29, -14
+    db -27,  13
+    db  -2,  27
+    db  42,  32
+    db  22,  34
+    db  31,  10
+               
+               
+    db  11, -80
+    db -32, -28
+    db -36, -11
+    db   2,  15
+    db  17,  39
+    db  19,  52
+    db  15,  36
+    db   8,   9
+    
 
 default rel
 section .text
@@ -406,29 +311,40 @@ evaluate:
     ; side to move
     cmp r11, r10 ; sets CF if r11 < r10
     sbb edi, edi ; -1 if black pieces
-    and edi, 1100b
+    and edi, 111b
 
     mov esi, 40
 .pst_piece_head:
     mov r8, qword [r10 + rsi]
 .pst_square_head:
-    xor edx, edx
     tzcnt rcx, r8
     jc .pst_tail
     btr r8, rcx
 
-    ; ecx - index
-    mov edx, 110110b
-    pext ecx, ecx, edx
-    xor ecx, edi
+    ; ecx - file index
+    ; edx - rank index
+    mov edx, ecx
+    shr edx, 3
+    and ecx, 111b
+    xor edx, edi
 
-    lea ecx, [rcx + 2 * rsi]
+    lea ecx, [rcx + rsi]
+    lea r9d, [rdx + rsi]
 
-    movsx edx, byte [rbp + PST_MG - EVAL_WEIGHTS + rcx]
+    ; probably some byte savings here by merging rank/file psts
+    movzx ecx, word [rbp + FILE_PST - EVAL_WEIGHTS + 2 * rcx]
+    movsx edx, cl
     add eax, edx
-
-    movsx edx, byte [rbp + PST_EG - EVAL_WEIGHTS + rcx]
+    movsx edx, ch
     add ebx, edx
+
+    ; rank
+    movzx ecx, word [rbp + RANK_PST - EVAL_WEIGHTS + 2 * r9]
+    movsx edx, cl
+    add eax, edx
+    movsx edx, ch
+    add ebx, edx
+
     jmp .pst_square_head
 .pst_tail:
     sub esi, 8
