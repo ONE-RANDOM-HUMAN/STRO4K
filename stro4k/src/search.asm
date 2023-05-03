@@ -178,7 +178,9 @@ root_search:
     leave
 %endif
 
-    jmp .iterative_deepening_head
+    mov rdx, qword [rbx + Search.min_search_time]
+    call time_up
+    jna .iterative_deepening_head
 .end_search: 
     call sort_search_moves
 
@@ -278,25 +280,8 @@ alpha_beta:
     test dword [rbx + Search.nodes], 0FFFh
     jnz .no_stop_search
 
-    mov eax, CLOCK_GETTIME_SYSCALL
-
-    push CLOCK_MONOTONIC
-    pop rdi
-
-    lea rsi, [rbp - 128]
-    syscall
-
-    ; calculate time used
-    lodsq
-    sub rax, qword [rbx + Search.start_tvsec]
-    imul rdx, rax, 1_000_000_000
-
-    lodsq
-    sub rax, qword [rbx + Search.start_tvnsec]
-    add rdx, rax
-
-    ; check if we have used too much time
-    cmp rdx, qword [rbx + Search.search_time]
+    mov rdx, qword [rbx + Search.max_search_time]
+    call time_up
     ja .stop_search
 .no_stop_search:
     ; could by replaced by dword since upper bits don't actually
@@ -1121,3 +1106,28 @@ alpha_beta:
     pop r15
     ret
 
+; rbx - search
+; rdx - time to search
+; set by using ja
+time_up:
+    mov eax, CLOCK_GETTIME_SYSCALL
+
+    push CLOCK_MONOTONIC
+    pop rdi
+
+    ; use red zone
+    lea rsi, [rsp - 16]
+    syscall
+
+    ; calculate time used
+    lodsq
+    sub rax, qword [rbx + Search.start_tvsec]
+    imul rcx, rax, 1_000_000_000
+
+    lodsq
+    sub rax, qword [rbx + Search.start_tvnsec]
+    add rcx, rax
+
+    ; compare
+    cmp rcx, rdx
+    ret

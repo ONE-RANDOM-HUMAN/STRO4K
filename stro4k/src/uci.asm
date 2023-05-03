@@ -100,7 +100,8 @@ _start:
 
     ; set search time - time elapsed cannot be greater
     ; without overflowing
-    mov qword [rsi + Search.search_time], -1
+    or qword [rsi + Search.min_search_time], -1
+    or qword [rsi + Search.max_search_time], -1
 
     sub edx, THREAD_STACK_SIZE
     jnz .setup_threads_head
@@ -248,8 +249,14 @@ _start:
     pop rsi
 
     mov rbx, rsp
-    imul rsi, rsi, 1000000 / 30
-    mov qword [rbx + Search.search_time], rsi
+
+    imul rcx, rsi, 1000000 / 20
+    imul rdx, rdx, 1000000 / 2
+    add rcx, rdx
+    mov qword [rbx + Search.max_search_time], rcx
+
+    imul rcx, rsi, 1000000 / 40
+    mov qword [rbx + Search.min_search_time], rcx
 
     call root_search
 
