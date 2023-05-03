@@ -498,9 +498,13 @@ alpha_beta:
     ; but is larger after compression
 ; .tt_cutoff: 
     jmp .end 
+.tt_miss:
+    ; iir
+    cmp dword [rbp + 8], 6
+    adc dword [rbp + 8], -1
+
 .tt_end:
 .no_tt_cutoff:
-.tt_miss:
 .no_tt_probe:
 
     ; get the static evaluation
@@ -735,6 +739,7 @@ alpha_beta:
     ; ecx - number of unordered moves
     mov ecx, r14d
     sub ecx, edx
+    jz .order_killer_moves_tail
 
     repne scasw
     jne .order_killer_moves_tail

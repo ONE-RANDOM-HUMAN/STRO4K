@@ -1,10 +1,5 @@
-// use crate::consts;
 use crate::position::{Bitboard, Board, Color};
 use std::arch::x86_64::*;
-
-#[repr(C)]
-#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
-struct Eval(i16, i16);
 
 pub const MAX_EVAL: i32 = 128 * 256 - 1;
 pub const MIN_EVAL: i32 = -MAX_EVAL;
@@ -142,3 +137,4 @@ pub fn evaluate(board: &Board) -> i32 {
             .clamp(-64 * 256, 64 * 256) // just in case
     }
 }
+
