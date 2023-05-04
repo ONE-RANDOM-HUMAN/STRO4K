@@ -515,6 +515,10 @@ alpha_beta:
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_null_move
 
+    ; check that the static eval exceeds beta
+    cmp eax, dword [rbp + 32]
+    jnge .no_null_move
+
     ; null move pruning
     ; the value of edx is 0
     xor edx, edx

@@ -285,7 +285,12 @@ impl<'a> Search<'a> {
         self.ply[ply].static_eval = static_eval as i16;
 
         // Null Move Pruning
-        if !self.ply[ply].no_nmp && depth >= 4 && !pv_node && !is_check {
+        if !self.ply[ply].no_nmp
+            && depth >= 4
+            && !pv_node
+            && !is_check
+            && static_eval >= beta
+        {
             let r: i32 = if depth >= 6 { 3 } else { 2 };
             unsafe {
                 self.game.make_null_move();
