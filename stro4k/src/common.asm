@@ -77,9 +77,10 @@ struc Search
         resq 1
     .start_tvnsec:
         resq 1
-    .search_time:
+    .min_search_time:
         resq 1
-    .history:
+    .max_search_time:
+        resq 1
     alignb 16
     .ply_data:
         resb PlyData_size * MAX_BOARDS
