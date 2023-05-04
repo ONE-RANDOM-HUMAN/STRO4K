@@ -56,7 +56,9 @@ pub struct Search<'a> {
     game: Game<'a>,
     nodes: u64,
     start: Time,
-    search_time: u64, // search time in nanoseconds
+    min_search_time: u64, // min search time in nanoseconds
+    max_search_time: u64, // max search time in nanoseconds
+    _padding: u64,
     ply: [PlyData; 6144],
     history: [HistoryTable; 2],
 }
@@ -83,7 +85,9 @@ impl<'a> Search<'a> {
             game,
             nodes: 0,
             start: time_now(),
-            search_time: 0,
+            min_search_time: 0,
+            max_search_time: 0,
+            _padding: 0,
             ply: [PlyData::new(); 6144],
             history: [HistoryTable::new(), HistoryTable::new()],
         }
@@ -97,9 +101,15 @@ impl<'a> Search<'a> {
     }
 
     #[cfg(feature = "asm")]
-    pub fn search_asm(&mut self, time_ms: u32, _inc_ms: u32, main_thread: bool) -> Move {
-        self.search_time = if main_thread {
-            (time_ms as u64) * (1_000_000 / 30)
+    pub fn search_asm(&mut self, time_ms: u32, inc_ms: u32, main_thread: bool) -> Move {
+        self.min_search_time = if main_thread {
+            (time_ms as u64) * 1_000_000 / 40
+        } else {
+            u64::MAX
+        };
+
+        self.max_search_time = if main_thread {
+            (time_ms as u64) * (1_000_000 / 20) + (inc_ms as u64) * (1_000_000 / 2)
         } else {
             u64::MAX
         };
@@ -107,11 +117,17 @@ impl<'a> Search<'a> {
         unsafe { crate::asm::root_search_sysv(self, main_thread) }
     }
 
-    pub fn search(&mut self, time_ms: u32, _inc_ms: u32, main_thread: bool) -> (Move, i32) {
+    pub fn search(&mut self, time_ms: u32, inc_ms: u32, main_thread: bool) -> (Move, i32) {
         self.nodes = 0;
 
-        self.search_time = if main_thread {
-            (time_ms as u64) * (1_000_000 / 30)
+        self.min_search_time = if main_thread {
+            (time_ms as u64) * 1_000_000 / 40
+        } else {
+            u64::MAX
+        };
+
+        self.max_search_time = if main_thread {
+            (time_ms as u64) * (1_000_000 / 20) + (inc_ms as u64) * (1_000_000 / 2)
         } else {
             u64::MAX
         };
@@ -176,6 +192,10 @@ impl<'a> Search<'a> {
                     moves[0].mov,
                 )
             }
+
+            if self.time_up(self.min_search_time) {
+                break 'a;
+            }
         }
 
         moves[0..searched].sort_by_key(|x| cmp::Reverse(x.score));
@@ -184,7 +204,9 @@ impl<'a> Search<'a> {
 
     pub fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: i32, ply: usize) -> Option<i32> {
         // Check if should stop
-        if self.nodes % 4096 == 0 && self.should_stop() {
+        if !RUNNING.load(Ordering::Relaxed) 
+            || self.nodes % 4096 == 0 && self.time_up(self.max_search_time)
+        {
             return None;
         }
 
@@ -447,7 +469,7 @@ impl<'a> Search<'a> {
         let mut buffer = GameBuf::uninit();
         let (game, start) = Game::startpos(&mut buffer);
         let mut search = Search::new(game);
-        search.search_time = u64::MAX;
+        search.max_search_time = u64::MAX;
 
         unsafe {
             tt::alloc((16 * 1024 * 1024).try_into().unwrap());
@@ -511,8 +533,8 @@ impl<'a> Search<'a> {
         unsafe { tt::dealloc() }
     }
 
-    fn should_stop(&self) -> bool {
-        !RUNNING.load(Ordering::Relaxed) || elapsed_nanos(&self.start) > self.search_time
+    fn time_up(&self, search_time: u64) -> bool {
+        elapsed_nanos(&self.start) > search_time
     }
 }
 
