@@ -598,8 +598,7 @@ alpha_beta:
     ; one move to order
     jz .order_noisy_no_moves
 
-    lea r15, [cmp_flags]
-    call sort_moves
+    call sort_moves_flags
 
     ; find first non-promotion
     xor ecx, ecx
@@ -633,8 +632,7 @@ alpha_beta:
     ; sorting zero captures
 .order_noisy_sort_noisy:
     add dword [rbp - 128 + ABLocals.ordered_moves], r12d
-    sub r15, cmp_flags - cmp_mvvlva
-    call sort_moves
+    call sort_moves_mvvlva
     
 
 .order_noisy_no_moves:
@@ -764,10 +762,8 @@ alpha_beta:
 
     add r8, Search.black_history - Search.white_history
 .order_quiet_white_moves:
-    push r15
-    lea r15, [cmp_history]
-    call sort_moves
-    pop r15
+    call sort_moves_history
+
 .main_search_no_order_moves:
     ; load the current move
     movzx r12d, word [rsp + 2 * r15]
