@@ -240,6 +240,8 @@ IMPROVING_FLAG equ 0010b
 PV_NODE_FLAG equ 0100b
 F_PRUNE_FLAG equ 1000b
 
+IMPROVING_FLAG_INDEX equ 1
+
 %if ABLocals_size > 128
 %error "Alpha-Beta locals too large"
 %endif
@@ -503,12 +505,21 @@ alpha_beta:
     ; store the static eval
     mov word [r13 + PlyData.static_eval], ax
 
+    ; calculate the improving variable
+    cmp dword [rbp + 16], 2
+    jnae .not_improving
+    cmp ax, word [r13 - 2 * PlyData_size + PlyData.static_eval]
+    jng .not_improving
+
+    or byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
+.not_improving:
+
     ; Null move pruning
     test byte [r13 + PlyData.no_nmp], 1
     jnz .no_null_move
 
     ; check depth
-    cmp dword [rbp + 8], 4
+    cmp dword [rbp + 8], 3
     jnge .no_null_move
 
     ; check if we are in check or in a pv node
@@ -531,13 +542,16 @@ alpha_beta:
     mov edx, dword [rbp + 16]
     inc edx
 
-    ; ecx depth - r - 1
-    ; where r = 3 if depth >= 6 and 2 otherwise
+    ; ecx - reduced depth
     mov ecx, dword [rbp + 8]
-    cmp ecx, 6
+    lea esi, [rcx - 2]
+    shr esi, 2
+    sub ecx, esi
+
+    bt dword [rbp - 128 + ABLocals.flags], IMPROVING_FLAG_INDEX
     adc ecx, -4
 
-    ; rdi - -beta
+    ; rsi - -beta
     mov esi, dword [rbp + 32]
     neg esi
 
@@ -627,22 +641,9 @@ alpha_beta:
     ; ecx - static eval
     movsx ecx, word [r13 + PlyData.static_eval]
 
-    ; calculate the improving variable
-    xor eax, eax ; eax - improving
-
-    cmp dword [rbp + 16], 2
-    jnae .not_improving
-    cmp cx, word [r13 - 2 * PlyData_size + PlyData.static_eval]
-    jng .not_improving
-
-    or byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
-    inc eax
-.not_improving:
+    ; futility pruning
     ; edx - depth
     mov edx, dword [rbp + 8]
-
-    ; futility pruning
-    ; ecx contains the static eval
 
     cmp edx, 3
     jnle .no_fprune
@@ -651,7 +652,12 @@ alpha_beta:
     jnz .no_fprune
     
     ; depth + improving
-    lea esi, qword [rdx + rax]
+    xor esi, esi
+
+    ; bt on memory is not that slow with imm
+    bt dword [rbp - 128 + ABLocals.flags], IMPROVING_FLAG_INDEX
+    adc esi, edx
+.fprune_not_improving:
 
     ; set a minimum of 1
     mov al, 1
