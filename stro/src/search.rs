@@ -284,16 +284,23 @@ impl<'a> Search<'a> {
         let static_eval = evaluate::evaluate(self.game.position());
         self.ply[ply].static_eval = static_eval as i16;
 
+        let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
+
         // Null Move Pruning
-        if !self.ply[ply].no_nmp && depth >= 4 && !pv_node && !is_check {
-            let r: i32 = if depth >= 6 { 3 } else { 2 };
+        if !self.ply[ply].no_nmp
+            && depth >= 3
+            && !pv_node
+            && !is_check
+            && static_eval >= beta
+        {
+            let r = 2 + (depth - 2) / 4;
             unsafe {
                 self.game.make_null_move();
             }
 
             // Don't do nmp on the next ply
             self.ply[ply + 1].no_nmp = true;
-            let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
+            let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 2 + improving as i32, ply + 1);
             self.ply[ply + 1].no_nmp = false;
 
             unsafe {
@@ -310,8 +317,6 @@ impl<'a> Search<'a> {
         // Order the noisy moves
         ordered_moves +=
             moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
-
-        let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
 
         // Futility pruning
         let f_prune = depth <= 3 && !is_check && !pv_node;
@@ -488,7 +493,7 @@ impl<'a> Search<'a> {
         ];
 
         let mut duration = std::time::Duration::ZERO;
-        const BENCH_DEPTH: i32 = 9;
+        const BENCH_DEPTH: i32 = 10;
         for fen in fens {
             tt::clear();
             search.new_game();
