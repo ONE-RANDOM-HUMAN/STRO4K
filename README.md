@@ -1,4 +1,5 @@
 # STRO4K
+![logo](logo.png)
 A chess engine designed to fit into 4096 bytes. A successor to we4k.
 
 ## Current Plan
@@ -7,13 +8,18 @@ STRO4K targets 2700 elo (CCRL) on a single thread, while actually scaling with m
 STRO is a non-4k version of STRO4K with more interface features, which is much easier to develop.
 
 ## Building
-Building STRO4K requires `nasm`, `xz` and [`sstrip`](https://github.com/aunali1/super-strip). A script is provided which attempts to download `sstrip` and build STRO3K.
+Building STRO4K requires `nasm`, `xz` and [`sstrip`](https://github.com/aunali1/super-strip). A script is provided which attempts to download `sstrip` and build STRO4K.
 
 ```
-./build4k
+./build4k <file_name> <thread_count> <hash_size_mb>
 ```
 
-STRO can be build using a Rust nightly compiler.
+Or, for a default build with 4 threads, 16mb hash, and output file `STRO4K`:
+```
+./build4kdefault
+```
+
+STRO can be build using a Rust nightly compiler. By default, this includes an `asm` option that will use STRO4K search and eval code.
 ```
 cargo build --release
 ```
@@ -33,13 +39,16 @@ cargo build --release
     * Null Move Pruning
     * Futility Pruning
     * Lazy SMP
+    * Internal Iterative Reductions
 * Evaluation
     * Material
     * Mobility
     * Bishop Pair
     * Doubled Pawns
     * Passed Pawns
+    * Isolated Pawns
     * Open Files
+    * Quarter Piece-Square Tables
 
 A neural network is planned.
 

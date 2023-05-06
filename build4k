@@ -2,7 +2,7 @@
 T=`mktemp -d`
 
 cd stro4k/src
-nasm -f elf64 combined.asm -o $T/combined.o
+nasm -f elf64 -d NUM_THREADS=$2 -d TT_SIZE_MB=$3 combined.asm -o $T/combined.o
 cd ../..
 
 pushd $T
