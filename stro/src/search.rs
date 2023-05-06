@@ -291,7 +291,6 @@ impl<'a> Search<'a> {
             && !pv_node
             && !is_check
             && beta.abs() < 64 * 256
-            && static_eval + 128 >= beta
         {
             let r = 2 + (depth - 2) / 4;
             unsafe {
