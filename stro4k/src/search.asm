@@ -15,8 +15,8 @@ DELTA_PRUNE_PIECE_VALUES:
     dw 2496
 
 section .data
-print_info:
-    db "info score cp "
+print_info: ; depth required for cutechess-cli
+    db "info depth 1 score cp "
 .score:
     db "       pv"
 .end:
@@ -200,8 +200,7 @@ root_search:
     add ecx, "0000"
     mov dword [rsi - print_info + print_info.score + 2], ecx
 
-    shr rax, 32
-    and al, 111b
+    shr eax, 12
     add al, "0"
     mov byte [rsi - print_info + print_info.score + 1], al
 
@@ -235,25 +234,27 @@ root_search:
 ; r14 - end of search moves
 sort_search_moves:
     ; rax - outer loop counter
-    push SearchMove_size
+    push 1
     pop rax
+    mov esi, r14d
+    shr esi, 2
 .outer_loop_head:
-    cmp eax, r14d
+    cmp eax, esi
     jae .end
 
-    mov ecx, dword [rsp + rax + 8]
+    mov ecx, dword [rsp + SearchMove_size * rax + 8]
     mov edi, eax
 .inner_loop_head:
-    mov edx, dword [rsp + rdi + 8 - SearchMove_size]
+    mov edx, dword [rsp + SearchMove_size * rdi + 8 - SearchMove_size]
     cmp cx, dx ; compare evals
     jle .inner_loop_end
 
-    mov dword [rsp + rdi + 8], edx
-    sub edi, SearchMove_size
+    mov dword [rsp + SearchMove_size * rdi + 8], edx
+    dec edi
     jnz .inner_loop_head
 .inner_loop_end:
-    mov dword [rsp + rdi + 8], ecx
-    add eax, SearchMove_size
+    mov dword [rsp + SearchMove_size * rdi + 8], ecx
+    inc eax
     jmp .outer_loop_head
 .end:
     ret

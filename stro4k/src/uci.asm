@@ -55,22 +55,6 @@ write8:
 
 
 _start:
-    ; set up shifts for movegen
-    mov rax, 060A_0F11_0709_0108h
-    push rax
-    push rsp
-    pop rsi
-
-    lea rdi, [SHIFTS]
-    push 8
-    pop rcx
-
-    xor eax, eax
-.movegen_shifts_head:
-    lodsb
-    stosq
-    loop .movegen_shifts_head
-
     ; wait for uci
     call read_until_newline
 

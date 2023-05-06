@@ -392,7 +392,8 @@ evaluate:
     sub ebx, esi
 .no_doubled_pawns:
     inc ecx
-    shl r9, 1
+    ; shl r9, 1
+    add r9, r9
     jnc .doubled_pawns_head
 
     ; add up mg and eg
@@ -457,7 +458,8 @@ evaluate:
 .passed_pawn_south_head:
     shrx rdx, rax, rcx
     or rax, rdx
-    shl ecx, 1
+    ; shl ecx, 1
+    add ecx, ecx
     jnc .passed_pawn_south_head
 
     ; attack spans
@@ -491,7 +493,8 @@ evaluate:
     add esi, edx
     add edi, ebx
 .no_passed_pawn:
-    shl rcx, 1
+    ; shl rcx, 1
+    add rcx, rcx
     jnc .passed_pawn_files_head
 
     ; swap white and black
