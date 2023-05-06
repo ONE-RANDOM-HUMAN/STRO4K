@@ -57,8 +57,6 @@ struc PlyData
         resw 2
     .static_eval:
         resw 1
-    .no_nmp:
-        resb 1
     alignb 8
 endstruc
 

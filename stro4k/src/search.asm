@@ -515,9 +515,6 @@ alpha_beta:
 .not_improving:
 
     ; Null move pruning
-    test byte [r13 + PlyData.no_nmp], 1
-    jnz .no_null_move
-
     ; check depth
     cmp dword [rbp + 8], 3
     jnge .no_null_move
@@ -526,9 +523,17 @@ alpha_beta:
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_null_move
 
-    ; check that the static eval exceeds beta
+    ; check that the static eval + 128 exceeds beta
+    sub eax, -128
     cmp eax, dword [rbp + 32]
     jnge .no_null_move
+
+    ; check that beta is no two high or low
+    cmp dword [rbp + 32], -64 * 256
+    jng .no_null_move
+
+    cmp dword [rbp + 32], 64 * 256
+    jnl .no_null_move
 
     ; null move pruning
     ; the value of edx is 0
@@ -536,8 +541,6 @@ alpha_beta:
     call game_make_move
 
     ; call alpha beta
-    mov byte [r13 + PlyData_size + PlyData.no_nmp], 1
-
     ; edx - ply count
     mov edx, dword [rbp + 16]
     inc edx
@@ -559,8 +562,6 @@ alpha_beta:
     lea edi, [rsi + 1]
 
     call alpha_beta
-
-    mov byte [r13 + PlyData_size + PlyData.no_nmp], 0
 
     ; unmake move
     add qword [rbx], -Board_size

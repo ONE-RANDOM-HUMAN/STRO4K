@@ -287,11 +287,11 @@ impl<'a> Search<'a> {
         let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
 
         // Null Move Pruning
-        if !self.ply[ply].no_nmp
-            && depth >= 3
+        if depth >= 3
             && !pv_node
             && !is_check
-            && static_eval >= beta
+            && beta.abs() < 64 * 256
+            && static_eval + 128 >= beta
         {
             let r = 2 + (depth - 2) / 4;
             unsafe {
@@ -299,9 +299,7 @@ impl<'a> Search<'a> {
             }
 
             // Don't do nmp on the next ply
-            self.ply[ply + 1].no_nmp = true;
             let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 2 + improving as i32, ply + 1);
-            self.ply[ply + 1].no_nmp = false;
 
             unsafe {
                 self.game.unmake_move();
@@ -550,12 +548,11 @@ struct SearchMove {
     mov: Move,
 }
 
-#[repr(C)]
+#[repr(C, align(8))]
 #[derive(Clone, Copy, Debug)]
 struct PlyData {
     kt: KillerTable,
     static_eval: i16,
-    no_nmp: bool,
 }
 
 impl PlyData {
@@ -563,7 +560,6 @@ impl PlyData {
         Self {
             kt: KillerTable::new(),
             static_eval: 0,
-            no_nmp: false,
         }
     }
 }
