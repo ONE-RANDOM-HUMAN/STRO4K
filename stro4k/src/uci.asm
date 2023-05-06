@@ -248,7 +248,8 @@ _start:
     pop rdx
     pop rsi
 
-    mov rbx, rsp
+    push rsp
+    pop rbx
 
     imul rcx, rsi, 1000000 / 20
     imul rdx, rdx, 1000000 / 2
@@ -257,6 +258,8 @@ _start:
 
     imul rcx, rsi, 1000000 / 40
     mov qword [rbx + Search.min_search_time], rcx
+
+    or r12d, -1
 
     call root_search
 
@@ -271,29 +274,9 @@ _start:
     call write8
 
     pop rax
-    mov ecx, 07070707h
-    pdep ecx, eax, ecx
-    add ecx, "a1a1"
-
-    push ' '
-    mov dword [rsp + 1], ecx ; add move
-    test ah, PROMO_FLAG << 4
-
-    mov dl, ' '
-    jz .print_move_no_promo
-    mov edx, "nbrq"
-    shr eax, 9
-    and al, 11000b
-    xchg eax, ecx
-    shr edx, cl
-.print_move_no_promo:
-    mov byte [rsp + 5], dl
-    mov word [rsp + 6], ` \n`
-    pop rdx
-    call write8
+    call print_move
 
     jmp .uci_loop_head
-
 .position:
     ; read 2 * 8 bytes
     push 8
@@ -377,5 +360,28 @@ _start:
 .position_end:
     add rsp, 512
     jmp .uci_loop_head
+
+; eax - move
+print_move:
+    mov ecx, 07070707h
+    pdep ecx, eax, ecx
+    add ecx, "a1a1"
+
+    push ' '
+    mov dword [rsp + 1], ecx ; add move
+    test ah, PROMO_FLAG << 4
+
+    mov dl, ' '
+    jz .print_move_no_promo
+    mov edx, "nbrq"
+    shr eax, 9
+    and al, 11000b
+    xchg eax, ecx
+    shr edx, cl
+.print_move_no_promo:
+    mov byte [rsp + 5], dl
+    mov word [rsp + 6], ` \n`
+    pop rdx
+    jmp write8
 
 %endif

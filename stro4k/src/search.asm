@@ -14,6 +14,14 @@ DELTA_PRUNE_PIECE_VALUES:
     dw 1344
     dw 2496
 
+section .data
+print_info:
+    db "info score cp "
+.score:
+    db "       pv"
+.end:
+
+
 default rel
 section .text
 
@@ -58,6 +66,7 @@ thread_search:
 
     syscall
 %endif
+
 ; search - rbx
 ; time should be calculated before calling root_search
 root_search:
@@ -66,13 +75,11 @@ root_search:
     ; get static eval
     mov rsi, qword [rbx]
     push rsi
-%ifdef EXPORT_SYSV
+
     push r12
     call evaluate
     pop r12
-%else
-    call evaluate
-%endif
+
     pop rsi
     mov word [rbx + Search.ply_data + PlyData.static_eval], ax
 
@@ -163,10 +170,9 @@ root_search:
     call sort_search_moves
     inc r13d
 
-%ifdef EXPORT_SYSV
     test r12d, r12d
-    jz .iterative_deepening_head
-
+    jz .no_print_search_info
+%ifdef EXPORT_SYSV
     mov rdi, rbx
     mov esi, r13d
     mov rdx, rsp
@@ -176,7 +182,43 @@ root_search:
     and rsp, -16
     call search_print_info_sysv
     leave
+%else
+    lea rsi, [print_info]
+    movsx eax, word [rsp + SearchMove.score]
+
+    mov cl, ' '
+    test eax, eax
+    jns .print_score_positive
+    mov cl, '-'
+
+    neg eax
+.print_score_positive:
+    mov byte [rsi - print_info + print_info.score], cl
+    mov ecx, 07070707h
+    pdep ecx, eax, ecx
+    bswap ecx
+    add ecx, "0000"
+    mov dword [rsi - print_info + print_info.score + 2], ecx
+
+    shr rax, 32
+    and al, 111b
+    add al, "0"
+    mov byte [rsi - print_info + print_info.score + 1], al
+
+    push 1
+    pop rax
+
+    mov edi, eax
+
+    push print_info.end - print_info
+    pop rdx
+
+    syscall
+
+    movzx eax, word [rsp + SearchMove.move]
+    call print_move
 %endif
+.no_print_search_info:
 
     mov rdx, qword [rbx + Search.min_search_time]
     call time_up
@@ -395,7 +437,8 @@ alpha_beta:
     mov rcx, rdx
 
 %ifndef EXPORT_SYSV
-    and rdx, TT_ENTRY_COUNT - 1
+    mov rax, TT_ENTRY_COUNT - 1
+    and rdx, rax
     lea rax, [TT_MEM]
 %else
     and rdx, qword [TT_MASK]
@@ -1063,15 +1106,16 @@ alpha_beta:
     mov rdi, qword [rbp - 128 + ABLocals.hash]
 
     ; upper 16 bits of hash
-    mov esi, 48
+    mov sil, 48
     bzhi rsi, rdi, rsi
     xor rsi, rdi
 
     ; load tt pointer and index
 
 %ifndef EXPORT_SYSV
+    mov r15, TT_ENTRY_COUNT - 1
+    and rdi, r15
     lea r15, [TT_MEM]
-    and rdi, TT_ENTRY_COUNT - 1
 %else
     mov r15, qword [TT_PTR]
     and rdi, qword [TT_MASK]

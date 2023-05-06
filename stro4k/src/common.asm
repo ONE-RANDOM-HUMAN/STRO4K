@@ -11,6 +11,11 @@ THREAD_STACK_SIZE equ 8 * 1024 * 1024
 %endif
 TT_SIZE_BYTES equ TT_SIZE_MB * 1024 * 1024
 TT_ENTRY_COUNT equ TT_SIZE_BYTES / 8
+
+%if TT_ENTRY_COUNT & (TT_ENTRY_COUNT - 1) != 0
+%error "TT entry count must be a power of 2"
+%endif
+
 %else
 global SHIFTS
 extern TT_PTR
