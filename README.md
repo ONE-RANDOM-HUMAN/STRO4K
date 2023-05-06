@@ -8,7 +8,7 @@ STRO4K targets 2700 elo (CCRL) on a single thread, while actually scaling with m
 STRO is a non-4k version of STRO4K with more interface features, which is much easier to develop.
 
 ## Version 1.0
-STRO4K 1.0 is available in the `version_1.0` branch. It has the has the extra feature of displaying the evaluation and principal variation during search.
+STRO4K 1.0 is available in the `version_1.0` branch. It has the extra feature of displaying the evaluation and principal variation during search.
 
 ## Building
 Building STRO4K requires `nasm`, `xz` and [`sstrip`](https://github.com/aunali1/super-strip). A script is provided which attempts to download `sstrip` and build STRO4K.
