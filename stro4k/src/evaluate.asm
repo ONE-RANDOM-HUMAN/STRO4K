@@ -310,7 +310,7 @@ evaluate:
     mov edi, 4
 
     ; rsi - move fns
-    lea rsi, qword [move_fns + 6]
+    lea rsi, [move_fns + 6]
 .mobility_head:
     ; rcx - piece
     mov rcx, qword [r10 + 8 * rdi]

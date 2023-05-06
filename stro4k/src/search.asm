@@ -750,7 +750,7 @@ alpha_beta:
 .order_killer_moves_end:
     
     ; sort moves by history
-    lea r11, qword [rsp + 2 * rdx]
+    lea r11, [rsp + 2 * rdx]
     mov r12d, r14d
     sub r12d, edx
 
@@ -995,7 +995,7 @@ alpha_beta:
 
 
     ; load history table
-    lea r8, qword [rbx + Search.white_history]
+    lea r8, [rbx + Search.white_history]
     mov rsi, qword [rbx]
     test byte [rsi + Board.side_to_move], 1
     jz .decrease_white_history
