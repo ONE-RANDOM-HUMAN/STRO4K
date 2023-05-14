@@ -24,11 +24,11 @@ game_make_move:
     lea eax, [rax + 2 * rax]
 
     ; pieces - r8
-    lea r8, qword [rsi + Board.pieces + rax]
+    lea r8, [rsi + Board.pieces + rax]
 
     ; enemy - r9
     xor al, 48
-    lea r9, qword [rsi + Board.pieces + rax]
+    lea r9, [rsi + Board.pieces + rax]
 
     ; ebx - flags
     mov ebx, edx
@@ -264,7 +264,7 @@ board_is_area_attacked:
 
     
     ; possible performance improvement from iterating tho other way
-    lea rcx, qword [move_fns + 8]
+    lea rcx, [move_fns + 8]
     mov edi, 5
 .piece_moves_head:
     call rcx
