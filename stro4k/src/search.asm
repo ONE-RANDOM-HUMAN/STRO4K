@@ -523,8 +523,8 @@ alpha_beta:
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_null_move
 
-    ; check that the static eval + 128 exceeds beta
-    sub eax, -128
+    ; check that the static eval + 256 exceeds beta
+    add eax, 256
     cmp eax, dword [rbp + 32]
     jnge .no_null_move
 
