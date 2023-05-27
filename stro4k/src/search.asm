@@ -643,7 +643,7 @@ alpha_beta:
     ; edx - depth
     mov edx, dword [rbp + 8]
 
-    cmp edx, 3
+    cmp edx, 5
     jnle .no_fprune
 
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
