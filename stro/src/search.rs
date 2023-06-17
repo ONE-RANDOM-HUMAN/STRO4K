@@ -204,7 +204,7 @@ impl<'a> Search<'a> {
 
     pub fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: i32, ply: usize) -> Option<i32> {
         // Check if should stop
-        if !RUNNING.load(Ordering::Relaxed) 
+        if !RUNNING.load(Ordering::Relaxed)
             || self.nodes % 4096 == 0 && self.time_up(self.max_search_time)
         {
             return None;
@@ -237,10 +237,10 @@ impl<'a> Search<'a> {
         let mut hash = 0;
 
         let pv_node = beta - alpha != 1;
+        let mut tt_success = false;
         if depth > 0 {
             // Probe tt
             hash = self.game.position().hash();
-            let mut tt_success = false;
 
             'tt: {
                 let Some(tt_data) = tt::load(hash) else { break 'tt };
@@ -275,8 +275,7 @@ impl<'a> Search<'a> {
                 tt_success = true;
             }
 
-            if !tt_success && depth > 5
-            {
+            if !tt_success && depth > 5 {
                 depth -= 1;
             }
         }
@@ -288,7 +287,7 @@ impl<'a> Search<'a> {
 
         // Null Move Pruning
         if !self.ply[ply].no_nmp
-            && depth >= 3
+            && depth >= 3 
             && !pv_node
             && !is_check
             && static_eval >= beta
@@ -314,9 +313,42 @@ impl<'a> Search<'a> {
             }
         }
 
-        // Order the noisy moves
-        ordered_moves +=
-            moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
+        ordered_moves = if pv_node && depth > 5 && !tt_success {
+            // Internal Iterative Deepening
+            let mut evals = vec![i16::MIN; 65536];
+            let mut it_alpha = alpha;
+            for &mov in &*moves {
+                unsafe {
+                    if !self.game.make_move(mov) {
+                        continue; // the move was illegal
+                    }
+                }
+
+                let eval = -search! { self, self.alpha_beta(-beta, -it_alpha, depth / 4, ply + 1) };
+                evals[mov.0.get() as usize] = eval as i16;
+
+                unsafe { self.game.unmake_move() }
+
+                if eval >= beta {
+                    break;
+                }
+
+                if eval > it_alpha {
+                    it_alpha = eval;
+                }
+            }
+
+            moveorder::insertion_sort_by(moves, |x, y| {
+                evals[x.0.get() as usize]
+                    .cmp(&evals[y.0.get() as usize])
+                    .reverse()
+            });
+            moves.len()
+        } else {
+            // Order the noisy moves
+            ordered_moves
+                + moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..])
+        };
 
         // Futility pruning
         let f_prune = depth <= 5 && !is_check && !pv_node;
@@ -339,7 +371,7 @@ impl<'a> Search<'a> {
             alpha = best_eval;
         }
 
-        // first quiet, non-tt move
+        // first quiet, non-tt move, non IID move
         let first_quiet = ordered_moves;
 
         for i in 0..moves.len() {
@@ -493,7 +525,7 @@ impl<'a> Search<'a> {
         ];
 
         let mut duration = std::time::Duration::ZERO;
-        const BENCH_DEPTH: i32 = 10;
+        const BENCH_DEPTH: i32 = 11;
         for fen in fens {
             tt::clear();
             search.new_game();

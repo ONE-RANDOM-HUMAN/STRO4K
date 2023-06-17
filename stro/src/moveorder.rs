@@ -96,7 +96,7 @@ pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable, history: &Hist
     len
 }
 
-fn insertion_sort_by<F>(moves: &mut [Move], mut cmp: F)
+pub fn insertion_sort_by<F>(moves: &mut [Move], mut cmp: F)
 where
     F: FnMut(Move, Move) -> cmp::Ordering,
 {
