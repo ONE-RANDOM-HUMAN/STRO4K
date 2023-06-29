@@ -904,15 +904,17 @@ alpha_beta:
     jnz .no_lmr_reduction
 
     ; calculate lmr depth
-    ; depth / 4
-    shr edx, 2
+    ; 2 * depth + i
+    lea eax, [r15 + 2 * rdx]
 
-    ; + i / 8
-    mov eax, r15d
+    ; divide by 8
     shr eax, 3
-    add eax, edx
 
-    ; reduction
+    ; decrease reduction if improving
+    test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
+    jz .lmr_not_improving
+    dec eax
+.lmr_not_improving:
     sub ecx, eax
 
     ; upper part of eax must be zero
