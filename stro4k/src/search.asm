@@ -4,7 +4,7 @@ BOUND_LOWER equ 01b
 BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
-F_PRUNE_MARGIN equ 256
+F_PRUNE_MARGIN equ 192
 
 section .rodata
 DELTA_PRUNE_PIECE_VALUES:
@@ -663,8 +663,8 @@ alpha_beta:
     cmovl esi, eax
 
     ; margin is currently 256
-    ; imul esi, esi, F_PRUNE_MARGIN
-    shl esi, 8
+    imul esi, esi, F_PRUNE_MARGIN
+    ; shl esi, 8
 
     ; check if margin + static_eval is less than alpha
     add esi, ecx
