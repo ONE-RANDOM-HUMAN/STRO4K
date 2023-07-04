@@ -4,8 +4,10 @@ BOUND_LOWER equ 01b
 BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
-F_PRUNE_MARGIN equ 256
-DELTA_PRUNE_MARGIN equ 192
+; When this is a power of two, the multiply use for the fprune calculation
+; should be replaced by a shift
+F_PRUNE_MARGIN equ 192
+DELTA_PRUNE_MARGIN equ 256
 
 section .rodata
 DELTA_PRUNE_PIECE_VALUES:
@@ -663,9 +665,8 @@ alpha_beta:
     cmp esi, eax
     cmovl esi, eax
 
-    ; margin is currently 256
-    ; imul esi, esi, F_PRUNE_MARGIN
-    shl esi, 8
+    imul esi, esi, F_PRUNE_MARGIN
+    ; shl esi, 8
 
     ; check if margin + static_eval is less than alpha
     add esi, ecx
