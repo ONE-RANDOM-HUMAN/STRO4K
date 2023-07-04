@@ -658,7 +658,7 @@ alpha_beta:
 .fprune_not_improving:
 
     ; set a minimum of 1
-    mov al, 1
+    mov eax, 1
     cmp esi, eax
     cmovl esi, eax
 
