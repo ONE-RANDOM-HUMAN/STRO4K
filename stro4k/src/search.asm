@@ -5,6 +5,7 @@ BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
 F_PRUNE_MARGIN equ 256
+DELTA_PRUNE_MARGIN equ 192
 
 section .rodata
 DELTA_PRUNE_PIECE_VALUES:
@@ -794,7 +795,7 @@ alpha_beta:
 
     ; edi - eval
     movsx edi, word [r13 + PlyData.static_eval]
-    add edi, F_PRUNE_MARGIN
+    add edi, DELTA_PRUNE_MARGIN
 
     ; rsi - piece values
     lea rsi, [DELTA_PRUNE_PIECE_VALUES]

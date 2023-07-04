@@ -363,6 +363,7 @@ impl<'a> Search<'a> {
             if f_prune && depth <= 0 {
                 // Delta pruning
                 const PIECE_VALUES: [i32; 5] = [256, 832, 832, 1344, 2496];
+                const DELTA: i32 = 192;
 
                 let capture = self
                     .game
@@ -375,7 +376,7 @@ impl<'a> Search<'a> {
                     .promo_piece()
                     .map_or(0, |x| PIECE_VALUES[x as usize]);
 
-                if static_eval + capture + promo + F_PRUNE_MARGIN <= alpha {
+                if static_eval + capture + promo + DELTA <= alpha {
                     continue;
                 }
             }
