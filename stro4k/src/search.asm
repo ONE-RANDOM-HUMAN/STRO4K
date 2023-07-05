@@ -6,8 +6,8 @@ BOUND_EXACT equ 11b
 
 ; When this is a power of two, the multiply use for the fprune calculation
 ; should be replaced by a shift
-F_PRUNE_MARGIN equ 192
-DELTA_PRUNE_MARGIN equ 256
+F_PRUNE_MARGIN equ 256
+DELTA_PRUNE_MARGIN equ 224
 
 section .rodata
 DELTA_PRUNE_PIECE_VALUES:
