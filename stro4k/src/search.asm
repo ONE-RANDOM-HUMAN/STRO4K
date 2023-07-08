@@ -5,6 +5,8 @@ BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
 F_PRUNE_MARGIN equ 256
+DELTA_BASE equ 224
+DELTA_IMPROVING_BONUS equ 64
 
 section .rodata
 DELTA_PRUNE_PIECE_VALUES:
@@ -794,7 +796,14 @@ alpha_beta:
 
     ; edi - eval
     movsx edi, word [r13 + PlyData.static_eval]
-    add edi, F_PRUNE_MARGIN
+    add edi, DELTA_BASE
+
+    ; add improving bonus
+    test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
+    jz .delta_prune_not_improving
+
+    add edi, DELTA_IMPROVING_BONUS
+.delta_prune_not_improving:
 
     ; rsi - piece values
     lea rsi, [DELTA_PRUNE_PIECE_VALUES]
