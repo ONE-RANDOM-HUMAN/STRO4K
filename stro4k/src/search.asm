@@ -537,11 +537,16 @@ alpha_beta:
     cmp ecx, 5
     jnle .no_static_nmp
 
-    ; set margin for static nmp
 
-    ; STATIC_NULL_MOVE_MARGIN is currently a power of 2
-    ; imul edx, ecx, STATIC_NULL_MOVE_MARGIN
+    ; set margin for static nmp
     mov edx, ecx
+    test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
+    jz .static_nmp_not_improving
+
+    dec edx
+.static_nmp_not_improving:
+    ; STATIC_NULL_MOVE_MARGIN is currently a power of 2
+    ; imul edx, edx, STATIC_NULL_MOVE_MARGIN
     shl edx, 8
 
     cmp eax, edx

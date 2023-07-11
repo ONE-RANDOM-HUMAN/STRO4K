@@ -294,7 +294,7 @@ impl<'a> Search<'a> {
             // Static null move pruning
             if depth <= 5 {
                 const STATIC_NULL_MOVE_MARGIN: i32 = 256;
-                let margin = depth * STATIC_NULL_MOVE_MARGIN;
+                let margin = (depth - improving as i32) * STATIC_NULL_MOVE_MARGIN;
 
                 if static_eval >= beta + margin {
                     return Some(beta);
