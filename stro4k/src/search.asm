@@ -5,6 +5,7 @@ BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
 F_PRUNE_MARGIN equ 256
+STATIC_NULL_MOVE_MARGIN equ 256
 DELTA_BASE equ 224
 DELTA_IMPROVING_BONUS equ 64
 
@@ -518,15 +519,37 @@ alpha_beta:
 
     ; Null move pruning
     ; check depth
-    cmp dword [rbp + 8], 3
-    jnge .no_null_move
+    mov ecx, dword [rbp + 8]
+    cmp ecx, 0
+    jng .no_null_move
 
     ; check if we are in check or in a pv node
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_null_move
 
     ; check that the static eval exceeds beta
-    cmp eax, dword [rbp + 32]
+    ; eax - static eval - beta
+    sub eax, dword [rbp + 32]
+    jnge .no_null_move
+
+    ; static null move pruning
+    ; check depth
+    cmp ecx, 5
+    jnle .no_static_nmp
+
+    ; set margin for static nmp
+
+    ; STATIC_NULL_MOVE_MARGIN is currently a power of 2
+    ; imul edx, ecx, STATIC_NULL_MOVE_MARGIN
+    mov edx, ecx
+    shl edx, 8
+
+    cmp eax, edx
+    mov eax, dword [rbp + 32] ; beta
+    jge .end
+.no_static_nmp:
+    ; check depth
+    cmp ecx, 3
     jnge .no_null_move
 
     ; null move pruning
