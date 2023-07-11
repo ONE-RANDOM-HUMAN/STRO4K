@@ -22,6 +22,7 @@ const MOBILITY_EVAL: [Eval; 4] = [Eval(37, 21), Eval(24, 10), Eval(17, 1), Eval(
 
 const BISHOP_PAIR_EVAL: Eval = Eval(112, 161);
 
+#[rustfmt::skip]
 const PST: [[Eval; 16]; 6] = [
     [
         Eval(-53,   2),

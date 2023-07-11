@@ -59,7 +59,9 @@ fn uci_loop() {
                 }
             }
 
-            let Some(index) = line.find("moves") else { continue };
+            let Some(index) = line.find("moves") else {
+                continue;
+            };
 
             // make moves
             for mov in line[index + 6..].split_ascii_whitespace() {

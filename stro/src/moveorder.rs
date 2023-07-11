@@ -80,7 +80,9 @@ pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable, history: &Hist
     // killers
     let len = moves.len();
     for mov in kt.0 {
-        let Some(mov) = mov else { break; };
+        let Some(mov) = mov else {
+            break;
+        };
 
         if let Some(index) = moves.iter().position(|&x| x == mov) {
             moves.swap(0, index);
