@@ -290,22 +290,35 @@ impl<'a> Search<'a> {
         let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
 
         // Null Move Pruning
-        if depth >= 3 && !pv_node && !is_check && static_eval >= beta {
-            let r = 2 + (depth - 2) / 4;
-            unsafe {
-                self.game.make_null_move();
+        if depth > 0 && !pv_node && !is_check && static_eval >= beta {
+            // Static null move pruning
+            if depth <= 5 {
+                const STATIC_NULL_MOVE_MARGIN: i32 = 256;
+                let margin = depth * STATIC_NULL_MOVE_MARGIN;
+
+                if static_eval >= beta + margin {
+                    return Some(beta);
+                }
             }
 
-            let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 2 + improving as i32, ply + 1);
+            // Null move pruning
+            if depth >= 3 {
+                let r = 2 + (depth - 2) / 4;
+                unsafe {
+                    self.game.make_null_move();
+                }
 
-            unsafe {
-                self.game.unmake_move();
-            }
+                let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 2 + improving as i32, ply + 1);
 
-            let eval = -eval?;
+                unsafe {
+                    self.game.unmake_move();
+                }
 
-            if eval >= beta {
-                return Some(eval);
+                let eval = -eval?;
+
+                if eval >= beta {
+                    return Some(eval);
+                }
             }
         }
 
