@@ -517,9 +517,6 @@ alpha_beta:
 .not_improving:
 
     ; Null move pruning
-    test byte [r13 + PlyData.no_nmp], 1
-    jnz .no_null_move
-
     ; check depth
     cmp dword [rbp + 8], 3
     jnge .no_null_move
@@ -538,8 +535,6 @@ alpha_beta:
     call game_make_move
 
     ; call alpha beta
-    mov byte [r13 + PlyData_size + PlyData.no_nmp], 1
-
     ; edx - ply count
     mov edx, dword [rbp + 16]
     inc edx
@@ -561,8 +556,6 @@ alpha_beta:
     lea edi, [rsi + 1]
 
     call alpha_beta
-
-    mov byte [r13 + PlyData_size + PlyData.no_nmp], 0
 
     ; unmake move
     add qword [rbx], -Board_size
