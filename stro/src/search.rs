@@ -58,7 +58,6 @@ pub struct Search<'a> {
     start: Time,
     min_search_time: u64, // min search time in nanoseconds
     max_search_time: u64, // max search time in nanoseconds
-    _padding: u64,
     ply: [PlyData; 6144],
     history: [HistoryTable; 2],
 }
@@ -87,7 +86,6 @@ impl<'a> Search<'a> {
             start: time_now(),
             min_search_time: 0,
             max_search_time: 0,
-            _padding: 0,
             ply: [PlyData::new(); 6144],
             history: [HistoryTable::new(), HistoryTable::new()],
         }
