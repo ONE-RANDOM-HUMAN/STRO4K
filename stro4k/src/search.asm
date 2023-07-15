@@ -942,11 +942,34 @@ alpha_beta:
 .lmr_not_improving:
     sub ecx, eax
 
-    ; upper part of eax must be zero
-    mov al, 1
+    cmp ecx, 1
+    jge .no_history_leaf_pruning
 
-    ; saturate at 1
-    cmovle ecx, eax
+    ; history leaf pruning
+    ; lead the history tables
+    lea rax, [rbx + Search.white_history]
+    mov rcx, qword [rbx]
+
+    ; This check occurs after the move has alreay been made,
+    ; so we are actually testing if it is currently black's move.
+    test byte [rcx + Board.side_to_move], 1
+    jnz .history_leaf_white
+
+    add rax, Search.black_history - Search.white_history
+.history_leaf_white:
+    ; get the history of the move
+    mov ecx, r12d
+    and ecx, 0FFFh
+
+
+    cmp qword [rax + 8 * rcx], 0
+    mov ecx, 1 ; set the minimum lmr depth
+    jnl .no_history_leaf_pruning
+
+    ; prune
+    add qword [rbx], -Board_size
+    jmp .main_search_tail
+.no_history_leaf_pruning:
 .no_lmr_reduction:
     ; save lmr depth + 1
     lea r11d, [rcx + 1]
