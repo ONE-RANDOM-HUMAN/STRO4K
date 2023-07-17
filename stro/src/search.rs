@@ -306,7 +306,8 @@ impl<'a> Search<'a> {
                     self.game.make_null_move();
                 }
 
-                let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 2 + improving as i32, ply + 1);
+                let eval =
+                    self.alpha_beta(-beta, -beta + 1, depth - r - 2 + improving as i32, ply + 1);
 
                 unsafe {
                     self.game.unmake_move();
@@ -417,7 +418,24 @@ impl<'a> Search<'a> {
                     && !is_check
                     && !gives_check
                 {
-                    cmp::max(1, depth - (2 * depth + i as i32) / 8 - 1 + improving as i32)
+                    let lmr_depth = depth - (2 * depth + i as i32) / 8 - 1 + improving as i32;
+
+                    if lmr_depth < 1 {
+                        // History leaf pruning
+                        let history = &self.history[self.game.position().side_to_move().other() as usize];
+                        if history.get(mov) < 0 {
+                            unsafe {
+                                self.game.unmake_move();
+                            }
+
+                            continue;
+                        }
+
+                        // minimum depth for lmr search
+                        1
+                    } else {
+                        lmr_depth
+                    }
                 } else {
                     depth - 1
                 };
@@ -540,6 +558,92 @@ impl<'a> Search<'a> {
         println!("{nodes} nodes {nps} nps");
 
         unsafe { tt::dealloc() }
+    }
+
+    /// Bench a using sequence of moves from a game to simulate the effects
+    /// of the state retained between moves such as the TT and history tables.
+    pub fn bench2() {
+        let mut buffer = GameBuf::uninit();
+        let (game, start) = Game::startpos(&mut buffer);
+        let mut search = Search::new(game);
+        search.max_search_time = u64::MAX;
+
+        unsafe {
+            tt::alloc((16 * 1024 * 1024).try_into().unwrap());
+        }
+
+        RUNNING.store(true, Ordering::Relaxed);
+
+        // game from testing for 60fd95d419c57ea0d3b8ae4aedffc1d6e66112f1
+        let moves: Vec<_> = include_str!("../../game.txt")
+            .split_ascii_whitespace()
+            .collect();
+
+        let mut duration = std::time::Duration::ZERO;
+        const BENCH_DEPTH: i32 = 8;
+
+        {
+            tt::clear();
+            search.new_game();
+
+            unsafe {
+                search.game.reset(&start);
+            }
+
+            for moves in moves.chunks_exact(2) {
+                let start = std::time::Instant::now();
+                search.alpha_beta(MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
+                duration += start.elapsed();
+
+                unsafe {
+                    assert!(search.make_move_str(moves[0]));
+                    assert!(search.make_move_str(moves[1]));
+                }
+            }
+        }
+
+        #[cfg(feature = "asm")]
+        {
+            let rust_node_count = search.nodes;
+
+            tt::clear();
+            search.new_game();
+
+            unsafe {
+                search.game.reset(&start);
+            }
+
+            for moves in moves.chunks_exact(2) {
+                let start = std::time::Instant::now();
+                crate::asm::alpha_beta(&mut search, MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
+                duration += start.elapsed();
+
+                unsafe {
+                    assert!(search.make_move_str(moves[0]));
+                    assert!(search.make_move_str(moves[1]));
+                }
+            }
+
+            assert_eq!(rust_node_count, search.nodes - rust_node_count);
+        }
+
+        RUNNING.store(false, Ordering::Relaxed);
+
+        let nodes = search.nodes;
+        let nps = (search.nodes as f64 / duration.as_secs_f64()) as u64;
+        println!("{nodes} nodes {nps} nps");
+
+        unsafe { tt::dealloc() }
+    }
+
+    unsafe fn make_move_str(&mut self, mov: &str) -> bool {
+        let mut buffer = MoveBuf::uninit();
+        let moves = gen_moves(self.game().position(), &mut buffer);
+        let Some(&mov) = moves.iter().find(|x| x.to_string() == mov) else {
+            return false;
+        };
+
+        unsafe { self.game.make_move(mov) }
     }
 
     fn time_up(&self, search_time: u64) -> bool {

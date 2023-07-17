@@ -4,10 +4,17 @@ fn main() {
         stro::init();
     }
 
-    // Openbench compat
-    if std::env::args().nth(1).map_or(false, |x| x == "bench") {
-        stro::search::Search::bench();
-        return;
+    match std::env::args().nth(1).as_deref() {
+        Some("bench") => {
+            // Openbench compat
+            stro::search::Search::bench();
+            return;
+        }
+        Some("bench2") => {
+            stro::search::Search::bench2();
+            return;
+        }
+        _ => (),
     }
 
     // Assume the first line is uci
