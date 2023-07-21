@@ -111,6 +111,8 @@ impl SearchThreads {
         for thread in &mut self.threads {
             thread.search.new_game();
         }
+
+        self.reset();
     }
 
     /// # Safety

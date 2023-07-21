@@ -14,7 +14,7 @@ make
 cd ..
 
 ./super-strip/sstrip -z STRO4K
-xz -ze9f --x86 --lzma2 STRO4K
+xz -ze9fF raw -S .xz --x86 --lzma2 STRO4K
 popd
 
 cat unpack.sh $T/STRO4K.xz > $1
