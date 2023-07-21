@@ -2,15 +2,13 @@ use crate::{position::Move, search::Search};
 
 #[allow(improper_ctypes)]
 extern "C" {
-    pub static mut SHIFTS: [u64; 8];
     pub fn root_search_sysv(search: &mut Search, main_thread: bool) -> Move;
 }
 
 /// # Safety
 /// No asm functions can be called concurrently
 pub(crate) unsafe fn init() {
-    static ONCE: std::sync::Once = std::sync::Once::new();
-    ONCE.call_once(|| unsafe { SHIFTS = [8, 1, 9, 7, 17, 15, 10, 6] })
+    // Currently does nothing
 }
 
 pub fn alpha_beta(

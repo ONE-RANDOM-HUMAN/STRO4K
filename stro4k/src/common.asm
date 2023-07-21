@@ -12,7 +12,6 @@ THREAD_STACK_SIZE equ 8 * 1024 * 1024
 TT_SIZE_BYTES equ TT_SIZE_MB * 1024 * 1024
 TT_ENTRY_COUNT equ TT_SIZE_BYTES / 8
 %else
-global SHIFTS
 extern TT_PTR
 extern TT_MASK
 extern RUNNING
@@ -162,16 +161,22 @@ STARTPOS:
     dq 0xFFFF_0000_0000_0000
     dd 000F4000h
 
-section .bss
+section .rodata
 alignb 8
 SHIFTS:
 ROOK_SHIFTS:
-    resq 2
+    dq 8
+    dq 1
 BISHOP_SHIFTS:
-    resq 2
+    dq 9
+    dq 7
 KNIGHT_SHIFTS:
-    resq 4
+    dq 17
+    dq 15
+    dq 10
+    dq 6
 
+section .bss
 %ifndef EXPORT_SYSV
 RUNNING_WORKER_THREADS:
     ; the top bit will indicate whether the threads should continue running
