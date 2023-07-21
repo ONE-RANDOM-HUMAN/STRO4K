@@ -130,6 +130,11 @@ impl<'a> Search<'a> {
             u64::MAX
         };
 
+        // Reduce past history
+        for history in self.history.iter_mut().flat_map(|x| &mut x.0) {
+            *history -= *history / 16;
+        }
+
         self.ply[0].static_eval = evaluate::evaluate(self.game.position()) as i16;
 
         let mut buffer = MoveBuf::uninit();

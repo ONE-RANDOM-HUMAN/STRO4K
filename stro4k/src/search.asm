@@ -79,6 +79,17 @@ root_search:
     pop rsi
     mov word [rbx + Search.ply_data + PlyData.static_eval], ax
 
+    ; reduce history of past moves
+    lea rdi, [rbx + Search.white_history]
+    mov ecx, 2 * 64 * 64 - 1
+.history_reduce_head:
+    mov rax, qword [rdi + 8 * rcx]
+    sar rax, 4
+    sub qword [rdi + 8 * rcx], rax
+    dec ecx
+    jns .history_reduce_head
+
+
     ; memory for 256 moves, with stack alignment
     lea rdi, [rsp - 512 - 8]
 

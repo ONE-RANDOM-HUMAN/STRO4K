@@ -18,7 +18,7 @@ impl KillerTable {
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct HistoryTable([i64; 64 * 64]);
+pub struct HistoryTable(pub [i64; 64 * 64]);
 impl HistoryTable {
     pub fn new() -> Self {
         HistoryTable([0; 64 * 64])
