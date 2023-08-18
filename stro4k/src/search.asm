@@ -5,7 +5,7 @@ BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
 F_PRUNE_MARGIN equ 256
-STATIC_NULL_MOVE_MARGIN equ 256
+STATIC_NULL_MOVE_MARGIN equ 192
 DELTA_BASE equ 224
 DELTA_IMPROVING_BONUS equ 64
 
@@ -541,13 +541,11 @@ alpha_beta:
     ; set margin for static nmp
     mov edx, ecx
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
-    jz .static_nmp_not_improving
+    jnz .static_nmp_improving
 
-    dec edx
-.static_nmp_not_improving:
-    ; STATIC_NULL_MOVE_MARGIN is currently a power of 2
-    ; imul edx, edx, STATIC_NULL_MOVE_MARGIN
-    shl edx, 8
+    inc edx
+.static_nmp_improving:
+    imul edx, edx, STATIC_NULL_MOVE_MARGIN
 
     cmp eax, edx
     mov eax, dword [rbp + 32] ; beta
