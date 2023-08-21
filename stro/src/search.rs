@@ -150,7 +150,7 @@ impl<'a> Search<'a> {
             return (moves[0].mov, score);
         }
 
-        const ASPIRATION_WINDOW_SIZE: i32 = 64;
+        const ASPIRATION_WINDOW_SIZE: i32 = 128;
 
         let mut searched = 0;
         'a: for depth in 0.. {
