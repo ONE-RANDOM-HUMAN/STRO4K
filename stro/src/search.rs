@@ -174,7 +174,7 @@ impl<'a> Search<'a> {
                     None => break 'a,
                 };
 
-                if searched == 0 && score < alpha {
+                if searched == 0 && score <= alpha {
                     alpha = MIN_EVAL;
                 } else {
                     moves[searched].score = score as i16;
