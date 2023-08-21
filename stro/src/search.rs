@@ -144,19 +144,22 @@ impl<'a> Search<'a> {
             })
             .collect::<Vec<_>>();
 
+        let mut score = evaluate::evaluate(self.game().position());
+
         if moves.len() == 1 {
-            let score = evaluate::evaluate(self.game().position());
             return (moves[0].mov, score);
         }
 
+        const ASPIRATION_WINDOW_SIZE: i32 = 64;
+
         let mut searched = 0;
         'a: for depth in 0.. {
-            let mut alpha = MIN_EVAL;
+            let mut alpha = score - ASPIRATION_WINDOW_SIZE;
             searched = 0;
 
-            for mov in &mut moves {
+            while searched < moves.len() {
                 unsafe {
-                    assert!(self.game.make_move(mov.mov));
+                    assert!(self.game.make_move(moves[searched].mov));
                 }
 
                 let score = self.alpha_beta(MIN_EVAL, -alpha, depth, 1);
@@ -171,13 +174,18 @@ impl<'a> Search<'a> {
                     None => break 'a,
                 };
 
-                mov.score = score as i16;
-                alpha = cmp::max(alpha, score);
+                if searched == 0 && score < alpha {
+                    alpha = MIN_EVAL;
+                } else {
+                    moves[searched].score = score as i16;
+                    alpha = cmp::max(alpha, score);
 
-                searched += 1;
+                    searched += 1;
+                }
             }
 
             moves.sort_by_key(|x| cmp::Reverse(x.score));
+            score = moves[0].score as i32;
 
             if main_thread {
                 println!(
