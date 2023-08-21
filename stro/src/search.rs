@@ -154,7 +154,7 @@ impl<'a> Search<'a> {
 
         let mut searched = 0;
         'a: for depth in 0.. {
-            let mut alpha = score - ASPIRATION_WINDOW_SIZE;
+            let mut alpha = cmp::max(score - ASPIRATION_WINDOW_SIZE, MIN_EVAL);
             searched = 0;
 
             while searched < moves.len() {
@@ -174,7 +174,7 @@ impl<'a> Search<'a> {
                     None => break 'a,
                 };
 
-                if searched == 0 && score <= alpha {
+                if searched == 0 && score <= alpha && alpha != MIN_EVAL {
                     alpha = MIN_EVAL;
                 } else {
                     moves[searched].score = score as i16;
