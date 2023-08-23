@@ -4,6 +4,8 @@ BOUND_LOWER equ 01b
 BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
+ASPIRATION_WINDOW_SIZE equ 64
+
 F_PRUNE_MARGIN equ 256
 STATIC_NULL_MOVE_MARGIN equ 256
 DELTA_BASE equ 224
@@ -87,6 +89,11 @@ root_search:
     ; this overlaps with the memory for moves, but it is fine
     ; because the moves are never used afterwards
     sub rsp, 256 * SearchMove_size + 8
+%ifdef EXPORT_SYSV
+    mov qword [rsp + 256 * SearchMove_size], r12
+%endif
+    ; r12d - score
+    mov r12d, eax
 
     ; make a copy
     push rdi ; Start of moves
@@ -123,7 +130,11 @@ root_search:
 .iterative_deepening_head:
     xor r14d, r14d ; searched moves * SearchMove_size
 
-    mov ebp, MIN_EVAL ; alpha
+    ; mov ebp, r12d ; alpha
+    lea ebp, [r12 - ASPIRATION_WINDOW_SIZE] ; alpha
+    mov eax, MIN_EVAL
+    cmp ebp, eax
+    cmovl ebp, eax
 .root_search_moves_head:
     ; edx - move
     movzx edx, word [rsp + r14 + SearchMove.move]
@@ -153,6 +164,20 @@ root_search:
     neg eax
     jo .end_search
 
+    ; check for score outside of aspiration window bound
+    test r14d, r14d
+    jnz .no_aspiration_failure
+
+    cmp eax, ebp
+    jnle .no_aspiration_failure
+
+    cmp ebp, MIN_EVAL
+    je .no_aspiration_failure
+
+    ; re-search with full bound
+    mov ebp, MIN_EVAL
+    jmp .root_search_moves_head
+.no_aspiration_failure:
     ; update score and alpha
     mov word [rsp + r14 + SearchMove.score], ax
     cmp eax, ebp
@@ -164,10 +189,11 @@ root_search:
     jne .root_search_moves_head
 
     call sort_search_moves
+    movzx r12d, word [rsp + SearchMove.score]
     inc r13d
 
 %ifdef EXPORT_SYSV
-    test r12d, r12d
+    test dword [rsp + 256 * SearchMove_size], 1
     jz .iterative_deepening_head
 
     mov rdi, rbx
