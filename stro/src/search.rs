@@ -154,7 +154,11 @@ impl<'a> Search<'a> {
 
         let mut searched = 0;
         'a: for depth in 0.. {
-            let mut alpha = cmp::max(score - ASPIRATION_WINDOW_SIZE, MIN_EVAL);
+            let mut alpha = MIN_EVAL;
+            if main_thread && score - ASPIRATION_WINDOW_SIZE > MIN_EVAL {
+                alpha = score - ASPIRATION_WINDOW_SIZE;
+            }
+
             searched = 0;
 
             while searched < moves.len() {
