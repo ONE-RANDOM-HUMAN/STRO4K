@@ -150,11 +150,17 @@ impl<'a> Search<'a> {
             return (moves[0].mov, score);
         }
 
-        const ASPIRATION_WINDOW_SIZE: i32 = 128;
+        const ASPIRATION_WINDOW_SIZE: i32 = 64;
+        const SMP_ASPIRATION_WINDOW_SIZE: i32 = 128;
 
         let mut searched = 0;
         'a: for depth in 0.. {
-            let mut alpha = cmp::max(score - ASPIRATION_WINDOW_SIZE, MIN_EVAL);
+            let mut alpha = if main_thread {
+                cmp::max(score - ASPIRATION_WINDOW_SIZE, MIN_EVAL)
+            } else {
+                cmp::max(score - SMP_ASPIRATION_WINDOW_SIZE, MIN_EVAL)
+            };
+
             searched = 0;
 
             while searched < moves.len() {
