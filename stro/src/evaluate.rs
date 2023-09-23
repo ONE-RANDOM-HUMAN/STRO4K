@@ -234,8 +234,7 @@ fn side_pst(pieces: &[Bitboard; 6], row_mask: u8) -> Eval {
     let mut eval = Eval(0, 0);
     for (i, mut pieces) in pieces.iter().copied().enumerate() {
         while pieces != 0 {
-            let piece_index = pieces.trailing_zeros();
-            let index = ((piece_index / 2) & 0b11) | ((piece_index / 4) & 0b1100);
+            let index = pieces.trailing_zeros();
 
             eval.accum(RANK_PST[i][((index as u8 >> 3) ^ row_mask) as usize], 1);
             eval.accum(FILE_PST[i][(index & 0b111) as usize], 1);
