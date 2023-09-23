@@ -1,266 +1,267 @@
 MAX_EVAL equ 128 * 256 - 1
 MIN_EVAL equ -MAX_EVAL
 
-MG_BISHOP_PAIR equ 112
-EG_BISHOP_PAIR equ 161
+MG_BISHOP_PAIR equ 92
+EG_BISHOP_PAIR equ 176
 
-MG_OPEN_FILE equ 73
-EG_OPEN_FILE equ 0
-MG_SEMI_OPEN_FILE equ 38
-EG_SEMI_OPEN_FILE equ 1
+MG_OPEN_FILE equ 72
+EG_OPEN_FILE equ -5
+MG_SEMI_OPEN_FILE equ 44
+EG_SEMI_OPEN_FILE equ -4
 
 section .rodata
 EVAL_WEIGHTS:
 MATERIAL_EVAL:
-    dw 318, 311
-    dw 814 - 4 * 37, 747 - 4 * 21
-    dw 914 - 6 * 24, 783 - 6 * 10
-    dw 1265 - 7 * 17, 1344 - 7 * 1
-    dw 2603 - 13 * 12, 2442 - 13 * 4
+    dw  317,  334
+    dw  717,  630
+    dw  814,  688
+    dw 1130, 1298
+    dw 2609, 2298
 
 MOBILITY_EVAL:
-    db 37, 21
-    db 24, 10
-    db 17,  1
-    db 12,  4
+    db 31, 22
+    db 22, 10
+    db 19,  1
+    db 13,  0
 
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
-    db 102, 193
-    db 102, 126
-    db  29,  58
-    db   0,  41
-    db   0,   0
-    db   0,   0
+    db 126, 122
+    db 110,  89
+    db  40,  32
+    db -23,  25
+    db -58, -15
+    db -30, -44
 
 ; doubled and isolated pawn eval
 ; first two in each row are isolated mg and eg
 ; second two are doubled mg and eg
 DOUBLED_ISOLATED_PAWN_EVAL:
-    db 33, 20, 59, 53
-    db 22, 22, 34, 41
-    db 58, 29, 61, 30
-    db 64, 41, 38, 16
-    db 87, 45, 61, 25
-    db 41, 39, 51, 47
-    db 27, 21, 19, 36
-    db 88, 31, 41, 48
+    db 17,  9, 125, 117
+    db 13,  5,  67,  78
+    db 50, 22,  96,  54
+    db 62, 36,  84,  47
+    db 88, 35,  84,  44
+    db 45, 31,  64,  70
+    db 40, 13,  24,  71
+    db 76, 24,  98, 104
 
 PST_MG:
-    db -53
-    db -74
-    db  -0
-    db  -7
-    db -55
-    db -19
-    db  -3
-    db  -9
-    db  -1
-    db  43
-    db  75
-    db  38
-    db  41
-    db  40
-    db  16
-    db   5
-          
-          
-    db -24
-    db -38
-    db -24
-    db -22
-    db -30
-    db -43
-    db -48
-    db   8
-    db  39
-    db  49
-    db  28
-    db  70
-    db   2
-    db  23
-    db  20
-    db   5
-          
-          
-    db  22
-    db -37
-    db -29
-    db  24
-    db   6
-    db   1
-    db -23
-    db  11
-    db   4
-    db  29
-    db  27
-    db  22
-    db  -7
-    db  -0
-    db   2
-    db  -6
-          
-          
-    db -60
-    db  -4
-    db -20
-    db -51
-    db -49
-    db -23
-    db -22
-    db  -5
-    db  13
-    db  28
-    db  29
-    db  29
-    db  30
-    db  46
-    db  34
-    db  33
-          
-          
-    db -18
-    db  -4
-    db -15
-    db -19
-    db -31
-    db -34
-    db -15
-    db  16
-    db -17
-    db  -3
-    db  31
-    db  60
-    db -17
-    db  13
-    db  31
-    db  34
-          
-          
-    db  42
-    db -20
-    db -75
-    db  48
-    db   5
-    db  -4
-    db -16
-    db -17
-    db  11
-    db  12
-    db   9
-    db   6
-    db   6
-    db   9
-    db  11
-    db   5
+    db  -26
+    db  -56
+    db   -7
+    db   -1
+    db  -34
+    db   -6
+    db   -4
+    db   -8
+    db   12
+    db   36
+    db   52
+    db   33
+    db   54
+    db   54
+    db   48
+    db   21
+
+
+    db  -21
+    db  -30
+    db  -19
+    db  -21
+    db  -35
+    db  -25
+    db  -29
+    db    3
+    db   43
+    db   46
+    db   28
+    db   56
+    db    0
+    db   52
+    db   56
+    db   23
+
+
+    db   24
+    db  -25
+    db  -26
+    db   34
+    db   11
+    db   10
+    db  -15
+    db   11
+    db    1
+    db   36
+    db   30
+    db   21
+    db  -29
+    db   -9
+    db    3
+    db   -4
+
+
+    db  -35
+    db   18
+    db   10
+    db  -37
+    db  -40
+    db  -15
+    db  -13
+    db   12
+    db   26
+    db   41
+    db   48
+    db   55
+    db   48
+    db   56
+    db   57
+    db   59
+
+
+    db  -21
+    db    1
+    db  -13
+    db  -31
+    db  -37
+    db  -35
+    db  -25
+    db   18
+    db  -30
+    db  -20
+    db   38
+    db   53
+    db  -33
+    db   24
+    db   52
+    db   59
+
+
+    db   52
+    db  -14
+    db  -47
+    db   42
+    db   18
+    db   -5
+    db  -28
+    db  -30
+    db   51
+    db   47
+    db   47
+    db   41
+    db   54
+    db   54
+    db   55
+    db   51
+
 
 PST_EG:
-    db   2
-    db  19
-    db   6
-    db -40
-    db -14
-    db -31
-    db -26
-    db -56
-    db  34
-    db  -9
-    db -26
-    db -15
-    db  75
-    db  56
-    db  33
-    db  29
-          
-          
-    db -19
-    db -33
-    db -33
-    db  -7
-    db  -4
-    db -13
-    db -20
-    db   9
-    db  13
-    db   9
-    db  23
-    db  29
-    db   4
-    db  14
-    db  12
-    db   1
-          
-          
-    db -16
-    db -24
-    db -16
-    db -18
-    db   4
-    db   2
-    db   4
-    db  -6
-    db  11
-    db   6
-    db  15
-    db  16
-    db   3
-    db   7
-    db   3
-    db  -5
-          
-          
-    db -35
-    db -38
-    db -47
-    db -43
-    db -12
-    db  -3
-    db  -9
-    db -19
-    db  23
-    db  31
-    db  20
-    db  10
-    db  38
-    db  44
-    db  33
-    db  31
-          
-          
-    db -22
-    db -47
-    db -46
-    db -21
-    db  -7
-    db   3
-    db  -1
-    db  -1
-    db  -5
-    db  25
-    db  37
-    db  24
-    db  -2
-    db  23
-    db  31
-    db  12
-          
-          
-    db -30
-    db -38
-    db -38
-    db -68
-    db  -6
-    db   6
-    db  -3
-    db -21
-    db  22
-    db  40
-    db  42
-    db  23
-    db   7
-    db  22
-    db  28
-    db  14
+    db   -7
+    db   18
+    db    6
+    db  -37
+    db  -18
+    db  -38
+    db  -30
+    db  -49
+    db   24
+    db   -7
+    db  -17
+    db  -17
+    db   52
+    db   51
+    db   48
+    db   42
+
+
+    db  -28
+    db  -33
+    db  -32
+    db  -13
+    db    6
+    db   -8
+    db  -17
+    db   13
+    db   31
+    db   18
+    db   29
+    db   50
+    db   21
+    db   27
+    db   25
+    db    3
+
+
+    db  -20
+    db  -24
+    db  -14
+    db  -23
+    db    7
+    db    7
+    db    5
+    db   -7
+    db   19
+    db    9
+    db   16
+    db   30
+    db   15
+    db   19
+    db   14
+    db    4
+
+
+    db  -32
+    db  -37
+    db  -43
+    db  -38
+    db    4
+    db    7
+    db   -2
+    db  -15
+    db   30
+    db   36
+    db   31
+    db   14
+    db   41
+    db   49
+    db   42
+    db   36
+
+
+    db  -51
+    db  -57
+    db  -59
+    db  -56
+    db  -15
+    db   16
+    db    5
+    db   -2
+    db   -1
+    db   53
+    db   55
+    db   50
+    db   -3
+    db   47
+    db   50
+    db   34
+
+
+    db  -28
+    db  -28
+    db  -30
+    db  -44
+    db   -2
+    db   12
+    db   12
+    db   -8
+    db   36
+    db   40
+    db   41
+    db   30
+    db   22
+    db   41
+    db   47
+    db   32
 
 
 default rel
@@ -484,9 +485,9 @@ evaluate:
     lzcnt rdx, rdx
     shr edx, 3
 
-    movzx ebx, word [rbp + PASSED_PAWN_EVAL - EVAL_WEIGHTS - 2 + 2 * rdx]
-    movzx edx, bl
-    shr ebx, 8
+    movsx ebx, word [rbp + PASSED_PAWN_EVAL - EVAL_WEIGHTS - 2 + 2 * rdx]
+    movsx edx, bl
+    sar ebx, 8
 
     add esi, edx
     add edi, ebx
