@@ -6,7 +6,7 @@ nasm -f elf64 -d NUM_THREADS=$2 -d TT_SIZE_MB=$3 combined.asm -o $T/combined.o
 cd ../..
 
 pushd $T
-ld.lld combined.o -o STRO4K --static -O3 --gc-sections --print-gc-sections -m "elf_x86_64" --as-needed --omagic
+ld.gold combined.o -o STRO4K --static -O3 --gc-sections --print-gc-sections -m "elf_x86_64" --as-needed --omagic
 
 git clone https://github.com/aunali1/super-strip
 cd super-strip
