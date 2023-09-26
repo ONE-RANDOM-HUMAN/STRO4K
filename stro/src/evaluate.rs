@@ -326,9 +326,9 @@ fn side_open_file(pieces: &[Bitboard; 6], side_pawns: Bitboard, enemy_pawns: Bit
 
     for _ in 0..8 {
         if (side_pawns | enemy_pawns) & file == 0 {
-            open |= file
+            open |= file;
         } else if (side_pawns & file) == 0 {
-            semi_open |= file
+            semi_open |= file;
         }
 
         file <<= 1;
