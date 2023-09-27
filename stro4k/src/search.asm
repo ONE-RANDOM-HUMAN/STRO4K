@@ -128,8 +128,7 @@ root_search:
     ; edx - move
     movzx edx, word [rsp + r14 + SearchMove.move]
     call game_make_move
-    test al, al ; check legality
-    jz .root_search_moves_tail
+    jc .root_search_moves_tail
 
     ; alpha
     mov esi, MIN_EVAL
@@ -297,13 +296,36 @@ alpha_beta:
     vxorps xmm0, xmm0, xmm0
     vmovups yword [rbp - 128 + 8], ymm0
 
-    call game_is_repetition
-    movzx eax, al
-    dec eax ; 0 if is repetition
-    jz .end
-
-    ; rsi - board - this is preserved by board_is_check
+    ; rsi - current position
     mov rsi, qword [rbx]
+
+    ; rdi - position to search
+    mov rdi, rsi
+
+    ; repeating positions remaining before draw
+    mov eax, 2
+.reptition_loop_head:
+    ; check for 50 move reset
+    cmp byte [rdi + Board.fifty_moves], 0
+    je .repetition_loop_end
+
+    ; previous position
+    add rdi, -Board_size
+
+    mov ecx, 115
+    repe cmpsb
+
+    ; reset rdi and rsi without affecting flags
+    lea rsi, [rsi + rcx - 115]
+    lea rdi, [rdi + rcx - 115]
+
+    jne .reptition_loop_head
+
+    dec eax
+    jnz .reptition_loop_head
+    jmp .end
+.repetition_loop_end:
+    ; rsi - board - this is preserved by board_is_check
     ; determine if we are in check
     call board_is_check
 
@@ -339,11 +361,8 @@ alpha_beta:
 .find_legal_move_head:
     movzx edx, word [r15 + 2 * r13]
 
-    ; sets rsi to current board if move was illegal,
-    ; next board otherwise
-    call game_is_move_legal
-    test al, al
-    jnz .legal_move_found
+    call game_make_move
+    jnc .legal_move_found
 
     inc r13
     jnz .find_legal_move_head
@@ -359,6 +378,9 @@ alpha_beta:
     jmp .end
 
 .legal_move_found:
+    ; Unmake move
+    add qword [rbx], -Board_size
+
     ; check 50 move rule
     ; rsi is now at board + Board_size
     xor eax, eax
@@ -434,9 +456,12 @@ alpha_beta:
     mov r12, rax ; TT entry
 
     movzx edx, ax ; TODO
-    call game_is_move_legal
-    test al, al
-    jz .tt_miss
+
+    call game_make_move
+    jc .tt_miss
+
+    ; Unmake move
+    add qword [rbx], -Board_size
 
     ; swap the move with the first move
 
@@ -863,10 +888,7 @@ alpha_beta:
     ; make the move
     mov edx, r12d
     call game_make_move
-
-    ; check legality
-    test al, al
-    jz .main_search_tail
+    jc .main_search_tail
 
     ; rsi is a pointer to the current board
     call board_is_check

@@ -2,6 +2,7 @@ default rel
 section .text
 
 ; rdx - move
+; carry flag indicates illegality
 game_make_move:
     ; make copy of board
     mov ecx, Board_size
@@ -145,10 +146,10 @@ game_make_move:
     call board_is_area_attacked
     pop rdx ; restore move
     pop rbx ; restore game
-    ; test al, al
-    ; jnz .end
-    xor al, 1
-    jz .end
+
+    ; Return with CF=1 for illegal move if al is not zero
+    add al, -1
+    jc .end
 
     ; rdi - origin
     xor edi, edi
@@ -190,19 +191,8 @@ game_make_move:
     ; update side to move, clear CF
     xor byte [rsi + Board.side_to_move], 1
 
-    setnc al ; al = 1
-
-    mov qword [rbx], rsi ; update Game
-.end:
-    ret
-
-; rbx - game
-; rdx - move
-game_is_move_legal:
-    call game_make_move
-    test al, al
-    jz .end ; illegal
-    add qword[rbx], -Board_size
+    ; update Game
+    mov qword [rbx], rsi
 .end:
     ret
 
@@ -286,41 +276,4 @@ board_is_check:
     mov rdi, qword [rsi + rax + 40] ; king
 
     jmp board_is_area_attacked
-
-
-; game - rbx
-game_is_repetition:
-    ; rdi - current position
-    mov rdi, qword [rbx]
-
-    ; rsi - position to search
-    mov rsi, rdi
-
-    ; repeating positions remaining, ends at -1 so that we have
-    ; ZF == 1 at the end
-    mov dl, 1 
-.loop_head:
-    ; check for 50 move reset
-    cmp byte [rsi + Board.fifty_moves], 0
-    je .end ; ZF == 1
-
-    ; previous position
-    add rsi, -Board_size
-
-    mov ecx, 115
-    repe cmpsb
-
-    ; reset rdi and rsi without affecting flags
-    lea rsi, [rsi + rcx - 115]
-    lea rdi, [rdi + rcx - 115]
-
-    jne .loop_head
-
-    dec dl
-    jns .loop_head
-    
-    ; ZF == 0
-.end:
-    setnz al
-    ret
 
