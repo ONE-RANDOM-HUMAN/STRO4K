@@ -2,6 +2,10 @@ stro/target/
 stro/Cargo.lock
 stro/.cargo
 
+build4krs/target/
+build4krs/Cargo.lock
+build4krs/.cargo
+
 .vscode/
 
 **/*.rs.bk
