@@ -21,11 +21,11 @@ MOBILITY_EVAL:
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
     db   98,   91
-    db   85,   55
-    db   44,   51
-    db  -30,   37
-    db  -47,  -11
-    db  -29,  -36
+    db   86,   56
+    db   46,   53
+    db  -28,   36
+    db  -44,   -8
+    db  -24,  -32
 
 ; doubled and isolated pawn eval
 ; first two in each row are isolated mg and eg
