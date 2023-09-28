@@ -5,13 +5,12 @@ MG_BISHOP_PAIR equ 90
 EG_BISHOP_PAIR equ 176
 
 section .rodata
-EVAL_WEIGHTS:
 MATERIAL_EVAL:
-    dw  335,  340
-    dw  761,  691
-    dw  825,  715
-    dw 1212, 1291
-    dw 2557, 2363
+    dw  330,  339
+    dw  762,  691
+    dw  830,  715
+    dw 1219, 1290
+    dw 2562, 2362
 
 MOBILITY_EVAL:
     db   28,   16
@@ -32,149 +31,158 @@ PASSED_PAWN_EVAL:
 ; first two in each row are isolated mg and eg
 ; second two are doubled mg and eg
 DOUBLED_ISOLATED_PAWN_EVAL:
-    db  7,  0, 107, 109
-    db 36, 16,  77,  86
-    db 42, 32,  68,  64
-    db 78, 31,  82,  49
-    db 65, 49,  64,  48
-    db 48, 29,  93,  70
-    db 38, 28,  69,  77
-    db 50,  9,  87,  92
+    db  8,  0, 105, 108
+    db 38, 16,  78,  85
+    db 42, 32,  65,  63
+    db 79, 31,  81,  48
+    db 65, 50,  64,  47
+    db 47, 26,  89,  69
+    db 35, 30,  73,  78
+    db 45,  7,  86,  91
 
+OPEN_FILE_EVAL:
+    db   -8,  -23
+    db  -19,    0
+    db   69,   -6
+    db  -22,   28
+    db  -87,  -17
+
+SEMI_OPEN_FILE_EVAL:
+    db   -5,   11
+    db  -14,   40
+    db   43,    1
+    db   10,    7
+    db  -38,   29
+
+; 0-4 pawns, 4 is max possible
+PAWN_SHIELD_EVAL:
+    db    0,    0
+    db  -31,  -16
+    db   25,  -21
+    db   74,   -9
+    db   74,   -9
+
+EVAL_WEIGHTS:
 RANK_PST:
     db    0,    0
-    db  -39,  -18
-    db  -39,  -46
-    db    1,  -59
-    db   39,  -33
-    db   71,   32
+    db  -44,  -18
+    db  -41,  -46
+    db    6,  -57
+    db   43,  -34
+    db   73,   32
     db   98,   91
     db    0,    0
 
 
-    db  -45,  -46
+    db  -46,  -46
     db  -26,  -38
-    db  -33,  -20
-    db    6,   30
-    db   44,   46
+    db  -34,  -19
+    db    6,   31
+    db   45,   45
     db   95,   27
-    db   99,   20
+    db  100,   21
     db  -74,   25
 
 
     db  -17,  -32
-    db    1,  -25
+    db    2,  -25
     db   13,   -3
-    db   -3,   12
+    db   -1,   12
     db    1,   30
-    db   70,   10
+    db   69,   10
     db   -5,   10
     db  -65,   30
 
 
     db  -28,  -37
-    db  -70,  -25
-    db  -55,   -6
-    db  -39,   20
-    db   31,   32
-    db   73,   27
+    db  -68,  -25
+    db  -54,   -7
+    db  -39,   19
+    db   30,   32
+    db   72,   28
     db   79,   49
-    db   98,   25
+    db   97,   25
 
 
-    db    3,  -90
+    db    2,  -90
     db    9,  -89
-    db  -24,   -6
-    db  -38,   61
-    db  -10,   84
-    db   58,   72
-    db   25,   86
-    db   92,   12
+    db  -24,   -5
+    db  -36,   60
+    db   -9,   83
+    db   58,   73
+    db   27,   85
+    db   92,   13
 
 
-    db   -5,  -66
-    db  -46,  -14
-    db  -79,   13
-    db   -8,   28
-    db   58,   47
-    db   84,   65
-    db   92,   60
-    db  100,   22
+    db   -4,  -64
+    db  -41,  -12
+    db  -79,    9
+    db  -14,   26
+    db   55,   44
+    db   82,   64
+    db   92,   58
+    db  100,   20
 
 
 FILE_PST:
-    db  -58,   25
-    db  -11,   42
-    db  -43,   29
-    db    9,    1
-    db    1,   15
-    db   55,   -3
-    db   46,   -1
-    db  -12,  -28
+    db  -56,   24
+    db   -6,   42
+    db  -40,   28
+    db   13,    0
+    db   10,   14
+    db   45,   -3
+    db   45,    3
+    db  -20,  -29
 
 
     db  -22,  -20
     db   -1,   -8
-    db   -9,   -4
-    db   12,    9
-    db    4,    5
-    db    7,  -18
-    db   15,    8
-    db    6,   -9
+    db  -11,   -4
+    db   11,    9
+    db    5,    5
+    db    7,  -17
+    db   18,    8
+    db    8,   -9
 
 
-    db   13,  -12
-    db   18,   -2
-    db   -7,   -6
+    db   12,  -12
+    db   18,   -3
+    db   -8,   -6
     db  -11,    4
     db  -18,    3
-    db  -22,    1
-    db   33,  -15
+    db  -21,    1
+    db   35,  -15
     db   34,  -29
 
 
-    db  -31,   10
-    db  -22,   16
-    db   16,   12
-    db   39,    5
-    db   35,   -7
-    db    8,    2
-    db   -2,    8
-    db  -27,   -7
+    db  -33,    9
+    db  -26,   16
+    db   12,   12
+    db   33,    6
+    db   31,   -6
+    db    3,    5
+    db   -1,    7
+    db  -13,  -12
 
 
-    db   -6,  -64
-    db  -15,  -20
-    db   -6,    6
-    db   -3,   22
-    db  -15,   41
-    db   -9,   35
-    db   39,    5
-    db   65,   -9
-
-
-    db   50,  -34
-    db   81,    2
-    db   23,   15
-    db  -86,   34
-    db  -40,   15
-    db  -90,   25
-    db   56,  -14
-    db   22,  -39
-
-OPEN_FILE_EVAL:
-    db   -9,  -23
-    db  -19,    0
-    db   68,   -6
-    db  -23,   29
-    db  -91,  -16
-
-SEMI_OPEN_FILE_EVAL:
-    db   -6,   11
+    db   -8,  -64
+    db  -16,  -20
+    db   -7,    6
+    db   -4,   24
     db  -13,   40
-    db   42,    1
-    db    9,    8
-    db  -46,   30
+    db   -5,   34
+    db   43,    6
+    db   65,  -10
+
+
+    db   47,  -34
+    db   73,    4
+    db   10,   18
+    db  -81,   30
+    db  -13,    5
+    db  -93,   27
+    db   47,  -10
+    db   21,  -38
 
 
 default rel
@@ -202,7 +210,7 @@ evaluate:
 
     ; SWAR multiplication for MG and EG eval
     ; since it must be positive
-    imul eax, dword [rbp + 4 * rcx]
+    imul eax, dword [rbp + MATERIAL_EVAL - EVAL_WEIGHTS + 4 * rcx]
     add ebx, eax
 
     dec ecx
@@ -387,7 +395,37 @@ evaluate:
     mov r8, qword [r10] ; white pawns
     mov r9, qword [r11] ; black pawns
     xor r11d, r11d ; loop counter
-.white_passed_pawn_head:
+
+    ; White king
+    mov edx, dword [r10 + 40]
+.white_eval_head:
+    ; Black king
+    movbe eax, dword [r10 + 88 + 4]
+
+    ; for white, SF=0 from xor
+    ; for black, SF=1 from dec at end of loop
+    cmovs edx, eax
+
+    mov ecx, 0707E0E0h
+    xor esi, esi ; mg eval
+    xor edi, edi ; eg eval
+
+.pawn_shield_head:
+    movzx eax, cx
+    test eax, edx
+    jz .pawn_shield_tail
+
+    ; Get number of pawns
+    shl eax, 8
+    and eax, r8d
+    popcnt eax, eax
+
+    movsx esi, byte [rbp + PAWN_SHIELD_EVAL - EVAL_WEIGHTS + rax * 2]
+    movsx edi, byte [rbp + PAWN_SHIELD_EVAL - EVAL_WEIGHTS + rax * 2 + 1]
+.pawn_shield_tail:
+    shr rcx, 16
+    jnz .pawn_shield_head
+
     ; get the black pawn attack spans
     ; The leftmost bit triggers the carry flag so that the shifts
     ; are 8, 16, 32
@@ -414,8 +452,6 @@ evaluate:
     andn rax, rax, r8
 
     mov rcx, r12
-    xor esi, esi ; mg eval
-    xor edi, edi ; eg eval
 .passed_pawn_files_head:
     mov rdx, rax
     and rdx, rcx ; passed pawns on file
@@ -442,7 +478,7 @@ evaluate:
 
     push rdi ; eg
     push rsi ; mg
-    jmp .white_passed_pawn_head
+    jmp .white_eval_head
 .white_passed_pawn_end:
     ; add up all eval terms
     pop rax
