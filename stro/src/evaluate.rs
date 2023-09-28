@@ -182,11 +182,11 @@ const ISOLATED_PAWN_EVAL: [Eval; 8] = [
 
 #[rustfmt::skip]
 const PASSED_PAWN_EVAL: [Eval; 6] = [
-    Eval( -29,  -36),
-    Eval( -47,  -11),
-    Eval( -30,   37),
-    Eval(  44,   51),
-    Eval(  85,   55),
+    Eval( -24,  -32),
+    Eval( -44,   -8),
+    Eval( -28,   36),
+    Eval(  46,   53),
+    Eval(  86,   56),
     Eval(  98,   91),
 ];
 
