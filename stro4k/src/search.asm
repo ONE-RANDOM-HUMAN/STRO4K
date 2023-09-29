@@ -235,6 +235,8 @@ struc ABLocals
         resb 1
     .flags:
         resb 1
+    .legals:
+        resb 1
 endstruc
 
 IS_CHECK_FLAG equ 0001b
@@ -749,6 +751,8 @@ alpha_beta:
 
     ; r15 - loop counter
     xor r15d, r15d
+
+    mov byte [rbp - 128 + ABLocals.legals], 0
 .main_search_loop_head:
     ; check if moves should be ordered
     mov edx, dword [rbp - 128 + ABLocals.ordered_moves]
@@ -934,8 +938,8 @@ alpha_beta:
     cmp edx, 3
     jnge .no_lmr_reduction
 
-    ; move num
-    cmp r15d, 3
+    ; legals tried
+    cmp byte [rbp - 128 + ABLocals.legals], 3
     jnge .no_lmr_reduction
 
     ; non-pv node and is check
@@ -951,10 +955,11 @@ alpha_beta:
     jnz .no_lmr_reduction
 
     ; calculate lmr depth
-    ; 5 * depth + 3 * i
-    lea eax, [r15 + 4 * rdx]
+    ; 5 * legals + 3 * i
+    movzx r9d, byte [rbp - 128 + ABLocals.legals]
+    lea eax, [r9 + 4 * rdx]
     add eax, edx
-    lea eax, [rax + 2 * r15]
+    lea eax, [rax + 2 * r9]
 
     ; divide by 16
     shr eax, 4
@@ -1043,6 +1048,7 @@ alpha_beta:
 
     ; unmake move
     add qword [rbx], -Board_size
+    inc byte [rbp - 128 + ABLocals.legals]
 
 
     ; check best move

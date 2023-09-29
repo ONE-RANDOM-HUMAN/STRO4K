@@ -348,6 +348,7 @@ impl<'a> Search<'a> {
 
         // first quiet, non-tt move
         let first_quiet = ordered_moves;
+        let mut legals = 0;
 
         for i in 0..moves.len() {
             if i == ordered_moves {
@@ -412,13 +413,13 @@ impl<'a> Search<'a> {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
             } else {
                 let lmr_depth = if depth >= 3
-                    && i >= 3
+                    && legals >= 3
                     && !pv_node
                     && !mov.flags().is_noisy()
                     && !is_check
                     && !gives_check
                 {
-                    let lmr_depth = depth - (5 * depth + 3 * i as i32) / 16 - 1 + improving as i32;
+                    let lmr_depth = depth - (5 * depth + 3 * legals) / 16 - 1 + improving as i32;
 
                     if lmr_depth < 1 {
                         // History leaf pruning
@@ -455,6 +456,8 @@ impl<'a> Search<'a> {
             unsafe {
                 self.game.unmake_move();
             }
+
+            legals += 1;
 
             if eval > best_eval {
                 best_move = Some(mov);
