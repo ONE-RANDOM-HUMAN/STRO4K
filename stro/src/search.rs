@@ -418,11 +418,12 @@ impl<'a> Search<'a> {
                     && !is_check
                     && !gives_check
                 {
-                    let lmr_depth = depth - (2 * depth + i as i32) / 8 - 1 + improving as i32;
+                    let lmr_depth = depth - (5 * depth + 3 * i as i32) / 16 - 1 + improving as i32;
 
                     if lmr_depth < 1 {
                         // History leaf pruning
-                        let history = &self.history[self.game.position().side_to_move().other() as usize];
+                        let history =
+                            &self.history[self.game.position().side_to_move().other() as usize];
                         if history.get(mov) < 0 {
                             unsafe {
                                 self.game.unmake_move();
