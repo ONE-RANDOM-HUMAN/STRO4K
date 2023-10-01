@@ -398,10 +398,6 @@ alpha_beta:
 
     ; probe the tt
 
-    ; check depth
-    cmp dword [rbp + 8], 0
-    jng .no_tt_probe
-
     ; hash the position
     mov eax, dword [rsi - Board_size + Board.side_to_move]
     and eax, 00FFFFFFh
@@ -463,6 +459,15 @@ alpha_beta:
     ; Unmake move
     add qword [rbx], -Board_size
 
+    ; Check if not qsearch
+    cmp dword [rbp + 8], 0
+    jg .tt_move_order
+
+    ; If qsearch, check if move is noisy
+    test r12d, (CAPTURE_FLAG | PROMO_FLAG) << 12
+    jz .no_tt_move_order
+
+.tt_move_order:
     ; swap the move with the first move
 
     ; read dwords, write words
@@ -475,6 +480,7 @@ alpha_beta:
     ; set the number of ordered moves
     inc dword [rbp - 128 + ABLocals.ordered_moves]
 
+.no_tt_move_order:
 
     ; get the depth of the tt entry
     mov rdx, r12
