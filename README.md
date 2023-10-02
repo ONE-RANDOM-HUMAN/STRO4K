@@ -39,7 +39,9 @@ cargo build --release
     * Killer Heuristic
     * History Heuristic
     * Late Move Reductions
+    * History Leaf Pruning
     * Null Move Pruning
+    * Static Null Move Pruning
     * Futility Pruning
     * Lazy SMP
     * Internal Iterative Reductions
@@ -51,7 +53,8 @@ cargo build --release
     * Passed Pawns
     * Isolated Pawns
     * Open Files
-    * Quarter Piece-Square Tables
+    * Rank and File Piece Tables
+    * Pawn Shield
 
 A neural network is planned.
 
