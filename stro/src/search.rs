@@ -232,54 +232,53 @@ impl<'a> Search<'a> {
         let mut depth = if is_check { depth + 1 } else { depth };
 
         let mut ordered_moves = 0;
-        let mut hash = 0;
-
         let pv_node = beta - alpha != 1;
-        if depth > 0 {
-            // Probe tt
-            hash = self.game.position().hash();
-            let mut tt_success = false;
 
-            'tt: {
-                let Some(tt_data) = tt::load(hash) else {
-                    break 'tt;
-                };
-                let best_move = tt_data.best_move();
+        // Probe tt
+        let hash = self.game.position().hash();
+        let mut tt_success = false;
 
-                let Some(index) = moves.iter().position(|&x| x == best_move) else {
-                    break 'tt;
-                };
-                if !self.game.is_legal(moves[index]) {
-                    break 'tt;
-                }
+        'tt: {
+            let Some(tt_data) = tt::load(hash) else {
+                break 'tt;
+            };
+            let best_move = tt_data.best_move();
 
+            let Some(index) = moves.iter().position(|&x| x == best_move) else {
+                break 'tt;
+            };
+            if !self.game.is_legal(moves[index]) {
+                break 'tt;
+            }
+
+            if depth > 0 || moves[index].flags().is_noisy() {
                 moves.swap(0, index);
                 ordered_moves = 1;
+            }
 
-                if !pv_node && tt_data.depth() >= depth {
-                    let eval = tt_data.eval();
-                    match tt_data.bound() {
-                        Bound::None => (),
-                        Bound::Lower => {
-                            if eval >= beta {
-                                return Some(eval);
-                            }
+            if !pv_node && tt_data.depth() >= depth {
+                let eval = tt_data.eval();
+                match tt_data.bound() {
+                    Bound::None => (),
+                    Bound::Lower => {
+                        if eval >= beta {
+                            return Some(eval);
                         }
-                        Bound::Upper => {
-                            if eval <= alpha {
-                                return Some(eval);
-                            }
-                        }
-                        Bound::Exact => return Some(eval),
                     }
+                    Bound::Upper => {
+                        if eval <= alpha {
+                            return Some(eval);
+                        }
+                    }
+                    Bound::Exact => return Some(eval),
                 }
-
-                tt_success = true;
             }
 
-            if !tt_success && depth > 5 {
-                depth -= 1;
-            }
+            tt_success = true;
+        }
+
+        if !tt_success && depth > 5 {
+            depth -= 1;
         }
 
         let static_eval = evaluate::evaluate(self.game.position());
