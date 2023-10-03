@@ -521,9 +521,14 @@ alpha_beta:
     jmp .end 
 .tt_miss:
     ; iir
-    cmp dword [rbp + 8], 6
-    adc dword [rbp + 8], -1
+    ; This does not work because depth might be negative
+    ; cmp dword [rbp + 8], 6
+    ; adc dword [rbp + 8], -1
 
+    cmp dword [rbp + 8], 5
+    jng .no_iir
+    dec dword [rbp + 8]
+.no_iir:
 .tt_end:
 .no_tt_cutoff:
 .no_tt_probe:
@@ -1135,10 +1140,8 @@ alpha_beta:
     test edx, edx
     jz .no_store_tt
 
-
+    ; depth
     mov ecx, dword [rbp + 8]
-    cmp ecx, 0
-    jng .no_store_tt
 
     ; load hash
     mov rdi, qword [rbp - 128 + ABLocals.hash]
