@@ -485,8 +485,8 @@ alpha_beta:
     ; get the depth of the tt entry
     mov rdx, r12
     mov eax, edx
-    shr rdx, 34 - 18
-    sar edx, 18
+    shr rdx, 34
+    and edx, (1 << 14) - 1
 
     ; check for cutoff
     cmp edx, dword [rbp + 8]
@@ -1140,8 +1140,6 @@ alpha_beta:
     test edx, edx
     jz .no_store_tt
 
-    ; depth
-    mov ecx, dword [rbp + 8]
 
     ; load hash
     mov rdi, qword [rbp - 128 + ABLocals.hash]
@@ -1168,6 +1166,11 @@ alpha_beta:
     or rsi, rdx
 
     ; depth
+    xor edx, edx
+    mov ecx, dword [rbp + 8]
+    cmp ecx, 0
+    cmovl ecx, edx
+
     shl ecx, 2
     or cl, byte [rbp - 128 + ABLocals.bound]
     shl ecx, 16
