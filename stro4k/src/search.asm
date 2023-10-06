@@ -5,7 +5,7 @@ BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
 F_PRUNE_MARGIN equ 256
-STATIC_NULL_MOVE_MARGIN equ 256
+STATIC_NULL_MOVE_MARGIN equ 128
 DELTA_BASE equ 224
 DELTA_IMPROVING_BONUS equ 64
 
@@ -578,7 +578,7 @@ alpha_beta:
     ; STATIC_NULL_MOVE_MARGIN is currently a power of 2
     ; imul edx, ecx, STATIC_NULL_MOVE_MARGIN
     mov edx, ecx
-    shl edx, 8
+    shl edx, 7
 
     cmp eax, edx
     mov eax, dword [rbp + 32] ; beta
