@@ -25,14 +25,14 @@ pub struct TTData(NonZeroU64);
 impl TTData {
     pub fn new(mov: Move, bound: Bound, eval: i32, depth: i32, hash: u64) -> Self {
         // 14 bits - truncating is probably sufficient
-        let depth = depth.clamp(-(1 << 13), (1 << 13) - 1);
+        let depth = depth.clamp(0, (1 << 14) - 1);
 
         TTData(
             NonZeroU64::new(
                 u64::from(mov.0.get())
                     | (eval as u16 as u64) << 16
                     | (bound as u64) << 32
-                    | (depth as u64 & ((1 << 14) - 1)) << 34
+                    | (depth as u64) << 34
                     | (hash & 0xFFFF_0000_0000_0000),
             )
             .unwrap(), // all zeroes is not a valid move
@@ -54,9 +54,7 @@ impl TTData {
     }
 
     pub fn depth(self) -> i32 {
-        let value = (self.0.get() >> (34 - 18)) as i32;
-
-        value >> 18
+        (self.0.get() >> 34) as i32 & ((1 << 14) - 1)
     }
 }
 

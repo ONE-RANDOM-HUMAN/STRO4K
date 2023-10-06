@@ -485,9 +485,7 @@ impl<'a> Search<'a> {
 
         // Store tt if not in qsearch
         if let Some(mov) = best_move {
-            if depth > 0 {
-                tt::store(hash, TTData::new(mov, bound, best_eval, depth, hash));
-            }
+            tt::store(hash, TTData::new(mov, bound, best_eval, depth, hash));
         }
 
         Some(best_eval)
