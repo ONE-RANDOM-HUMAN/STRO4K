@@ -290,7 +290,7 @@ impl<'a> Search<'a> {
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 5 {
-                const STATIC_NULL_MOVE_MARGIN: i32 = 256;
+                const STATIC_NULL_MOVE_MARGIN: i32 = 192;
                 let margin = depth * STATIC_NULL_MOVE_MARGIN;
 
                 if static_eval >= beta + margin {
