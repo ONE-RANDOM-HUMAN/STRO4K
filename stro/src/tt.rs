@@ -13,17 +13,17 @@ pub enum Bound {
 }
 
 /// Format:
-/// Bits 15-0: packed move
+/// Bits 15-0: best move
 /// Bits 31-16: eval
 /// Bits 33-32: bound type
 /// Bits 47-34: depth
-/// Bits 63-48: upper 16 bits of hash
+/// Bits 63-48: best capture
 #[repr(transparent)]
 #[derive(Clone, Copy, Debug)]
 pub struct TTData(NonZeroU64);
 
 impl TTData {
-    pub fn new(mov: Move, bound: Bound, eval: i32, depth: i32, hash: u64) -> Self {
+    pub fn new(mov: Move, bound: Bound, eval: i32, depth: i32, noisy: Option<Move>) -> Self {
         // 14 bits - truncating is probably sufficient
         let depth = depth.clamp(0, (1 << 14) - 1);
 
@@ -33,15 +33,21 @@ impl TTData {
                     | (eval as u16 as u64) << 16
                     | (bound as u64) << 32
                     | (depth as u64) << 34
-                    | (hash & 0xFFFF_0000_0000_0000),
+                    | noisy.map_or(0, |x| x.0.get() as u64) << 48
             )
             .unwrap(), // all zeroes is not a valid move
         )
     }
 
     pub fn best_move(self) -> Move {
-        // mov_unpack(self.0.get() as u16)
         Move((self.0.get() as u16).try_into().unwrap())
+    }
+
+    pub fn best_noisy(self) -> Option<Move> {
+        ((self.0.get() >> 48) as u16)
+            .try_into()
+            .ok()
+            .map(Move)
     }
 
     pub fn bound(self) -> Bound {
@@ -105,9 +111,7 @@ pub fn load(hash: u64) -> Option<TTData> {
         std::intrinsics::atomic_load_unordered(TT_PTR.add(index))
     };
 
-    NonZeroU64::new(data)
-        .filter(|x| x.get() >> 48 == hash >> 48)
-        .map(TTData)
+    NonZeroU64::new(data).map(TTData)
 }
 
 pub fn store(hash: u64, data: TTData) {

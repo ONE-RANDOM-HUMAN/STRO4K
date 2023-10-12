@@ -242,11 +242,17 @@ impl<'a> Search<'a> {
             let Some(tt_data) = tt::load(hash) else {
                 break 'tt;
             };
-            let best_move = tt_data.best_move();
+
+            let best_move = if depth > 0 {
+                tt_data.best_move()
+            } else {
+                tt_data.best_noisy().unwrap_or(tt_data.best_move())
+            };
 
             let Some(index) = moves.iter().position(|&x| x == best_move) else {
                 break 'tt;
             };
+
             if !self.game.is_legal(moves[index]) {
                 break 'tt;
             }
@@ -344,6 +350,9 @@ impl<'a> Search<'a> {
             bound = Bound::Exact;
             alpha = best_eval;
         }
+
+        let mut best_noisy_eval = MIN_EVAL - 1;
+        let mut best_noisy = None;
 
         // first quiet, non-tt move
         let first_quiet = ordered_moves;
@@ -454,6 +463,11 @@ impl<'a> Search<'a> {
                 self.game.unmake_move();
             }
 
+            if mov.flags().is_noisy() && eval > best_noisy_eval {
+                best_noisy = Some(mov);
+                best_noisy_eval = eval;
+            }
+
             if eval > best_eval {
                 best_move = Some(mov);
                 best_eval = eval;
@@ -485,7 +499,7 @@ impl<'a> Search<'a> {
 
         // Store tt if not in qsearch
         if let Some(mov) = best_move {
-            tt::store(hash, TTData::new(mov, bound, best_eval, depth, hash));
+            tt::store(hash, TTData::new(mov, bound, best_eval, depth, best_noisy));
         }
 
         Some(best_eval)
