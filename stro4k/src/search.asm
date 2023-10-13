@@ -4,18 +4,18 @@ BOUND_LOWER equ 01b
 BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
-F_PRUNE_MARGIN equ 256
-STATIC_NULL_MOVE_MARGIN equ 256
-DELTA_BASE equ 224
-DELTA_IMPROVING_BONUS equ 64
+F_PRUNE_MARGIN equ 128
+STATIC_NULL_MOVE_MARGIN equ 128
+DELTA_BASE equ 112
+DELTA_IMPROVING_BONUS equ 32
 
 section .rodata
 DELTA_PRUNE_PIECE_VALUES:
-    dw 256
-    dw 832
-    dw 832
-    dw 1344
-    dw 2496
+    dw 128
+    dw 416
+    dw 416
+    dw 672
+    dw 1248
 
 default rel
 section .text
@@ -578,7 +578,7 @@ alpha_beta:
     ; STATIC_NULL_MOVE_MARGIN is currently a power of 2
     ; imul edx, ecx, STATIC_NULL_MOVE_MARGIN
     mov edx, ecx
-    shl edx, 8
+    shl edx, 7
 
     cmp eax, edx
     mov eax, dword [rbp + 32] ; beta
@@ -716,9 +716,9 @@ alpha_beta:
     cmp esi, eax
     cmovl esi, eax
 
-    ; margin is currently 256
+    ; margin is currently 128
     ; imul esi, esi, F_PRUNE_MARGIN
-    shl esi, 8
+    shl esi, 7
 
     ; check if margin + static_eval is less than alpha
     add esi, ecx

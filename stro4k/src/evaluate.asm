@@ -525,12 +525,12 @@ evaluate:
     sub edx, ecx
     imul ebx, edx
 
-    ; divide by 24
+    ; divide by 48
     add ebx, eax
     movsx rax, ebx
     imul rax, rax, 2aaaaaabh
     mov rcx, rax
-    sar rax, 34
+    sar rax, 35
     shr rcx, 63
     add eax, ecx
 

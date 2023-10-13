@@ -454,5 +454,5 @@ pub fn evaluate(board: &Board) -> i32 {
         -1,
     );
 
-    resolve(board, eval)
+    resolve(board, eval) / 2
 }
