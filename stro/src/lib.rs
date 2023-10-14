@@ -35,6 +35,12 @@ compile_error!("Only x86 is supported");
 #[cfg(not(target_feature = "aes"))]
 compile_error!("aes-ni is required");
 
+#[cfg(not(target_feature = "avx2"))]
+compile_error!("avx2 is required");
+
+#[cfg(not(target_feature = "fma"))]
+compile_error!("fma is required");
+
 #[cfg(all(
     feature = "asm",
     not(all(

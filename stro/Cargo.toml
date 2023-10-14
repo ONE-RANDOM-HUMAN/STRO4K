@@ -12,5 +12,6 @@ libc = { version = "0.2.140", optional = true, default-features = false }
 lto = "fat"
 
 [features]
-default = ["asm"]
+# default = ["asm"]
 asm = ["libc"]
+nn_path_env = []
