@@ -532,7 +532,7 @@ impl<'a> Search<'a> {
         let fens = include_str!("../../fens.txt");
 
         let mut duration = std::time::Duration::ZERO;
-        const BENCH_DEPTH: i32 = 7;
+        const BENCH_DEPTH: i32 = 3;
         for fen in fens.lines() {
             tt::clear();
             search.new_game();
