@@ -290,7 +290,7 @@ impl<'a> Search<'a> {
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 5 {
-                const STATIC_NULL_MOVE_MARGIN: i32 = 256;
+                const STATIC_NULL_MOVE_MARGIN: i32 = 173;
                 let margin = depth * STATIC_NULL_MOVE_MARGIN;
 
                 if static_eval >= beta + margin {
@@ -300,13 +300,15 @@ impl<'a> Search<'a> {
 
             // Null move pruning
             if depth >= 3 {
-                let r = 2 + (depth - 2) / 4;
+                // Round towards -inf is fine
+                let r = (874 + depth * 63 - 162 * improving as i32) >> 8;
+
                 unsafe {
                     self.game.make_null_move();
                 }
 
                 let eval =
-                    self.alpha_beta(-beta, -beta + 1, depth - r - 2 + improving as i32, ply + 1);
+                    self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
 
                 unsafe {
                     self.game.unmake_move();
@@ -327,7 +329,7 @@ impl<'a> Search<'a> {
         // Futility pruning
         let f_prune = depth <= 5 && !is_check && !pv_node;
 
-        const F_PRUNE_MARGIN: i32 = 256;
+        const F_PRUNE_MARGIN: i32 = 239;
         let f_prune = f_prune
             && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
 
@@ -368,9 +370,9 @@ impl<'a> Search<'a> {
 
             if f_prune && depth <= 0 {
                 // Delta pruning
-                const PIECE_VALUES: [i32; 5] = [256, 832, 832, 1344, 2496];
-                const DELTA_BASE: i32 = 224;
-                const IMPROVING_BONUS: i32 = 64;
+                const PIECE_VALUES: [i32; 5] = [191, 844, 800, 1370, 2531];
+                const DELTA_BASE: i32 = 210;
+                const IMPROVING_BONUS: i32 = 41;
 
                 let capture = self
                     .game
@@ -417,7 +419,9 @@ impl<'a> Search<'a> {
                     && !is_check
                     && !gives_check
                 {
-                    let lmr_depth = depth - (2 * depth + i as i32) / 8 - 1 + improving as i32;
+                    // Round towards -inf is fine
+                    let reduction = (depth * 45 + i as i32 * 38 - improving as i32 * 304) >> 8;
+                    let lmr_depth = depth - reduction - 1;
 
                     if lmr_depth < 1 {
                         // History leaf pruning
