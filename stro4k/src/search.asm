@@ -36,6 +36,7 @@ root_search_sysv:
     mov rbx, rdi
     mov r12d, esi
     call root_search
+    mov eax, ebx
 
     pop rbp
     pop rbx
@@ -50,19 +51,17 @@ thread_search:
     push rsp
     pop rbx
 
+%ifdef EXPORT_SYSV
     xor r12d, r12d ; temp
+%endif
     call root_search
 
-    push EXIT_SYSCALL
-    pop rax
-    xor edi, edi
-
     lock dec byte [RUNNING_WORKER_THREADS]
-
-    syscall
+    jmp _start.exit
 %endif
 ; search - rbx
 ; time should be calculated before calling root_search
+; returns best move in ebx
 root_search:
     mov qword [rbx + Search.nodes], 0
 
@@ -109,13 +108,11 @@ root_search:
     cmp esi, ebp ; upper bits don't matter
     jne .create_search_moves_head
 
+    ; Check if there is only one move
     sub edi, esp ; upper bits don't matter
     cmp edi, SearchMove_size
-    ja .more_than_one_move
+    jna .return
 
-    movzx eax, word [rsp + 2]
-    jmp .return
-.more_than_one_move:
     push rdi ; number of moves * SearchMove_size
     pop r15
 
@@ -186,9 +183,9 @@ root_search:
 .end_search: 
     call sort_search_moves
 
-    movzx eax, word [rsp + SearchMove.move]
 .return:
-    add rsp, 1024 + 8
+    movzx ebx, word [rsp + SearchMove.move]
+    add rsp, 256 * SearchMove_size + 8
     ret
 
 ; rsp + 8 - search moves
