@@ -4,18 +4,18 @@ BOUND_LOWER equ 01b
 BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
-F_PRUNE_MARGIN equ 256
-STATIC_NULL_MOVE_MARGIN equ 256
-DELTA_BASE equ 224
-DELTA_IMPROVING_BONUS equ 64
+F_PRUNE_MARGIN equ 239
+STATIC_NULL_MOVE_MARGIN equ 173
+DELTA_BASE equ 210
+DELTA_IMPROVING_BONUS equ 41
 
 section .rodata
 DELTA_PRUNE_PIECE_VALUES:
-    dw 256
-    dw 832
-    dw 832
-    dw 1344
-    dw 2496
+    dw 191
+    dw 844
+    dw 800
+    dw 1370
+    dw 2531
 
 default rel
 section .text
@@ -36,6 +36,7 @@ root_search_sysv:
     mov rbx, rdi
     mov r12d, esi
     call root_search
+    mov eax, ebx
 
     pop rbp
     pop rbx
@@ -50,19 +51,17 @@ thread_search:
     push rsp
     pop rbx
 
+%ifdef EXPORT_SYSV
     xor r12d, r12d ; temp
+%endif
     call root_search
 
-    push EXIT_SYSCALL
-    pop rax
-    xor edi, edi
-
     lock dec byte [RUNNING_WORKER_THREADS]
-
-    syscall
+    jmp _start.exit
 %endif
 ; search - rbx
 ; time should be calculated before calling root_search
+; returns best move in ebx
 root_search:
     mov qword [rbx + Search.nodes], 0
 
@@ -109,13 +108,11 @@ root_search:
     cmp esi, ebp ; upper bits don't matter
     jne .create_search_moves_head
 
+    ; Check if there is only one move
     sub edi, esp ; upper bits don't matter
     cmp edi, SearchMove_size
-    ja .more_than_one_move
+    jna .return
 
-    movzx eax, word [rsp + 2]
-    jmp .return
-.more_than_one_move:
     push rdi ; number of moves * SearchMove_size
     pop r15
 
@@ -186,9 +183,9 @@ root_search:
 .end_search: 
     call sort_search_moves
 
-    movzx eax, word [rsp + SearchMove.move]
 .return:
-    add rsp, 1024 + 8
+    movzx ebx, word [rsp + SearchMove.move]
+    add rsp, 256 * SearchMove_size + 8
     ret
 
 ; rsp + 8 - search moves
@@ -521,14 +518,15 @@ alpha_beta:
     jmp .end 
 .tt_miss:
     ; iir
-    ; This does not work because depth might be negative
-    ; cmp dword [rbp + 8], 6
-    ; adc dword [rbp + 8], -1
+    ; This gives slightly different results if depth is negative but
+    ; it does not matter
+    cmp dword [rbp + 8], 6
+    adc dword [rbp + 8], -1
 
-    cmp dword [rbp + 8], 5
-    jng .no_iir
-    dec dword [rbp + 8]
-.no_iir:
+;     cmp dword [rbp + 8], 5
+;     jng .no_iir
+;     dec dword [rbp + 8]
+; .no_iir:
 .tt_end:
 .no_tt_cutoff:
 .no_tt_probe:
@@ -575,10 +573,7 @@ alpha_beta:
 
     ; set margin for static nmp
 
-    ; STATIC_NULL_MOVE_MARGIN is currently a power of 2
-    ; imul edx, ecx, STATIC_NULL_MOVE_MARGIN
-    mov edx, ecx
-    shl edx, 8
+    imul edx, ecx, STATIC_NULL_MOVE_MARGIN
 
     cmp eax, edx
     mov eax, dword [rbp + 32] ; beta
@@ -600,12 +595,16 @@ alpha_beta:
 
     ; ecx - reduced depth
     mov ecx, dword [rbp + 8]
-    lea esi, [rcx - 2]
-    shr esi, 2
-    sub ecx, esi
+    imul esi, ecx, 63
+    add esi, 874 + 256 ; + 256 since formula is depth - r - 1
 
-    bt dword [rbp - 128 + ABLocals.flags], IMPROVING_FLAG_INDEX
-    adc ecx, -4
+    test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
+    jz .nmp_not_improving
+    sub esi, 162
+
+.nmp_not_improving:
+    sar esi, 8
+    sub ecx, esi
 
     ; rsi - -beta
     mov esi, dword [rbp + 32]
@@ -716,9 +715,7 @@ alpha_beta:
     cmp esi, eax
     cmovl esi, eax
 
-    ; margin is currently 256
-    ; imul esi, esi, F_PRUNE_MARGIN
-    shl esi, 8
+    imul esi, esi, F_PRUNE_MARGIN
 
     ; check if margin + static_eval is less than alpha
     add esi, ecx
@@ -936,9 +933,8 @@ alpha_beta:
     ; ecx - depth - 1
     ; edx - depth
     ; esi - - alpha - 1
-    mov ecx, dword [rbp + 8]
-    mov edx, ecx
-    dec ecx
+    mov edx, dword [rbp + 8]
+    lea ecx, [rdx - 1]
     lea esi, [rdi - 1]
 
     ; depth
@@ -962,17 +958,18 @@ alpha_beta:
     jnz .no_lmr_reduction
 
     ; calculate lmr depth
-    ; 2 * depth + i
-    lea eax, [r15 + 2 * rdx]
-
-    ; divide by 8
-    shr eax, 3
+    ; depth * 45 + i * 38
+    imul eax, edx, 45
+    imul edx, r15d, 38
+    add eax, edx
 
     ; decrease reduction if improving
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .lmr_not_improving
-    dec eax
+    sub eax, 304
 .lmr_not_improving:
+    ; divide by 8
+    sar eax, 8
     sub ecx, eax
 
     cmp ecx, 1

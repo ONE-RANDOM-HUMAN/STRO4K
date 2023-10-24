@@ -124,11 +124,10 @@ _start:
 
     ; registers set up for read
     ; consume the 'uit' so that it doesn't get sent to bash
-    xor eax, eax ; read syscall
-    add edx, 2 ; count = 3
-    syscall ; we don't care about the memory anymore
+    call read_until_newline
     
     ; exit
+.exit:
     push EXIT_SYSCALL
     pop rax
     xor edi, edi
@@ -248,27 +247,25 @@ _start:
     lock and byte [RUNNING_WORKER_THREADS], 7Fh
     jnz .go_wait_for_threads
 
-    ; mov in ax
-    push rax
-
+    ; mov in bx
     mov rdx, "bestmove"
     call write8
 
-    pop rax
-    mov ecx, 07070707h
-    pdep ecx, eax, ecx
-    add ecx, "a1a1"
+    mov ecx, ebx
+    mov eax, 07070707h
+    pdep eax, ecx, eax
+    add eax, "a1a1"
 
     push ' '
-    mov dword [rsp + 1], ecx ; add move
-    test ah, PROMO_FLAG << 4
+    mov dword [rsp + 1], eax ; add move
+    test ch, PROMO_FLAG << 4
 
     mov dl, ' '
     jz .print_move_no_promo
     mov edx, "nbrq"
-    shr eax, 9
-    and al, 11000b
-    xchg eax, ecx
+    shr ecx, 9
+
+    and cl, 11000b
     shr edx, cl
 .print_move_no_promo:
     mov byte [rsp + 5], dl
