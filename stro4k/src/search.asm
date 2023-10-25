@@ -4,18 +4,18 @@ BOUND_LOWER equ 01b
 BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
-F_PRUNE_MARGIN equ 239
-STATIC_NULL_MOVE_MARGIN equ 173
-DELTA_BASE equ 210
-DELTA_IMPROVING_BONUS equ 41
+F_PRUNE_MARGIN equ 119
+STATIC_NULL_MOVE_MARGIN equ 86
+DELTA_BASE equ 105
+DELTA_IMPROVING_BONUS equ 21
 
 section .rodata
 DELTA_PRUNE_PIECE_VALUES:
-    dw 191
-    dw 844
-    dw 800
-    dw 1370
-    dw 2531
+    dw 85
+    dw 422
+    dw 400
+    dw 685
+    dw 1266
 
 default rel
 section .text
