@@ -290,7 +290,7 @@ impl<'a> Search<'a> {
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 5 {
-                const STATIC_NULL_MOVE_MARGIN: i32 = 173;
+                const STATIC_NULL_MOVE_MARGIN: i32 = 86;
                 let margin = depth * STATIC_NULL_MOVE_MARGIN;
 
                 if static_eval >= beta + margin {
@@ -329,7 +329,7 @@ impl<'a> Search<'a> {
         // Futility pruning
         let f_prune = depth <= 5 && !is_check && !pv_node;
 
-        const F_PRUNE_MARGIN: i32 = 239;
+        const F_PRUNE_MARGIN: i32 = 119;
         let f_prune = f_prune
             && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
 
@@ -370,9 +370,9 @@ impl<'a> Search<'a> {
 
             if f_prune && depth <= 0 {
                 // Delta pruning
-                const PIECE_VALUES: [i32; 5] = [191, 844, 800, 1370, 2531];
-                const DELTA_BASE: i32 = 210;
-                const IMPROVING_BONUS: i32 = 41;
+                const PIECE_VALUES: [i32; 5] = [85, 422, 400, 685, 1266];
+                const DELTA_BASE: i32 = 105;
+                const IMPROVING_BONUS: i32 = 21;
 
                 let capture = self
                     .game
