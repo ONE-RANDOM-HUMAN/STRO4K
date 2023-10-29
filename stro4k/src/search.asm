@@ -520,10 +520,10 @@ alpha_beta:
     ; iir
     ; This gives slightly different results if depth is negative but
     ; it does not matter
-    cmp dword [rbp + 8], 6
+    cmp dword [rbp + 8], 4
     adc dword [rbp + 8], -1
 
-;     cmp dword [rbp + 8], 5
+;     cmp dword [rbp + 8], 3
 ;     jng .no_iir
 ;     dec dword [rbp + 8]
 ; .no_iir:
@@ -568,7 +568,7 @@ alpha_beta:
 
     ; static null move pruning
     ; check depth
-    cmp ecx, 5
+    cmp ecx, 7
     jnle .no_static_nmp
 
     ; set margin for static nmp
@@ -696,7 +696,7 @@ alpha_beta:
     ; edx - depth
     mov edx, dword [rbp + 8]
 
-    cmp edx, 5
+    cmp edx, 7
     jnle .no_fprune
 
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG

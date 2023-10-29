@@ -277,7 +277,7 @@ impl<'a> Search<'a> {
             tt_success = true;
         }
 
-        if !tt_success && depth > 5 {
+        if !tt_success && depth > 3 {
             depth -= 1;
         }
 
@@ -289,7 +289,7 @@ impl<'a> Search<'a> {
         // Null Move Pruning
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
-            if depth <= 5 {
+            if depth <= 7 {
                 const STATIC_NULL_MOVE_MARGIN: i32 = 86;
                 let margin = depth * STATIC_NULL_MOVE_MARGIN;
 
@@ -327,7 +327,7 @@ impl<'a> Search<'a> {
             moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
 
         // Futility pruning
-        let f_prune = depth <= 5 && !is_check && !pv_node;
+        let f_prune = depth <= 7 && !is_check && !pv_node;
 
         const F_PRUNE_MARGIN: i32 = 119;
         let f_prune = f_prune
