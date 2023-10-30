@@ -967,6 +967,9 @@ alpha_beta:
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .lmr_not_improving
     sub eax, 304
+    jns .lmr_not_negative
+    xor eax, eax
+.lmr_not_negative:
 .lmr_not_improving:
     ; divide by 8
     sar eax, 8

@@ -419,8 +419,8 @@ impl<'a> Search<'a> {
                     && !is_check
                     && !gives_check
                 {
-                    // Round towards -inf is fine
-                    let reduction = (depth * 45 + i as i32 * 38 - improving as i32 * 304) >> 8;
+                    // Can't round towards -inf otherwise -1 is possible
+                    let reduction = (depth * 45 + i as i32 * 38 - improving as i32 * 304) / 256;
                     let lmr_depth = depth - reduction - 1;
 
                     if lmr_depth < 1 {
