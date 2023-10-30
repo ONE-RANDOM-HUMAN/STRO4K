@@ -10,6 +10,19 @@ use crate::moveorder::{self, HistoryTable, KillerTable};
 use crate::position::{Board, Move};
 use crate::tt::{self, Bound, TTData};
 
+pub static mut STATIC_NULL_MOVE_MARGIN: i32 = 86;
+pub static mut F_PRUNE_MARGIN: i32 = 119;
+pub static mut PIECE_VALUES: [i32; 5] = [85, 422, 400, 685, 1266];
+pub static mut DELTA_BASE: i32 = 105;
+pub static mut DELTA_IMPROVING_BONUS: i32 = 21;
+pub static mut LMR_DEPTH: f64 = 0.1461791707215488;
+pub static mut LMR_MOVE: f64 = 0.17459584533715872;
+pub static mut LMR_IMPROVING: f64 = -1.18825631137966;
+pub static mut NMP_BASE: f64 = 3.414627419743035;
+pub static mut NMP_DEPTH: f64 = 0.24682411872982593;
+pub static mut NMP_IMPROVING: f64 = -0.631825975004946;
+
+
 #[no_mangle]
 pub static RUNNING: AtomicBool = AtomicBool::new(false);
 
@@ -290,8 +303,7 @@ impl<'a> Search<'a> {
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 7 {
-                const STATIC_NULL_MOVE_MARGIN: i32 = 86;
-                let margin = depth * STATIC_NULL_MOVE_MARGIN;
+                let margin = unsafe { depth * STATIC_NULL_MOVE_MARGIN };
 
                 if static_eval >= beta + margin {
                     return Some(beta);
@@ -300,15 +312,16 @@ impl<'a> Search<'a> {
 
             // Null move pruning
             if depth >= 3 {
-                // Round towards -inf is fine
-                let r = (874 + depth * 63 - 162 * improving as i32) >> 8;
+                let r = unsafe {
+                    NMP_BASE + f64::from(depth) * NMP_DEPTH + f64::from(improving) * NMP_IMPROVING
+                };
 
                 unsafe {
                     self.game.make_null_move();
                 }
 
                 let eval =
-                    self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
+                    self.alpha_beta(-beta, -beta + 1, depth - r as i32 - 1, ply + 1);
 
                 unsafe {
                     self.game.unmake_move();
@@ -329,9 +342,10 @@ impl<'a> Search<'a> {
         // Futility pruning
         let f_prune = depth <= 7 && !is_check && !pv_node;
 
-        const F_PRUNE_MARGIN: i32 = 119;
-        let f_prune = f_prune
-            && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
+        let f_prune = unsafe {
+            f_prune
+                && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha
+        };
 
         // Stand pat in qsearch
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
@@ -369,26 +383,24 @@ impl<'a> Search<'a> {
             }
 
             if f_prune && depth <= 0 {
-                // Delta pruning
-                const PIECE_VALUES: [i32; 5] = [85, 422, 400, 685, 1266];
-                const DELTA_BASE: i32 = 105;
-                const IMPROVING_BONUS: i32 = 21;
+                unsafe {
+                    // Delta pruning
+                    let capture = self
+                        .game
+                        .position()
+                        .get_piece(mov.dest(), self.game.position().side_to_move().other())
+                        .map_or(0, |x| PIECE_VALUES[x as usize]);
 
-                let capture = self
-                    .game
-                    .position()
-                    .get_piece(mov.dest(), self.game.position().side_to_move().other())
-                    .map_or(0, |x| PIECE_VALUES[x as usize]);
+                    let promo = mov
+                        .flags()
+                        .promo_piece()
+                        .map_or(0, |x| PIECE_VALUES[x as usize]);
 
-                let promo = mov
-                    .flags()
-                    .promo_piece()
-                    .map_or(0, |x| PIECE_VALUES[x as usize]);
-
-                if static_eval + capture + promo + DELTA_BASE + (improving as i32 * IMPROVING_BONUS)
-                    <= alpha
-                {
-                    continue;
+                    if static_eval + capture + promo + DELTA_BASE + (improving as i32 * DELTA_IMPROVING_BONUS)
+                        <= alpha
+                        {
+                            continue;
+                        }
                 }
             }
 
@@ -419,9 +431,13 @@ impl<'a> Search<'a> {
                     && !is_check
                     && !gives_check
                 {
-                    // Round towards -inf is fine
-                    let reduction = (depth * 45 + i as i32 * 38 - improving as i32 * 304) >> 8;
-                    let lmr_depth = depth - reduction - 1;
+                    let lmr_reduction = unsafe {
+                        f64::from(depth) * LMR_DEPTH
+                            + i as f64 * LMR_MOVE
+                            + f64::from(improving) * LMR_IMPROVING
+                    };
+
+                    let lmr_depth = depth - lmr_reduction as i32 - 1;
 
                     if lmr_depth < 1 {
                         // History leaf pruning

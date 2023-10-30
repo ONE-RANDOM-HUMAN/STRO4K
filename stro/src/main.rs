@@ -29,6 +29,23 @@ fn main() {
     println!("option name Threads type spin default 1 min 1 max 128");
     println!("option name asm type check default false");
 
+    // SPSA
+    println!("option name SNmp type spin default 86 min 0 max 1024");
+    println!("option name FPrune type spin default 119 min 0 max 1024");
+    println!("option name DeltaP type spin default 85 min 0 max 1024");
+    println!("option name DeltaN type spin default 422 min 0 max 4096");
+    println!("option name DeltaB type spin default 400 min 0 max 4096");
+    println!("option name DeltaR type spin default 685 min 0 max 4096");
+    println!("option name DeltaQ type spin default 1266 min 0 max 4096");
+    println!("option name DeltaBase type spin default 105 min 0 max 1024");
+    println!("option name DeltaImprove type spin default 21 min 0 max 1024");
+    println!("option name LmrDepth type string default 0.1461791707215488");
+    println!("option name LmrMove type string default 0.17459584533715872");
+    println!("option name LmrImprove type string default -1.18825631137966");
+    println!("option name NmrBase type string default 3.414627419743035");
+    println!("option name NmrDepth type string default 0.24682411872982593");
+    println!("option name NmrImprove type string default -0.631825975004946");
+
     println!("uciok");
 
     uci_loop();
@@ -126,7 +143,52 @@ fn uci_loop() {
                     "false" => search.set_asm(false),
                     _ => (),
                 },
-                _ => (),
+                "snmp" => unsafe {
+                    stro::search::STATIC_NULL_MOVE_MARGIN = value.parse().unwrap()
+                }
+                "fprune" => unsafe {
+                    stro::search::F_PRUNE_MARGIN = value.parse().unwrap()
+                }
+                "deltap" => unsafe {
+                    stro::search::PIECE_VALUES[0] = value.parse().unwrap()
+                }
+                "deltan" => unsafe {
+                    stro::search::PIECE_VALUES[1] = value.parse().unwrap()
+                }
+                "deltab" => unsafe {
+                    stro::search::PIECE_VALUES[2] = value.parse().unwrap()
+                }
+                "deltar" => unsafe {
+                    stro::search::PIECE_VALUES[3] = value.parse().unwrap()
+                }
+                "deltaq" => unsafe {
+                    stro::search::PIECE_VALUES[4] = value.parse().unwrap()
+                }
+                "deltabase" => unsafe {
+                    stro::search::DELTA_BASE = value.parse().unwrap()
+                }
+                "deltaimprove" => unsafe {
+                    stro::search::DELTA_IMPROVING_BONUS = value.parse().unwrap()
+                }
+                "lmrdepth" => unsafe {
+                    stro::search::LMR_DEPTH = value.parse().unwrap()
+                }
+                "lmrmove" => unsafe {
+                    stro::search::LMR_MOVE = value.parse().unwrap()
+                }
+                "lmrimprove" => unsafe {
+                    stro::search::LMR_IMPROVING = value.parse().unwrap()
+                }
+                "nmrbase" => unsafe {
+                    stro::search::NMP_BASE = value.parse().unwrap()
+                }
+                "nmrdepth" => unsafe {
+                    stro::search::NMP_DEPTH = value.parse().unwrap()
+                }
+                "nmpimprove" => unsafe {
+                    stro::search::NMP_IMPROVING = value.parse().unwrap()
+                }
+                name => eprintln!("Unrecognised option: {name}", )
             }
         } else if line.starts_with("quit") {
             break;
