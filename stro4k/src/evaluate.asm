@@ -1,188 +1,191 @@
 MAX_EVAL equ 128 * 256 - 1
 MIN_EVAL equ -MAX_EVAL
 
-MG_BISHOP_PAIR equ 45
+MG_BISHOP_PAIR equ 44
 EG_BISHOP_PAIR equ 90
+
+MG_TEMPO equ 34
+EG_TEMPO equ 4
 
 section .rodata
 MATERIAL_EVAL:
-    dw  169,  165
-    dw  421,  356
-    dw  454,  352
-    dw  660,  656
-    dw 1485, 1135
+    dw  173,  160
+    dw  438,  355
+    dw  467,  351
+    dw  678,  656
+    dw 1538, 1121
 
 MOBILITY_EVAL:
-    db   13,    6
-    db   11,    5
-    db    6,    2
-    db    6,    0
+    db   12,    6
+    db   12,    5
+    db    7,    1
+    db    6,   -1
 
 ; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
-    db   67,   63
-    db   60,   42
-    db   26,   34
-    db  -10,   23
-    db  -22,    1
-    db  -13,  -12
+    db   73,   66
+    db   63,   42
+    db   27,   35
+    db  -10,   25
+    db  -23,    2
+    db  -12,  -10
 
 ; doubled and isolated pawn eval
 ; first two in each row are isolated mg and eg
 ; second two are doubled mg and eg
 DOUBLED_ISOLATED_PAWN_EVAL:
-    db  3,  0, 70, 61,
-    db 19, 11, 44, 44,
-    db 22, 17, 37, 28,
-    db 45, 16, 46, 18,
-    db 36, 27, 35, 22,
-    db 26, 15, 52, 32,
-    db 18, 16, 33, 41,
-    db 26,  4, 54, 52,
+    db  4,  1, 71, 61
+    db 20, 10, 45, 45
+    db 22, 17, 38, 27
+    db 47, 16, 47, 17
+    db 36, 25, 36, 22
+    db 26, 14, 53, 31
+    db 18, 16, 33, 40
+    db 27,  5, 55, 52
 
 OPEN_FILE_EVAL:
     db   -3,  -12
-    db   -8,    0
-    db   42,   -5
-    db  -12,   18
-    db  -55,   -5
+    db  -10,    0
+    db   44,   -4
+    db  -13,   20
+    db  -58,   -5
 
 SEMI_OPEN_FILE_EVAL:
-    db   -2,    6
+    db   -1,    6
     db   -7,   22
-    db   25,    3
+    db   27,    4
     db    5,    8
-    db  -18,   16
+    db  -19,   16
 
 ; 0-4 pawns, 4 is max possible
 PAWN_SHIELD_EVAL:
-    db  -55,   21
-    db  -18,   -5
-    db   18,  -12
-    db   49,   -9
-    db   32,    8
+    db  -56,   22
+    db  -19,   -6
+    db   19,  -13
+    db   53,  -11
+    db   32,    6
 
 EVAL_WEIGHTS:
 RANK_PST:
     db    0,    0
-    db  -25,   -1
-    db  -23,  -15
-    db    4,  -21
-    db   26,  -12
-    db   48,   13
-    db   67,   63
+    db  -28,    3
+    db  -22,  -12
+    db    6,  -18
+    db   28,   -9
+    db   51,   16
+    db   73,   66
     db    0,    0
 
 
-    db  -30,  -30
-    db  -15,  -23
-    db  -17,   -7
-    db    3,   17
-    db   27,   23
-    db   66,    6
-    db   56,    1
-    db  -50,    6
+    db  -38,  -30
+    db  -15,  -24
+    db  -18,   -7
+    db    4,   16
+    db   28,   22
+    db   70,    6
+    db   61,    1
+    db  -47,    6
 
 
-    db  -11,  -16
-    db    0,  -13
-    db    5,   -2
+    db  -15,  -15
+    db    0,  -12
+    db    6,   -2
     db   -1,    5
-    db    0,   15
-    db   40,    2
-    db   -5,    4
-    db  -40,   13
+    db    1,   13
+    db   41,    2
+    db   -2,    4
+    db  -36,   12
 
 
-    db  -17,  -23
+    db  -19,  -24
     db  -39,  -15
-    db  -29,   -7
-    db  -19,    6
+    db  -30,   -8
+    db  -20,    6
     db   15,   12
-    db   44,    9
-    db   54,   16
-    db   59,    5
+    db   46,    8
+    db   57,   16
+    db   62,    4
 
 
-    db   -1,  -62
-    db    5,  -56
-    db  -14,   -6
-    db  -20,   28
-    db   -9,   45
-    db   27,   39
-    db   10,   47
-    db   53,    3
+    db   -3,  -61
+    db    5,  -60
+    db  -15,   -7
+    db  -20,   30
+    db   -8,   45
+    db   29,   37
+    db   11,   47
+    db   54,    3
 
 
-    db    2,  -39
+    db    3,  -39
     db  -14,  -11
-    db  -42,    4
-    db  -12,   14
-    db   28,   23
-    db   56,   32
-    db   66,   29
-    db   63,    6
+    db  -43,    5
+    db  -11,   15
+    db   26,   22
+    db   55,   32
+    db   66,   27
+    db   62,    5
 
 
 FILE_PST:
     db  -27,    5
-    db   -3,   17
-    db  -20,    9
-    db    8,   -8
+    db   -4,   18
+    db  -21,   10
+    db    8,   -7
     db    7,    2
-    db   25,   -6
-    db   21,   -5
-    db  -10,  -20
+    db   27,   -7
+    db   21,   -4
+    db  -10,  -19
 
 
-    db  -14,  -13
-    db   -1,   -5
-    db   -7,    2
-    db    5,    9
-    db    2,    8
-    db    4,   -5
-    db    9,    4
-    db    1,   -7
+    db  -19,  -15
+    db   -3,   -5
+    db   -6,    3
+    db    6,    9
+    db    4,    6
+    db    5,   -5
+    db    8,    3
+    db   -2,   -9
 
 
-    db    3,   -3
+    db    5,   -4
     db    8,    0
-    db   -6,    0
-    db   -8,    5
-    db   -9,    4
-    db  -11,    1
-    db   19,   -5
-    db   18,  -11
+    db   -6,    1
+    db   -9,    5
+    db   -9,    3
+    db  -12,    3
+    db   18,   -5
+    db   20,  -11
 
 
-    db  -19,    3
-    db  -17,    5
-    db    3,    4
-    db   15,    1
-    db   14,   -6
-    db    2,    1
+    db  -20,    4
+    db  -15,    5
+    db    5,    4
+    db   16,    0
+    db   16,   -7
+    db    0,    1
     db    2,   -2
-    db   -1,  -11
+    db   -4,  -11
 
 
-    db   -6,  -39
-    db   -9,  -13
-    db   -5,    1
-    db   -5,   11
+    db   -5,  -39
+    db   -8,  -13
+    db   -5,    2
+    db   -7,   14
     db   -8,   19
-    db    0,   16
+    db   -1,   17
     db   23,   -2
-    db   36,  -14
+    db   38,  -16
 
 
-    db   24,  -19
+    db   26,  -18
     db   38,   -1
-    db    3,    8
-    db  -49,   16
-    db   -3,    3
-    db  -58,   15
-    db   24,   -6
-    db   13,  -21
+    db    1,    8
+    db  -48,   17
+    db   -6,    2
+    db  -60,   15
+    db   25,   -6
+    db   14,  -22
 
 
 default rel
@@ -205,6 +208,14 @@ evaluate:
 
     mov ecx, 4
     mov ebx, 10001000h ; 'king' value which cancels out but avoids underflow
+
+    ; tempo
+    cmp esi, r10d
+    setne al
+    cmp al, byte [rsi + Board.side_to_move]
+    jne .no_tempo
+    add ebx, MG_TEMPO + (EG_TEMPO << 16)
+.no_tempo:
 .material_eval_head:
     popcnt rax, qword [r10 + 8 * rcx]
 
