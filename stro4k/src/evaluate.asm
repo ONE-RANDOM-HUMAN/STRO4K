@@ -15,33 +15,40 @@ MATERIAL_EVAL:
     dw  678,  656
     dw 1538, 1121
 
+; For smaller size
+BISHOP_PAIR_EVAL:
+    dw MG_BISHOP_PAIR, EG_BISHOP_PAIR
+
+TEMPO_EVAL:
+    db MG_TEMPO, EG_TEMPO
+
 MOBILITY_EVAL:
     db   12,    6
     db   12,    5
     db    7,    1
     db    6,   -1
 
-; in reverse order because lzcnt is used
 PASSED_PAWN_EVAL:
-    db   73,   66
-    db   63,   42
-    db   27,   35
-    db  -10,   25
-    db  -23,    2
     db  -12,  -10
+    db  -23,    2
+    db  -10,   25
+    db   27,   35
+    db   63,   42
+    db   73,   66
 
-; doubled and isolated pawn eval
-; first two in each row are isolated mg and eg
-; second two are doubled mg and eg
+
+; first two in each row are doubled mg and eg
+; second two are isolated mg and eg
 DOUBLED_ISOLATED_PAWN_EVAL:
-    db  4,  1, 71, 61
-    db 20, 10, 45, 45
-    db 22, 17, 38, 27
-    db 47, 16, 47, 17
-    db 36, 25, 36, 22
-    db 26, 14, 53, 31
-    db 18, 16, 33, 40
-    db 27,  5, 55, 52
+    db  -71,  -61,   -4,   -1
+    db  -45,  -45,  -20,  -10
+    db  -38,  -27,  -22,  -17
+    db  -47,  -17,  -47,  -16
+    db  -36,  -22,  -36,  -25
+    db  -53,  -31,  -26,  -14
+    db  -33,  -40,  -18,  -16
+    db  -55,  -52,  -27,   -5
+
 
 OPEN_FILE_EVAL:
     db   -3,  -12
@@ -196,360 +203,257 @@ evaluate:
     push rbx
     push rbp
     lea rbp, [EVAL_WEIGHTS]
+
+    ; Side to move
     mov r10, rsi
     lea r11, [rsi + Board.black_pieces]
-
-    mov r12, 0101010101010101h
+    cmp byte [rsi + Board.side_to_move], 0
+    je .white_to_move
+    xchg r10, r11
+.white_to_move:
+    vpmovsxbw xmm0, qword [rbp + TEMPO_EVAL - EVAL_WEIGHTS]
 
     ; r9 - occ
-.side_eval_head:
     mov r9, qword [rsi + Board.white]
     or r9, qword [rsi + Board.black]
-
-    mov ecx, 4
-    mov ebx, 10001000h ; 'king' value which cancels out but avoids underflow
-
-    ; tempo
-    cmp esi, r10d
-    setne al
-    cmp al, byte [rsi + Board.side_to_move]
-    jne .no_tempo
-    add ebx, MG_TEMPO + (EG_TEMPO << 16)
-.no_tempo:
-.material_eval_head:
-    popcnt rax, qword [r10 + 8 * rcx]
-
-    ; SWAR multiplication for MG and EG eval
-    ; since it must be positive
-    imul eax, dword [rbp + MATERIAL_EVAL - EVAL_WEIGHTS + 4 * rcx]
-    add ebx, eax
-
-    dec ecx
-    jns .material_eval_head
+.side_eval_head:
 
     ; bishop pair
-    mov rcx, LIGHT_SQUARES
+    mov rbx, LIGHT_SQUARES
     mov rax, qword [r10 + 16]
-    test rax, rcx
+    test rax, rbx
     jz .no_bishop_pair
-    not rcx
-    test rax, rcx
+    andn rax, rbx, rax
     jz .no_bishop_pair
 
-    add ebx, MG_BISHOP_PAIR + (EG_BISHOP_PAIR << 16)
+    vpaddw xmm0, xmm0, oword [rbp + BISHOP_PAIR_EVAL - EVAL_WEIGHTS]
 .no_bishop_pair:
 
+    ; Pawn shield
+    mov rax, qword [r10] ; pawns
+    mov rdx, qword [r10 + 40] ; king
+
+    cmp r11, r10
+    ja .pawn_shield_white
+
+    bswap rax
+    bswap rdx
+.pawn_shield_white:
+    mov ecx, 0707h
+    test edx, ecx
+    jnz .pawn_shield
+
+    mov ecx, 0E0E0h
+    test edx, ecx
+    jz .no_pawn_shield
+.pawn_shield:
+    shl ecx, 8
+    and eax, ecx
+    popcnt eax, eax
+
+    vpmovsxbw xmm1, qword [rbp + PAWN_SHIELD_EVAL - EVAL_WEIGHTS + 2 * rax]
+    vpaddw xmm0, xmm0, xmm1
+.no_pawn_shield:
+
+    mov ecx, 5
+.side_pieces_head:
+    mov r12, qword [r10 + 8 * rcx]
+.piece_type_head:
+    ; ebx - piece index
+    tzcnt rbx, r12
+    jc .piece_type_end
+    btr r12, rbx
+
+    ; Material
+    ; It does not matter if a random value is added for
+    ; king eval because it cancels out anyway
+    vpaddw xmm0, xmm0, oword [rbp + MATERIAL_EVAL - EVAL_WEIGHTS + 4 * rcx]
+
     ; mobility
-    mov edi, 4
+    cmp ecx, 0
+    je .no_mobility
+    cmp ecx, 5
+    je .no_mobility
 
-    ; rsi - move fns
-    lea rsi, [move_fns + 6]
-.mobility_head:
-    ; rcx - piece
-    mov rcx, qword [r10 + 8 * rdi]
+    ; rax - move fn
+    lea rax, [move_fns - 2]
+    lea rax, [rax + 2 * rcx]
 
-.mobility_piece_head:
-    blsi r8, rcx
-    jz .mobility_end_piece
-    xor rcx, r8
+    ; r8 - piece
+    ; r9 - occ
+    xor r8d, r8d
+    bts r8, rbx
 
-    call rsi
+    call rax
 
     ; currently mask is all squares
     ; and rax, mask
 
     popcnt rax, rax
 
+    vmovd xmm2, eax
+    vpmovsxbw xmm1, qword [rbp + MOBILITY_EVAL - EVAL_WEIGHTS + 2 * rcx - 2]
+    vpmulld xmm1, xmm1, xmm2
+
+    ; Alternatively with multiplication in GPRs
     ; EG << 16 + MG
-    movsx edx, word [rbp + MOBILITY_EVAL - EVAL_WEIGHTS + 2 * rdi - 2]
-    shl edx, 8
-    xchg dl, dh
-
-    imul edx, eax
-    add ebx, edx
-    jmp .mobility_piece_head
-.mobility_end_piece:
-    sub rsi, 2
-    dec edi
-    jnz .mobility_head
-
-    ; doubled and isolated pawns and open file
-    ; r9 - file
-    mov r9, r12
-    xor ecx, ecx ; loop counter
-.pawn_eval_head:
-    mov r8, qword [r10] ; side pawns
-    and r8, r9
-    jnz .no_semi_open_file
-
-    lea rdi, [rbp + SEMI_OPEN_FILE_EVAL - EVAL_WEIGHTS - 2]
-
-    ; check if the file is fully open
-    test r9, qword [r11]
-    jnz .no_fully_open_file
-    add rdi, OPEN_FILE_EVAL - SEMI_OPEN_FILE_EVAL
-.no_fully_open_file:
-
-    mov esi, 5
-.open_file_piece_head:
-    ; find number of pieces
-    mov rax, qword [r10 + rsi * 8] ; side pieces
-    and rax, r9
-    popcnt rax, rax
-
-    movsx edx, byte [rdi + rsi * 2]
-    imul edx, eax
-    add bx, dx ; Avoids affecting eg eval
-
-    movsx edx, byte [rdi + rsi * 2 + 1]
-    imul edx, eax
-    shl edx, 16
-    add ebx, edx
-
-    dec esi
-    jnz .open_file_piece_head ; exclude pawns
-.no_semi_open_file:
-    ; isolated pawns
-    ; rax - adjacent files
-    andn rax, r12, r9
-    shl r9, 1
-    andn rdx, r12, r9
-    shr rax, 1
-    add rax, rdx
-
-    ; rdx - number of pawns on file
-    popcnt rdx, r8
-
-    ; load isolated and doubled pawns and SWAR-multiply by rdx
-    ; is smaller after compression with xmm5 for some unknown reason
-    vpmovzxbw xmm5, qword [rbp + DOUBLED_ISOLATED_PAWN_EVAL - EVAL_WEIGHTS + rcx * 4]
-    vmovq rdi, xmm5
-    imul rdx, rdi
-
-    test rax, qword [r10]
-    jnz .no_isolated_pawns
-
-    ; these subtractions cannot underflow because of the king value
-    sub ebx, edx
-.no_isolated_pawns:
-    sub rdx, rdi
-    jc .no_doubled_pawns
-
-    shr rdx, 32
-    sub ebx, edx
-.no_doubled_pawns:
-    inc ecx
-    cmp ecx, 8
-    jne .pawn_eval_head
-
-    ; add up mg and eg
-    movzx eax, bx
-    shr ebx, 16
-
-    ; pst eval
-    ; ebx - eg
-    ; eax - mg
-
-    ; side to move
+    ; movsx edx, word [rbp + MOBILITY_EVAL - EVAL_WEIGHTS + 2 * rcx - 2]
+    ; shl edx, 8
+    ; xchg dl, dh
+    ;
+    ; imul edx, eax
+    ; vmovd xmm1, edx
+    vpaddw xmm0, xmm0, xmm1
+.no_mobility:
     cmp r11, r10 ; sets CF if r11 < r10
-    sbb edi, edi ; -1 if black pieces
-    and edi, 111b
+    sbb eax, eax ; -1 if black pieces
 
-    mov esi, 5
-.pst_piece_head:
-    mov r8, qword [r10 + rsi * 8]
-.pst_square_head:
-    tzcnt rcx, r8
-    jc .pst_tail
-    btr r8, rcx
-
-    ; ecx - file index
-    ; edx - rank index
-    mov edx, ecx
-    shr edx, 3
-    and ecx, 111b
-    xor edx, edi
-
-    lea ecx, [rcx + rsi * 8]
-    lea r9d, [rdx + rsi * 8]
+    ; edx - file index
+    ; eax - rank index
+    mov edx, ebx
+    xor eax, ebx
+    shr eax, 3
+    and edx, 111b
+    and eax, 111b
 
     ; file
-    movzx ecx, word [rbp + FILE_PST - EVAL_WEIGHTS + 2 * rcx]
-    movsx edx, cl
-    add eax, edx
-    movsx edx, ch
-    add ebx, edx
+    lea edi, [rdx + rcx * 8]
+    vpmovsxbw xmm1, qword [rbp + FILE_PST - EVAL_WEIGHTS + 2 * rdi]
+    vpaddw xmm0, xmm0, xmm1
 
     ; rank
-    movzx ecx, word [rbp + RANK_PST - EVAL_WEIGHTS + 2 * r9]
-    movsx edx, cl
-    add eax, edx
-    movsx edx, ch
-    add ebx, edx
+    lea edi, [rax + rcx * 8]
+    vpmovsxbw xmm1, qword [rbp + RANK_PST - EVAL_WEIGHTS + 2 * rdi]
+    vpaddw xmm0, xmm0, xmm1
 
-    jmp .pst_square_head
-.pst_tail:
-    dec esi
-    jns .pst_piece_head
+    ; r8 - A-file
+    mov r8, 0101010101010101h
 
-    ; switch white and black
-    xchg r10, r11
-    cmp r10, r11
+    ; Free up rdx and rax
+    vpmovsxbw xmm1, qword [rbp + DOUBLED_ISOLATED_PAWN_EVAL - EVAL_WEIGHTS + 4 * rdx]
+    vpmovsxbw xmm2, qword [rbp + PASSED_PAWN_EVAL - EVAL_WEIGHTS + 2 * rax - 2]
 
-    push rbx ; eg
-    push rax ; mg
-    mov rsi, r11
-    ja .side_eval_head
+    test ecx, ecx
+    jnz .not_pawn_eval
 
+    ; Doubled, isolated, and passed pawns
 
-    ; passed pawns
-    mov r8, qword [r10] ; white pawns
-    mov r9, qword [r11] ; black pawns
-    xor r11d, r11d ; loop counter
+    ; rdi - mask in front of pawn
+    ; rdx - file mask
+    shlx rdi, r8, rbx
+    shlx rdx, r8, rdx
+    cmp r11, r10
+    ja .pawn_eval_white_piece
 
-    ; White king
-    mov edx, dword [r10 + 40]
-.white_eval_head:
-    ; Black king
-    movbe eax, dword [r10 + 88 + 4]
+    xor rdi, rdx
+.pawn_eval_white_piece:
+    btr rdi, rbx
+    test rdi, qword [r10]
+    jz .no_doubled_pawn
 
-    ; for white, SF=0 from xor
-    ; for black, SF=1 from dec at end of loop
-    cmovs edx, eax
+    vpaddw xmm0, xmm0, xmm1
+    jmp .no_passed_pawn
+.no_doubled_pawn:
+    ; passed pawn - might be possible to merge with isolated pawn eval
+    andn rax, r8, rdi
+    shr rax, 1
+    or rax, rdi
 
-    mov ecx, 0707E0E0h
-    xor esi, esi ; mg eval
-    xor edi, edi ; eg eval
+    and rdi, qword [NOT_H_FILE] ; Enables the use of Lea instructions
+    lea rdi, [rax + 2 * rdi]
+    test rdi, qword [r11]
+    jnz .no_passed_pawn
 
-.pawn_shield_head:
-    movzx eax, cx
-    test eax, edx
-    jz .pawn_shield_tail
-
-    ; Get number of pawns
-    shl eax, 8
-    and eax, r8d
-    popcnt eax, eax
-
-    movsx esi, byte [rbp + PAWN_SHIELD_EVAL - EVAL_WEIGHTS + rax * 2]
-    movsx edi, byte [rbp + PAWN_SHIELD_EVAL - EVAL_WEIGHTS + rax * 2 + 1]
-.pawn_shield_tail:
-    shr rcx, 16
-    jnz .pawn_shield_head
-
-    ; get the black pawn attack spans
-    ; The leftmost bit triggers the carry flag so that the shifts
-    ; are 8, 16, 32
-    mov ecx, 20000008h
-    mov rax, r9
-.passed_pawn_south_head:
-    shrx rdx, rax, rcx
-    or rax, rdx
-    shl ecx, 1
-    jnc .passed_pawn_south_head
-
-    ; attack spans
-    mov rcx, rax
-
-    shr rcx, 7
-    andn rcx, r12, rcx
-    andn rdx, r12, rax
-    shr rdx, 9
-
-    or rax, rdx
-    or rax, rcx
-
-    ; rax - passed pawns
-    andn rax, rax, r8
-
-    mov rcx, r12
-.passed_pawn_files_head:
-    mov rdx, rax
-    and rdx, rcx ; passed pawns on file
-    jz .no_passed_pawn
-    lzcnt rdx, rdx
-    shr edx, 3
-
-    movsx ebx, word [rbp + PASSED_PAWN_EVAL - EVAL_WEIGHTS - 2 + 2 * rdx]
-    movsx edx, bl
-    sar ebx, 8
-
-    add esi, edx
-    add edi, ebx
+    vpaddw xmm0, xmm0, xmm2
 .no_passed_pawn:
-    shl rcx, 1
-    jnc .passed_pawn_files_head
+    ; isolated pawn
+    mov rdi, rdx
 
-    ; swap white and black
-    xchg r9, r8
-    bswap r8
-    bswap r9
-    dec r11d
-    jpo .white_passed_pawn_end
+    andn rax, r8, rdi
+    shr rax, 1
+    and rdi, qword [NOT_H_FILE]
+    lea rdi, [rax + 2 * rdi]
 
-    push rdi ; eg
-    push rsi ; mg
-    jmp .white_eval_head
-.white_passed_pawn_end:
-    ; add up all eval terms
-    pop rax
-    pop rbx
-    sub eax, esi
-    sub ebx, edi
+    test rdi, qword [r10]
+    jnz .no_isolated_pawn
 
-    ; black eval
-    pop rsi
-    pop rdi
-    sub eax, esi
-    sub ebx, edi
-    
-    ; white eval
-    pop rsi
-    pop rdi
-    add eax, esi
-    add ebx, edi
+    vpshufd xmm1, xmm1, 01h
+    vpaddw xmm0, xmm0, xmm1
 
-    ; calculate phase
+.no_isolated_pawn:
+    jmp .not_piece_eval
+.not_pawn_eval:
+    ; Non-pawn eval
+    ; Open files
+
+    ; edx - file index
+    shlx rdi, r8, rdx
+    test rdi, qword [r10]
+    jnz .closed_file
+
+    test rdi, qword [r11]
+    jnz .semi_open_file
+
+    vpmovsxbw xmm1, qword [rbp + OPEN_FILE_EVAL - EVAL_WEIGHTS + 2 * rcx - 2]
+    vpaddw xmm0, xmm0, xmm1
+    jmp .open_file_end
+.semi_open_file:
+    vpmovsxbw xmm1, qword [rbp + SEMI_OPEN_FILE_EVAL - EVAL_WEIGHTS + 2 * rcx - 2]
+    vpaddw xmm0, xmm0, xmm1
+
+.closed_file:
+.open_file_end:
+.not_piece_eval:
+
+    jmp .piece_type_head
+.piece_type_end:
+
+    dec ecx
+    jns .side_pieces_head
+
+    vpxor xmm1, xmm1, xmm1
+    vpsubw xmm0, xmm1, xmm0
+
+    xchg r10, r11
+
+    ; Since rsi is a pointer to a board, it must be aligned
+    ; so we can loop twice by testing and complementing the
+    ; least significant bit
+    btc rsi, 0
+    jnc .side_eval_head
+
     mov ecx, 4
+    xor eax, eax
 .phase_head:
-    mov rsi, qword [r10 + 8 * rcx]
-    or rsi, qword [r10 + 8 * rcx + 48]
-    popcnt rdi, rsi
-    push rdi
-    
+    mov rdi, qword [r10 + 8 * rcx]
+    or rdi, qword [r11 + 8 * rcx]
+    popcnt rdi, rdi
+    lea eax, [rdi + 2 * rax]
     dec ecx
     jnz .phase_head
 
-    pop rdi
-    pop rsi
-    pop rcx
-    pop rdx
-    add edi, esi
-    lea ecx, [rcx + 2 * rdx]
-    lea ecx, [rdi + 2 * rcx]
+    ; Add knight eval for 2 * (N + B + 2 * R + 4 * Q)
+    ; eax - 2 * phase
+    add eax, edi
 
-    ; mg eval
-    imul eax, ecx
+    vmovd ecx, xmm0
+    movsx ebx, cx
+    sar ecx, 16
 
-    ; eg eval
-    mov dl, 24 ; top half is zero from phase calculation
-    sub edx, ecx
-    imul ebx, edx
+    imul ebx, eax
 
-    ; divide by 24
-    add ebx, eax
+    sub eax, 48 ; 2 * -(24 - phase)
+    imul ecx, eax
+
+    sub ebx, ecx
     movsx rax, ebx
+
+    ; divide by 2 * 24
     imul rax, rax, 2aaaaaabh
     mov rcx, rax
-    sar rax, 34
+    sar rax, 35
     shr rcx, 63
     add eax, ecx
-
-    ; return side to move relative eval
-    test byte [r10 + Board.side_to_move], 1
-    jz .white_to_move
-    neg eax
-.white_to_move:
 
     pop rbp
     pop rbx

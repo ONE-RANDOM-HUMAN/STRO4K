@@ -233,21 +233,21 @@ gen_moves:
 ; r8 - gen (preserved)
 ; r9 - occ (preserved)
 rook_moves:
-    vmovdqu xmm0, oword [ALL_MASK]
+    vmovdqu xmm7, oword [ALL_MASK]
     vmovdqu xmm1, oword [ROOK_SHIFTS]
     jmp dumb7fill
 
 ; r8 - gen (preserved)
 ; r9 - occ (preserved)
 bishop_moves:
-    vmovdqu xmm0, oword [NOT_A_FILE]
+    vmovdqu xmm7, oword [NOT_A_FILE]
     vmovdqu xmm1, oword [BISHOP_SHIFTS]
     
     ; jmp dumb7fill
 
 ; r8 - gen (preserved)
 ; r9 - occ (preserved)
-; l_mask - xmm0,
+; l_mask - xmm7,
 ; shifts - xmm1
 dumb7fill:
     vmovq xmm2, r8 ; gen
@@ -267,18 +267,18 @@ dumb7fill:
     vpor xmm3, xmm3, xmm6
 .loop_start:
     vpsllvq xmm5, xmm2, xmm1
-    vpand xmm6, xmm3, xmm0
-    vpand xmm5, xmm5, xmm0
+    vpand xmm6, xmm3, xmm7
+    vpand xmm5, xmm5, xmm7
     vpsrlvq xmm6, xmm6, xmm1
 
     dec al
     jnz .loop_head
 
 .or:
-    vpor xmm0, xmm5, xmm6
-    vpunpckhqdq xmm1, xmm0, xmm0
-    vpor xmm0, xmm0, xmm1
-    vmovq rax, xmm0
+    vpor xmm7, xmm5, xmm6
+    vpunpckhqdq xmm1, xmm7, xmm7
+    vpor xmm7, xmm7, xmm1
+    vmovq rax, xmm7
     ret
 
 move_fns:
@@ -325,15 +325,15 @@ queen_moves:
 ; r8 - gen (preserved)
 ; r9 - preserved
 knight_moves:
-    vmovdqu ymm0, yword [NOT_A_FILE]
+    vmovdqu ymm7, yword [NOT_A_FILE]
     vmovdqu ymm1, yword [KNIGHT_SHIFTS]
 
     vmovq xmm2, r8
     vpbroadcastq ymm2, xmm2
     
     vpsllvq ymm3, ymm2, ymm1
-    vpand ymm4, ymm2, ymm0
-    vpand ymm3, ymm3, ymm0
+    vpand ymm4, ymm2, ymm7
+    vpand ymm3, ymm3, ymm7
     vpsrlvq ymm4, ymm4, ymm1
 
     vpor ymm5, ymm4, ymm3
