@@ -28,6 +28,12 @@ impl HistoryTable {
         self.0.fill(0);
     }
 
+    pub fn scale(&mut self) {
+        for value in &mut self.0 {
+            *value -= *value >> 7;
+        }
+    }
+
     pub fn get(&self, mov: Move) -> i64 {
         self.0[(mov.0.get() & 0x0FFF) as usize]
     }

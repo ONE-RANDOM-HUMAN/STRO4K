@@ -151,6 +151,11 @@ impl<'a> Search<'a> {
 
         let mut searched = 0;
         'a: for depth in 0.. {
+            if depth >= 4 {
+                self.history[0].scale();
+                self.history[1].scale();
+            }
+
             let mut alpha = MIN_EVAL;
             searched = 0;
 

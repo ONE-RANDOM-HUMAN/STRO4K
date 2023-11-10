@@ -118,6 +118,18 @@ root_search:
 .iterative_deepening_head:
     xor r14d, r14d ; searched moves * SearchMove_size
 
+    cmp r13d, 4
+    jnge .no_scale_history
+    mov ecx, 2 * 64 * 64
+.scale_history_head:
+    mov rax, qword [rbx + Search.white_history + rcx * 8 - 8]
+    sar rax, 7
+    sub qword [rbx + Search.white_history + rcx * 8 - 8], rax
+    dec ecx
+    jnz .scale_history_head
+
+.no_scale_history:
+
     mov ebp, MIN_EVAL ; alpha
 .root_search_moves_head:
     ; edx - move
