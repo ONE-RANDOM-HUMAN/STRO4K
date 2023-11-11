@@ -37,7 +37,7 @@ impl HistoryTable {
     }
 
     pub fn failed_cutoff(&mut self, mov: Move, depth: i32) {
-        self.0[(mov.0.get() & 0x0FFF) as usize] -= i64::from(depth);
+        self.0[(mov.0.get() & 0x0FFF) as usize] -= i64::from(depth) * i64::from(depth);
     }
 }
 

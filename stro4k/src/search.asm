@@ -1088,6 +1088,7 @@ alpha_beta:
     ; beta cutoff for history
     ; eax - depth
     mov eax, dword [rbp + 8]
+    imul eax, eax
 
     ; decrease history of searched quiet moves
     mov edi, dword [rbp - 128 + ABLocals.first_quiet]
@@ -1105,7 +1106,6 @@ alpha_beta:
     jmp .decrease_history_head
 .decrease_history_end:
     ; increase history of move causing cutoff
-    imul eax, eax
     and edx, 0FFFh
     add qword [r8 + 8 * rdx], rax
 
