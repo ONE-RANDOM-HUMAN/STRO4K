@@ -130,6 +130,9 @@ impl<'a> Search<'a> {
             u64::MAX
         };
 
+        self.history[0].scale();
+        self.history[1].scale();
+
         self.ply[0].static_eval = evaluate::evaluate(self.game.position()) as i16;
 
         let mut buffer = MoveBuf::uninit();
@@ -592,6 +595,9 @@ impl<'a> Search<'a> {
             }
 
             for moves in moves.chunks_exact(2) {
+                search.history[0].scale();
+                search.history[1].scale();
+
                 let start = std::time::Instant::now();
                 search.alpha_beta(MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
                 duration += start.elapsed();
@@ -615,6 +621,9 @@ impl<'a> Search<'a> {
             }
 
             for moves in moves.chunks_exact(2) {
+                search.history[0].scale();
+                search.history[1].scale();
+
                 let start = std::time::Instant::now();
                 crate::asm::alpha_beta(&mut search, MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
                 duration += start.elapsed();
