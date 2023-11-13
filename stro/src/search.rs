@@ -130,6 +130,9 @@ impl<'a> Search<'a> {
             u64::MAX
         };
 
+        self.history[0].scale();
+        self.history[1].scale();
+
         self.ply[0].static_eval = evaluate::evaluate(self.game.position()) as i16;
 
         let mut buffer = MoveBuf::uninit();

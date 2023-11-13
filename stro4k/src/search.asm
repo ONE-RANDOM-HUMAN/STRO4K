@@ -65,6 +65,16 @@ thread_search:
 root_search:
     mov qword [rbx + Search.nodes], 0
 
+    ; scale past history
+
+    mov ecx, 2 * 64 * 64
+.scale_history_head:
+    mov rax, qword [rbx + Search.white_history + rcx * 8 - 8]
+    sar rax, 4
+    sub qword [rbx + Search.white_history + rcx * 8 - 8], rax
+    dec ecx
+    jnz .scale_history_head
+
     ; get static eval
     mov rsi, qword [rbx]
 %ifdef EXPORT_SYSV
