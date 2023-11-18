@@ -1,19 +1,19 @@
 MAX_EVAL equ 128 * 256 - 1
 MIN_EVAL equ -MAX_EVAL
 
-MG_BISHOP_PAIR equ 23
-EG_BISHOP_PAIR equ 61
+MG_BISHOP_PAIR equ 31
+EG_BISHOP_PAIR equ 95
 
-MG_TEMPO equ 19
-EG_TEMPO equ 3
+MG_TEMPO equ 29
+EG_TEMPO equ 10
 
 section .rodata
 MATERIAL_EVAL:
-    dw   88,  121
-    dw  282,  294
-    dw  300,  292
-    dw  406,  538
-    dw  952,  927
+    dw  112,  212
+    dw  322,  481
+    dw  353,  493
+    dw  468,  886
+    dw 1292, 1293
 
 ; For smaller size
 BISHOP_PAIR_EVAL:
@@ -23,192 +23,192 @@ TEMPO_EVAL:
     db MG_TEMPO, EG_TEMPO
 
 MOBILITY_EVAL:
-    db    6,    3
-    db    5,    4
-    db    4,    1
-    db    2,    1
+    db    8,   10
+    db    7,    8
+    db    4,    4
+    db    2,   10
 
 PASSED_PAWN_EVAL:
-    db   -3,   -4
-    db   -9,    4
-    db   -6,   20
-    db   16,   31
-    db   39,   42
-    db   46,   60
+    db   -3,  -15
+    db  -11,    0
+    db  -10,   30
+    db   16,   51
+    db   45,   67
+    db   59,   88
 
 
 ; first two in each row are doubled mg and eg
 ; second two are isolated mg and eg
 DOUBLED_ISOLATED_PAWN_EVAL:
-    db  -43,  -47,    1,    1
-    db  -21,  -33,  -10,   -7
-    db  -21,  -21,  -10,  -10
-    db  -23,  -13,  -20,  -13
-    db  -15,  -19,  -17,  -16
-    db  -26,  -26,  -16,   -7
-    db  -17,  -34,  -11,   -8
-    db  -28,  -44,  -12,   -2
+    db  -49,  -86,    0,   11
+    db  -26,  -59,  -16,  -10
+    db  -22,  -37,  -14,  -15
+    db  -30,  -26,  -27,  -23
+    db  -15,  -37,  -24,  -21
+    db  -31,  -49,  -24,   -8
+    db  -17,  -62,  -16,  -10
+    db  -29,  -82,  -25,   10
 
 
 OPEN_FILE_EVAL:
-    db   -1,  -10
-    db   -5,   -3
-    db   25,   -1
-    db   -7,   10
-    db  -37,   -9
+    db   -3,   -9
+    db   -7,    2
+    db   32,    4
+    db  -12,   10
+    db  -50,  -13
 
 SEMI_OPEN_FILE_EVAL:
-    db   -2,    7
-    db   -4,   19
-    db   13,   10
-    db    3,    7
-    db  -12,   14
+    db   -4,   13
+    db   -8,   26
+    db   16,   17
+    db    2,   16
+    db  -16,   16
 
 ; 0-4 pawns, 4 is max possible
 PAWN_SHIELD_EVAL:
-    db  -38,   15
-    db   -7,   -1
-    db   18,   -5
-    db   36,   -3
-    db   29,    5
+    db  -41,    9
+    db   -9,    1
+    db   22,   -4
+    db   49,   -3
+    db   41,    6
 
 EVAL_WEIGHTS:
 PAWN_DEFENDED_EVAL:
-    db   11,    4
-    db    1,   11
-    db    1,   13
-    db    1,   20
-    db   -5,   21
-    db  -33,   26
+    db   14,   11
+    db    2,   12
+    db    2,   18
+    db    4,   19
+    db   -6,   30
+    db  -45,   33
 
 PAWN_ATTACKED_EVAL:
-    db    5,   20
-    db  -40,  -29
-    db  -40,  -39
-    db  -39,  -34
-    db  -30,  -18
-    db  -34,   -7
+    db    7,   27
+    db  -53,  -45
+    db  -50,  -59
+    db  -48,  -48
+    db  -41,  -10
+    db    0,    0
 
 RANK_PST:
     db    0,    0
-    db  -11,   -4
-    db  -16,  -12
-    db    3,  -15
-    db   15,   -9
-    db   32,    9
-    db   46,   60
+    db  -18,  -22
+    db  -24,  -35
+    db    3,  -37
+    db   23,  -26
+    db   40,   12
+    db   59,   88
     db    0,    0
 
 
-    db  -23,  -20
-    db  -11,  -12
-    db  -11,   -5
-    db    3,   10
-    db   18,   14
-    db   52,    3
-    db   41,   -1
-    db  -46,    4
+    db  -30,   -8
+    db  -14,   -7
+    db  -14,   -4
+    db    6,   18
+    db   24,   24
+    db   72,    6
+    db   49,    7
+    db  -64,   15
 
 
-    db  -10,   -9
-    db   -1,   -6
-    db    2,   -3
+    db  -14,   -1
+    db   -2,   -2
+    db    4,    0
+    db    4,    3
+    db    6,   11
+    db   41,    5
+    db   -3,   13
+    db  -47,   27
+
+
+    db  -17,   -7
+    db  -29,   -3
+    db  -22,    2
+    db  -17,   18
+    db    8,   25
+    db   35,   23
+    db   46,   34
+    db   60,   15
+
+
+    db   -1,  -16
+    db   11,  -23
     db    1,    2
-    db    4,    6
-    db   31,    0
-    db   -2,    4
-    db  -35,   13
+    db   -6,   30
+    db    0,   48
+    db   28,   59
+    db   13,   71
+    db   50,   26
 
 
-    db  -14,  -14
-    db  -26,  -10
-    db  -21,   -5
-    db  -17,    3
-    db    4,    7
-    db   28,    5
-    db   40,   10
-    db   49,    2
-
-
-    db   -5,  -45
-    db    0,  -39
-    db   -8,  -11
-    db  -12,   14
-    db   -5,   29
-    db   20,   28
-    db    4,   35
-    db   43,   -4
-
-
-    db    2,  -26
-    db   -8,   -6
-    db  -26,    3
-    db  -12,    7
-    db    8,   14
-    db   32,   22
-    db   48,   17
-    db   50,   -4
+    db   11,  -58
+    db   -3,  -21
+    db  -35,    0
+    db  -33,   21
+    db  -12,   42
+    db   37,   60
+    db   58,   50
+    db   69,    7
 
 
 FILE_PST:
-    db  -18,    1
-    db   -5,   11
-    db  -11,    4
-    db    2,   -6
-    db    3,    1
-    db   18,   -5
-    db   13,    1
-    db   -5,  -14
+    db  -25,    2
+    db   -3,   21
+    db  -16,    3
+    db    4,  -10
+    db    7,   -3
+    db   21,   -4
+    db   13,    9
+    db   -8,  -21
 
 
-    db  -13,  -14
-    db   -2,   -6
-    db   -5,    3
-    db    3,    7
-    db    2,    7
-    db    4,   -2
-    db    6,    1
-    db   -1,   -8
+    db  -16,   -1
+    db    0,    3
+    db   -6,    8
+    db    6,   13
+    db    3,   12
+    db    5,   -2
+    db    9,   11
+    db   -1,    3
 
 
-    db    1,   -1
-    db    3,    1
-    db   -3,    0
+    db    5,    5
+    db    8,    4
     db   -5,    4
-    db   -3,    1
-    db   -6,    0
-    db   10,   -2
-    db   10,   -6
+    db   -7,   10
+    db   -6,    6
+    db   -8,    5
+    db   15,    3
+    db   14,    1
 
 
-    db  -13,    3
-    db   -9,    3
-    db   -1,    4
-    db    7,    2
-    db    9,   -3
-    db    0,    1
-    db    6,   -5
-    db    2,   -9
+    db  -18,   19
+    db  -15,   20
+    db    1,   22
+    db   12,   15
+    db   13,    8
+    db   -3,   14
+    db    3,    8
+    db    5,   -1
 
 
-    db   -6,  -28
-    db   -5,  -10
-    db   -5,    2
-    db   -5,   13
-    db   -5,   15
-    db    0,   14
-    db   16,    0
+    db    0,   12
+    db    0,   19
+    db    3,   25
+    db   -1,   37
+    db    0,   37
+    db    6,   42
+    db   23,   33
+    db   36,   38
+
+
+    db   35,  -37
+    db   33,   -4
+    db   -1,   14
+    db  -52,   27
+    db   -3,   10
+    db  -59,   19
     db   23,   -8
-
-
-    db   19,  -16
-    db   23,   -2
-    db   -1,    4
-    db  -33,   12
-    db   -1,    2
-    db  -42,   11
-    db   14,   -2
-    db   11,  -14
+    db   19,  -34
 
 
 default rel
