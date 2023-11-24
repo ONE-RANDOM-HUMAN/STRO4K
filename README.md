@@ -55,6 +55,8 @@ cargo build --release
     * Open Files
     * Rank and File Piece Tables
     * Pawn Shield
+    * Tempo
+    * Pieces attacked and defended by pawns
 
 A neural network is planned.
 
