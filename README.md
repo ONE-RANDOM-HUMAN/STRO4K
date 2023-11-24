@@ -29,7 +29,7 @@ cargo build --release
 
 ## Current size
 ```
-3989 bytes
+4011 bytes
 ```
 ## Features
 * Search
@@ -51,6 +51,7 @@ cargo build --release
     * Bishop Pair
     * Doubled Pawns
     * Passed Pawns
+    * Protected Passed Pawns
     * Isolated Pawns
     * Open Files
     * Rank and File Piece Tables
