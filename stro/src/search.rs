@@ -307,8 +307,7 @@ impl<'a> Search<'a> {
                     self.game.make_null_move();
                 }
 
-                let eval =
-                    self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
+                let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
 
                 unsafe {
                     self.game.unmake_move();
@@ -425,7 +424,8 @@ impl<'a> Search<'a> {
 
                     if lmr_depth < 1 {
                         // History leaf pruning
-                        let history = &self.history[self.game.position().side_to_move().other() as usize];
+                        let history =
+                            &self.history[self.game.position().side_to_move().other() as usize];
                         if history.get(mov) < 0 {
                             unsafe {
                                 self.game.unmake_move();

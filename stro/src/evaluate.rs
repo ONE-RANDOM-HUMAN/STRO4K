@@ -249,7 +249,7 @@ impl Eval {
 
     fn map<F>(self, mut f: F) -> Self
     where
-        F: FnMut(i16) -> i16
+        F: FnMut(i16) -> i16,
     {
         Self(f(self.0), f(self.1))
     }
@@ -314,43 +314,63 @@ fn side_mobility(pieces: &[Bitboard; 6], occ: Bitboard, mask: Bitboard) -> Eval 
     eval
 }
 
-fn side_pawn_structure(pawns: Bitboard) -> Eval {
+fn side_pawn_structure(
+    side_pawns: Bitboard,
+    enemy_pawns: Bitboard,
+    enemy_attacks: Bitboard,
+    side_to_move: Color,
+) -> Eval {
     let mut eval = Eval(0, 0);
-    let mut file = consts::A_FILE;
-    for i in 0..8 {
-        let pawn_count = popcnt(pawns & file);
-        let adjacent = ((file << 1) & !consts::A_FILE) | ((file & !consts::A_FILE) >> 1);
-        if pawns & adjacent == 0 {
-            eval.accum(ISOLATED_PAWN_EVAL[i], pawn_count);
+    let mut remaining_pawns = side_pawns;
+    while remaining_pawns != 0 {
+        let index = remaining_pawns.trailing_zeros();
+
+        let file = index % 8;
+        let file_mask = consts::A_FILE << (index % 8);
+        let front_mask = if side_to_move == Color::White {
+            consts::A_FILE << (index + 8)
+        } else {
+            file_mask ^ (consts::A_FILE << index)
+        };
+
+        if front_mask & side_pawns != 0 {
+            eval.accum(DOUBLED_PAWN_EVAL[file as usize], 1);
+        } else if (front_mask | (1 << index)) & (enemy_attacks | enemy_pawns) == 0 {
+            let rank_index = if side_to_move == Color::White {
+                index / 8 - 1
+            } else {
+                6 - index / 8
+            };
+
+            eval.accum(PASSED_PAWN_EVAL[rank_index as usize], 1);
         }
 
-        eval.accum(DOUBLED_PAWN_EVAL[i], pawn_count.max(1) - 1);
-        file <<= 1;
+        let adjacent = ((file_mask << 1) & !consts::A_FILE) | ((file_mask & !consts::A_FILE) >> 1);
+        if adjacent & side_pawns == 0 {
+            eval.accum(ISOLATED_PAWN_EVAL[file as usize], 1);
+        }
+
+        remaining_pawns &= remaining_pawns - 1;
     }
 
     eval
 }
 
-// Passed pawns from white's perspective
-fn white_passed_pawn(side: Bitboard, enemy: Bitboard) -> Eval {
-    let mut mask = enemy;
-    mask |= mask >> 8;
-    mask |= mask >> 16;
-    mask |= mask >> 32;
-
-    mask |= ((mask >> 7) & !consts::A_FILE) | ((mask & !consts::A_FILE) >> 9);
-
+fn pawn_structure(white_pawns: Bitboard, black_pawns: Bitboard) -> Eval {
     let mut eval = Eval(0, 0);
-    let pawns = side & !mask;
-    let mut file = consts::A_FILE;
-    for _ in 0..8 {
-        let index = (pawns & file).leading_zeros();
-        if index != 64 {
-            eval.accum(PASSED_PAWN_EVAL[(6 - index / 8) as usize], 1);
-        }
+    let white_attacks =
+        ((white_pawns << 9) & !consts::A_FILE) | ((white_pawns & !consts::A_FILE) << 7);
+    let black_attacks =
+        ((black_pawns >> 7) & !consts::A_FILE) | ((black_pawns & !consts::A_FILE) >> 9);
 
-        file <<= 1;
-    }
+    eval.accum(
+        side_pawn_structure(white_pawns, black_pawns, black_attacks, Color::White),
+        1,
+    );
+    eval.accum(
+        side_pawn_structure(black_pawns, white_pawns, white_attacks, Color::Black),
+        -1,
+    );
 
     eval
 }
@@ -391,23 +411,29 @@ fn white_king_safety(king: Bitboard, pawns: Bitboard, phase: i16) -> Eval {
 
     if king & KS_AREA != 0 {
         let pawn_count = (pawns & (KS_AREA << 8)).count_ones();
-        eval.accum(PAWN_SHIELD_EVAL[pawn_count as usize].map(|x| (x * phase) >> 3), 1);
+        eval.accum(
+            PAWN_SHIELD_EVAL[pawn_count as usize].map(|x| (x * phase) >> 3),
+            1,
+        );
     } else if king & QS_AREA != 0 {
         let pawn_count = (pawns & (QS_AREA << 8)).count_ones();
-        eval.accum(PAWN_SHIELD_EVAL[pawn_count as usize].map(|x| (x * phase) >> 3), 1);
+        eval.accum(
+            PAWN_SHIELD_EVAL[pawn_count as usize].map(|x| (x * phase) >> 3),
+            1,
+        );
     }
 
     eval
 }
 
-fn pawn_attacked(pieces: &[[Bitboard; 6]; 2]) -> Eval {
+fn pawn_piece(pieces: &[[Bitboard; 6]; 2]) -> Eval {
     let mut eval = Eval(0, 0);
 
-    let white_pawn_attacks = ((pieces[0][0] << 9) & !consts::A_FILE)
-        | ((pieces[0][0] & !consts::A_FILE) << 7);
+    let white_pawn_attacks =
+        ((pieces[0][0] << 9) & !consts::A_FILE) | ((pieces[0][0] & !consts::A_FILE) << 7);
 
-    let black_pawn_attacks = ((pieces[1][0] >> 7) & !consts::A_FILE)
-        | ((pieces[1][0] & !consts::A_FILE) >> 9);
+    let black_pawn_attacks =
+        ((pieces[1][0] >> 7) & !consts::A_FILE) | ((pieces[1][0] & !consts::A_FILE) >> 9);
 
     for (i, piece) in pieces[0].into_iter().enumerate() {
         eval.accum(PAWN_DEFENDED_EVAL[i], popcnt(piece & white_pawn_attacks));
@@ -421,7 +447,6 @@ fn pawn_attacked(pieces: &[[Bitboard; 6]; 2]) -> Eval {
 
     eval
 }
-
 
 pub fn evaluate(board: &Board) -> i32 {
     let mut eval = if board.side_to_move() == Color::White {
@@ -459,22 +484,10 @@ pub fn evaluate(board: &Board) -> i32 {
     eval.accum(side_mobility(&board.pieces()[0], occ, consts::ALL), 1);
     eval.accum(side_mobility(&board.pieces()[1], occ, consts::ALL), -1);
 
-    // doubled pawns
-    eval.accum(side_pawn_structure(board.pieces()[0][0]), 1);
-    eval.accum(side_pawn_structure(board.pieces()[1][0]), -1);
-
-    // passed pawns
+    // doubled, isolated, and passed pawns
     eval.accum(
-        white_passed_pawn(board.pieces()[0][0], board.pieces()[1][0]),
+        pawn_structure(board.pieces()[0][0], board.pieces()[1][0]),
         1,
-    );
-
-    eval.accum(
-        white_passed_pawn(
-            board.pieces()[1][0].swap_bytes(),
-            board.pieces()[0][0].swap_bytes(),
-        ),
-        -1,
     );
 
     // open files
@@ -520,7 +533,7 @@ pub fn evaluate(board: &Board) -> i32 {
         -1,
     );
 
-    eval.accum(pawn_attacked(board.pieces()), 1);
+    eval.accum(pawn_piece(board.pieces()), 1);
 
     resolve(board, eval)
 }
