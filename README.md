@@ -29,7 +29,7 @@ cargo build --release
 
 ## Current size
 ```
-3989 bytes
+4026 bytes
 ```
 ## Features
 * Search
@@ -52,6 +52,7 @@ cargo build --release
     * Doubled Pawns
     * Passed Pawns
     * Isolated Pawns
+    * Backward Pawns
     * Open Files
     * Rank and File Piece Tables
     * Pawn Shield
