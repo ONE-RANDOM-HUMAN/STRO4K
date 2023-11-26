@@ -11,7 +11,7 @@ section .rodata
 MATERIAL_EVAL:
     dw  112,  211
     dw  322,  474
-    dw  351,  488
+    dw  351,  489
     dw  470,  875
     dw 1282, 1273
 
@@ -29,35 +29,35 @@ MOBILITY_EVAL:
     db    2,   11
 
 PASSED_PAWN_EVAL:
-    db   -3,  -14
-    db  -12,   -1
-    db  -10,   30
-    db   17,   54
-    db   47,   67
+    db   -3,  -13
+    db  -12,    0
+    db  -11,   30
+    db   17,   52
+    db   46,   66
     db   58,   87
 
 
 ; first two in each row are isolated mg and eg
 ; second two are doubled mg and eg
 ISOLATED_DOUBLED_PAWN_EVAL:
-    db    2,    9,  -48,  -85
-    db  -13,  -10,  -25,  -58
-    db  -11,  -13,  -20,  -38
-    db  -22,  -23,  -28,  -27
-    db  -21,  -23,  -14,  -36
-    db  -21,   -7,  -27,  -49
-    db  -15,   -7,  -16,  -62
-    db  -24,   12,  -27,  -82
+    db    1,   10,  -49,  -84
+    db  -14,   -9,  -25,  -57
+    db  -10,  -12,  -21,  -38
+    db  -18,  -24,  -29,  -27
+    db  -19,  -23,  -15,  -35
+    db  -19,   -7,  -27,  -48
+    db  -16,   -6,  -17,  -61
+    db  -25,   12,  -28,  -81
 
 BACKWARD_PAWN_EVAL:
-    db    0,    0
-    db    2,   -7
-    db  -11,   -2
-    db   -7,    1
-    db  -13,    1
-    db  -28,   -5
-    db  -19,  -12
-    db    0,    0
+    db   -3,   -6
+    db   -4,  -12
+    db  -14,   -5
+    db  -22,    0
+    db  -20,    0
+    db  -24,    2
+    db  -10,  -10
+    db    5,   -3
 
 OPEN_FILE_EVAL:
     db   -3,   -9
@@ -68,30 +68,30 @@ OPEN_FILE_EVAL:
 
 SEMI_OPEN_FILE_EVAL:
     db   -4,   12
-    db   -8,   29
+    db   -8,   28
     db   16,   17
     db    0,   17
-    db  -16,   18
+    db  -17,   18
 
 ; 0-4 pawns, 4 is max possible
 PAWN_SHIELD_EVAL:
     db  -28,  -24
-    db   -7,  -20
+    db   -7,  -22
     db    8,    4
-    db   24,   33
-    db   22,   32
+    db   25,   35
+    db   22,   34
 
 EVAL_WEIGHTS:
 PAWN_DEFENDED_EVAL:
     db   14,   11
     db    2,   11
-    db    0,   18
+    db    1,   17
     db    4,   20
-    db   -6,   29
-    db  -46,   35
+    db   -7,   29
+    db  -45,   34
 
 PAWN_ATTACKED_EVAL:
-    db    8,   20
+    db    7,   21
     db  -52,  -47
     db  -50,  -59
     db  -48,  -49
@@ -100,27 +100,27 @@ PAWN_ATTACKED_EVAL:
 
 RANK_PST:
     db    0,    0
-    db  -18,  -22
-    db  -23,  -34
+    db  -18,  -23
+    db  -23,  -35
     db    3,  -36
-    db   20,  -29
-    db   39,   13
+    db   20,  -27
+    db   39,   14
     db   58,   87
     db    0,    0
 
 
     db  -29,   -8
-    db  -13,   -7
-    db  -14,   -3
+    db  -14,   -7
+    db  -13,   -3
     db    6,   17
-    db   24,   25
-    db   70,    6
+    db   25,   25
+    db   70,    7
     db   51,    8
     db  -67,   21
 
 
     db  -14,    1
-    db   -1,    1
+    db   -1,    0
     db    3,    1
     db    4,    5
     db    6,   11
@@ -129,7 +129,7 @@ RANK_PST:
     db  -46,   26
 
 
-    db  -17,   -6
+    db  -18,   -6
     db  -29,    0
     db  -22,    4
     db  -17,   19
@@ -140,12 +140,12 @@ RANK_PST:
 
 
     db    2,  -13
-    db   12,  -20
+    db   13,  -20
     db    2,    4
     db   -4,   30
-    db   -1,   50
+    db    0,   50
     db   29,   60
-    db   15,   73
+    db   15,   74
     db   50,   29
 
 
@@ -161,12 +161,12 @@ RANK_PST:
 
 FILE_PST:
     db  -25,    1
-    db   -4,   21
-    db  -15,    2
-    db    4,   -9
-    db    6,   -2
-    db   21,   -4
-    db   13,    9
+    db   -3,   22
+    db  -16,    1
+    db    5,   -9
+    db    5,   -2
+    db   22,   -5
+    db   13,   10
     db   -8,  -20
 
 
@@ -175,26 +175,26 @@ FILE_PST:
     db   -7,    6
     db    6,   14
     db    5,   12
-    db    6,    0
+    db    5,    0
     db    9,   12
     db    0,    4
 
 
     db    5,    6
-    db    8,    5
-    db   -4,    6
+    db    9,    5
+    db   -4,    7
     db   -7,   10
     db   -5,    6
     db   -8,    7
-    db   14,    4
+    db   15,    4
     db   15,   -1
 
 
     db  -17,   21
     db  -16,   22
-    db    0,   23
+    db    1,   23
     db   12,   16
-    db   13,    8
+    db   12,    8
     db   -3,   16
     db    3,    9
     db    4,    1
@@ -211,12 +211,12 @@ FILE_PST:
 
 
     db   37,  -35
-    db   34,   -2
+    db   35,   -2
     db   -1,   13
     db  -56,   27
     db  -10,    9
-    db  -58,   21
-    db   24,   -8
+    db  -59,   21
+    db   25,   -8
     db   20,  -34
 
 

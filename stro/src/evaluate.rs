@@ -13,7 +13,7 @@ pub const MIN_EVAL: i32 = -MAX_EVAL;
 const MATERIAL_EVAL: [Eval; 5] = [
     Eval( 112,  211),
     Eval( 322,  474),
-    Eval( 351,  488),
+    Eval( 351,  489),
     Eval( 470,  875),
     Eval(1282, 1273),
 ];
@@ -25,27 +25,27 @@ const TEMPO: Eval = Eval(29, 9);
 const RANK_PST: [[Eval; 8]; 6] = [
     [
         Eval(   0,    0),
-        Eval( -18,  -22),
-        Eval( -23,  -34),
+        Eval( -18,  -23),
+        Eval( -23,  -35),
         Eval(   3,  -36),
-        Eval(  20,  -29),
-        Eval(  39,   13),
+        Eval(  20,  -27),
+        Eval(  39,   14),
         Eval(  58,   87),
         Eval(   0,    0),
     ],
     [
         Eval( -29,   -8),
-        Eval( -13,   -7),
-        Eval( -14,   -3),
+        Eval( -14,   -7),
+        Eval( -13,   -3),
         Eval(   6,   17),
-        Eval(  24,   25),
-        Eval(  70,    6),
+        Eval(  25,   25),
+        Eval(  70,    7),
         Eval(  51,    8),
         Eval( -67,   21),
     ],
     [
         Eval( -14,    1),
-        Eval(  -1,    1),
+        Eval(  -1,    0),
         Eval(   3,    1),
         Eval(   4,    5),
         Eval(   6,   11),
@@ -54,7 +54,7 @@ const RANK_PST: [[Eval; 8]; 6] = [
         Eval( -46,   26),
     ],
     [
-        Eval( -17,   -6),
+        Eval( -18,   -6),
         Eval( -29,    0),
         Eval( -22,    4),
         Eval( -17,   19),
@@ -65,12 +65,12 @@ const RANK_PST: [[Eval; 8]; 6] = [
     ],
     [
         Eval(   2,  -13),
-        Eval(  12,  -20),
+        Eval(  13,  -20),
         Eval(   2,    4),
         Eval(  -4,   30),
-        Eval(  -1,   50),
+        Eval(   0,   50),
         Eval(  29,   60),
-        Eval(  15,   73),
+        Eval(  15,   74),
         Eval(  50,   29),
     ],
     [
@@ -89,12 +89,12 @@ const RANK_PST: [[Eval; 8]; 6] = [
 const FILE_PST: [[Eval; 8]; 6] = [
     [
         Eval( -25,    1),
-        Eval(  -4,   21),
-        Eval( -15,    2),
-        Eval(   4,   -9),
-        Eval(   6,   -2),
-        Eval(  21,   -4),
-        Eval(  13,    9),
+        Eval(  -3,   22),
+        Eval( -16,    1),
+        Eval(   5,   -9),
+        Eval(   5,   -2),
+        Eval(  22,   -5),
+        Eval(  13,   10),
         Eval(  -8,  -20),
     ],
     [
@@ -103,26 +103,26 @@ const FILE_PST: [[Eval; 8]; 6] = [
         Eval(  -7,    6),
         Eval(   6,   14),
         Eval(   5,   12),
-        Eval(   6,    0),
+        Eval(   5,    0),
         Eval(   9,   12),
         Eval(   0,    4),
     ],
     [
         Eval(   5,    6),
-        Eval(   8,    5),
-        Eval(  -4,    6),
+        Eval(   9,    5),
+        Eval(  -4,    7),
         Eval(  -7,   10),
         Eval(  -5,    6),
         Eval(  -8,    7),
-        Eval(  14,    4),
+        Eval(  15,    4),
         Eval(  15,   -1),
     ],
     [
         Eval( -17,   21),
         Eval( -16,   22),
-        Eval(   0,   23),
+        Eval(   1,   23),
         Eval(  12,   16),
-        Eval(  13,    8),
+        Eval(  12,    8),
         Eval(  -3,   16),
         Eval(   3,    9),
         Eval(   4,    1),
@@ -139,12 +139,12 @@ const FILE_PST: [[Eval; 8]; 6] = [
     ],
     [
         Eval(  37,  -35),
-        Eval(  34,   -2),
+        Eval(  35,   -2),
         Eval(  -1,   13),
         Eval( -56,   27),
         Eval( -10,    9),
-        Eval( -58,   21),
-        Eval(  24,   -8),
+        Eval( -59,   21),
+        Eval(  25,   -8),
         Eval(  20,  -34),
     ],
 ];
@@ -159,47 +159,47 @@ const MOBILITY_EVAL: [Eval; 4] = [
 
 #[rustfmt::skip]
 const BACKWARD_PAWN_EVAL: [Eval; 8] = [
-    Eval(   0,    0),
-    Eval(   2,   -7),
-    Eval( -11,   -2),
-    Eval(  -7,    1),
-    Eval( -13,    1),
-    Eval( -28,   -5),
-    Eval( -19,  -12),
-    Eval(   0,    0),
+    Eval(  -3,   -6),
+    Eval(  -4,  -12),
+    Eval( -14,   -5),
+    Eval( -22,    0),
+    Eval( -20,    0),
+    Eval( -24,    2),
+    Eval( -10,  -10),
+    Eval(   5,   -3),
 ];
 
 #[rustfmt::skip]
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval( -48,  -85),
-    Eval( -25,  -58),
-    Eval( -20,  -38),
-    Eval( -28,  -27),
-    Eval( -14,  -36),
-    Eval( -27,  -49),
-    Eval( -16,  -62),
-    Eval( -27,  -82),
+    Eval( -49,  -84),
+    Eval( -25,  -57),
+    Eval( -21,  -38),
+    Eval( -29,  -27),
+    Eval( -15,  -35),
+    Eval( -27,  -48),
+    Eval( -17,  -61),
+    Eval( -28,  -81),
 ];
 
 #[rustfmt::skip]
 const ISOLATED_PAWN_EVAL: [Eval; 8] = [
-    Eval(   2,    9),
-    Eval( -13,  -10),
-    Eval( -11,  -13),
-    Eval( -22,  -23),
-    Eval( -21,  -23),
-    Eval( -21,   -7),
-    Eval( -15,   -7),
-    Eval( -24,   12),
+    Eval(   1,   10),
+    Eval( -14,   -9),
+    Eval( -10,  -12),
+    Eval( -18,  -24),
+    Eval( -19,  -23),
+    Eval( -19,   -7),
+    Eval( -16,   -6),
+    Eval( -25,   12),
 ];
 
 #[rustfmt::skip]
 const PASSED_PAWN_EVAL: [Eval; 6] = [
-    Eval(  -3,  -14),
-    Eval( -12,   -1),
-    Eval( -10,   30),
-    Eval(  17,   54),
-    Eval(  47,   67),
+    Eval(  -3,  -13),
+    Eval( -12,    0),
+    Eval( -11,   30),
+    Eval(  17,   52),
+    Eval(  46,   66),
     Eval(  58,   87),
 ];
 
@@ -215,34 +215,34 @@ const OPEN_FILE_EVAL: [Eval; 5] = [
 #[rustfmt::skip]
 const SEMI_OPEN_FILE_EVAL: [Eval; 5] = [
     Eval(  -4,   12),
-    Eval(  -8,   29),
+    Eval(  -8,   28),
     Eval(  16,   17),
     Eval(   0,   17),
-    Eval( -16,   18),
+    Eval( -17,   18),
 ];
 
 #[rustfmt::skip]
 const PAWN_SHIELD_EVAL: [Eval; 5] = [
     Eval( -28,  -24),
-    Eval(  -7,  -20),
+    Eval(  -7,  -22),
     Eval(   8,    4),
-    Eval(  24,   33),
-    Eval(  22,   32),
+    Eval(  25,   35),
+    Eval(  22,   34),
 ];
 
 #[rustfmt::skip]
 const PAWN_DEFENDED_EVAL: [Eval; 6] = [
     Eval(  14,   11),
     Eval(   2,   11),
-    Eval(   0,   18),
+    Eval(   1,   17),
     Eval(   4,   20),
-    Eval(  -6,   29),
-    Eval( -46,   35),
+    Eval(  -7,   29),
+    Eval( -45,   34),
 ];
 
 #[rustfmt::skip]
 const PAWN_ATTACKED_EVAL: [Eval; 6] = [
-    Eval(   8,   20),
+    Eval(   7,   21),
     Eval( -52,  -47),
     Eval( -50,  -59),
     Eval( -48,  -49),
