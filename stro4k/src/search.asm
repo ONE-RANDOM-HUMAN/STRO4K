@@ -1071,9 +1071,13 @@ alpha_beta:
     ; update killer table
     ; edx - copy of move
     mov edx, r12d
+
+    cmp word [r13 + PlyData.kt], r12w
+    je .no_update_killers
+
     shl r12d, 16 ; temp
     shld dword [r13 + PlyData.kt], r12d, 16
-
+.no_update_killers:
 
     ; load history table
     lea r8, [rbx + Search.white_history]
