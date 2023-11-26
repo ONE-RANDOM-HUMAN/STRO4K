@@ -9,11 +9,11 @@ EG_TEMPO equ 9
 
 section .rodata
 MATERIAL_EVAL:
-    dw  112,  211
+    dw  112,  212
     dw  322,  474
     dw  351,  489
     dw  470,  875
-    dw 1282, 1273
+    dw 1283, 1273
 
 ; For smaller size
 BISHOP_PAIR_EVAL:
@@ -29,35 +29,35 @@ MOBILITY_EVAL:
     db    2,   11
 
 PASSED_PAWN_EVAL:
-    db   -3,  -13
-    db  -12,    0
-    db  -11,   30
-    db   17,   52
-    db   46,   66
-    db   58,   87
+    db   -2,  -14
+    db  -11,   -1
+    db   -9,   28
+    db   19,   52
+    db   47,   65
+    db   59,   87
 
 
 ; first two in each row are isolated mg and eg
 ; second two are doubled mg and eg
 ISOLATED_DOUBLED_PAWN_EVAL:
-    db    1,   10,  -49,  -84
-    db  -14,   -9,  -25,  -57
-    db  -10,  -12,  -21,  -38
-    db  -18,  -24,  -29,  -27
-    db  -19,  -23,  -15,  -35
-    db  -19,   -7,  -27,  -48
-    db  -16,   -6,  -17,  -61
-    db  -25,   12,  -28,  -81
+    db    0,    8,  -48,  -84
+    db  -15,  -12,  -24,  -58
+    db  -15,  -13,  -21,  -38
+    db  -28,  -24,  -28,  -28
+    db  -26,  -23,  -15,  -36
+    db  -24,   -7,  -27,  -49
+    db  -18,   -9,  -17,  -62
+    db  -25,   11,  -28,  -82
 
 BACKWARD_PAWN_EVAL:
-    db   -3,   -6
-    db   -4,  -12
-    db  -14,   -5
-    db  -22,    0
-    db  -20,    0
-    db  -24,    2
-    db  -10,  -10
-    db    5,   -3
+    db    2,  -18
+    db   -3,  -17
+    db  -15,  -17
+    db  -22,  -12
+    db  -25,  -13
+    db  -26,   -3
+    db  -12,  -15
+    db   -9,  -11
 
 OPEN_FILE_EVAL:
     db   -3,   -9
@@ -68,52 +68,52 @@ OPEN_FILE_EVAL:
 
 SEMI_OPEN_FILE_EVAL:
     db   -4,   12
-    db   -8,   28
+    db   -8,   29
     db   16,   17
     db    0,   17
-    db  -17,   18
+    db  -16,   19
 
 ; 0-4 pawns, 4 is max possible
 PAWN_SHIELD_EVAL:
     db  -28,  -24
-    db   -7,  -22
-    db    8,    4
-    db   25,   35
+    db   -7,  -21
+    db    8,    3
+    db   24,   35
     db   22,   34
 
 EVAL_WEIGHTS:
 PAWN_DEFENDED_EVAL:
-    db   14,   11
+    db   14,   12
     db    2,   11
-    db    1,   17
+    db    1,   18
     db    4,   20
-    db   -7,   29
-    db  -45,   34
+    db   -6,   29
+    db  -46,   34
 
 PAWN_ATTACKED_EVAL:
     db    7,   21
     db  -52,  -47
     db  -50,  -59
-    db  -48,  -49
+    db  -48,  -50
     db  -41,  -11
     db    0,    0
 
 RANK_PST:
     db    0,    0
-    db  -18,  -23
+    db  -18,  -24
     db  -23,  -35
     db    3,  -36
-    db   20,  -27
-    db   39,   14
-    db   58,   87
+    db   20,  -28
+    db   40,   14
+    db   59,   87
     db    0,    0
 
 
-    db  -29,   -8
-    db  -14,   -7
-    db  -13,   -3
+    db  -30,   -8
+    db  -13,   -7
+    db  -13,   -2
     db    6,   17
-    db   25,   25
+    db   24,   25
     db   70,    7
     db   51,    8
     db  -67,   21
@@ -122,7 +122,7 @@ RANK_PST:
     db  -14,    1
     db   -1,    0
     db    3,    1
-    db    4,    5
+    db    3,    5
     db    6,   11
     db   42,    5
     db   -2,   13
@@ -153,21 +153,21 @@ RANK_PST:
     db   -3,  -18
     db  -35,    1
     db  -39,   21
-    db  -13,   42
+    db  -12,   42
     db   38,   58
     db   56,   44
     db   61,    7
 
 
 FILE_PST:
-    db  -25,    1
-    db   -3,   22
-    db  -16,    1
-    db    5,   -9
+    db  -26,    1
+    db   -4,   22
+    db  -15,    1
+    db    5,   -8
     db    5,   -2
-    db   22,   -5
+    db   21,   -5
     db   13,   10
-    db   -8,  -20
+    db   -8,  -21
 
 
     db  -15,    1
@@ -182,7 +182,7 @@ FILE_PST:
 
     db    5,    6
     db    9,    5
-    db   -4,    7
+    db   -5,    7
     db   -7,   10
     db   -5,    6
     db   -8,    7
@@ -211,11 +211,11 @@ FILE_PST:
 
 
     db   37,  -35
-    db   35,   -2
+    db   34,   -2
     db   -1,   13
     db  -56,   27
     db  -10,    9
-    db  -59,   21
+    db  -58,   21
     db   25,   -8
     db   20,  -34
 
@@ -437,6 +437,7 @@ evaluate:
     jnz .no_isolated_pawn
 
     vpaddw xmm0, xmm0, xmm1
+    jmp .no_backward_pawn
 .no_isolated_pawn:
 
     ; backward pawn
