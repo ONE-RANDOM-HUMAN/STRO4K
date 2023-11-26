@@ -11,8 +11,10 @@ impl KillerTable {
     }
 
     pub fn beta_cutoff(&mut self, mov: Move) {
-        self.0[1] = self.0[0];
-        self.0[0] = Some(mov);
+        if self.0[0] != Some(mov) {
+            self.0[1] = self.0[0];
+            self.0[0] = Some(mov);
+        }
     }
 }
 
