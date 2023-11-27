@@ -248,18 +248,20 @@ evaluate:
     andn r14, r8, rdi
     or r14, rax
 
-    cmp byte [rsi + Board.side_to_move], 0
-    je .white_to_move
-    xchg r10, r11
-    xchg r13, r14
-    xor r15, 8
-.white_to_move:
     vpmovsxbw xmm0, qword [rbp + TEMPO_EVAL - EVAL_WEIGHTS]
 
     ; r9 - occ
     mov r9, qword [rsi + Board.white]
     or r9, qword [rsi + Board.black]
+
+    cmp byte [rsi + Board.side_to_move], 0
+    je .white_to_move
+
 .side_eval_head:
+    xchg r10, r11
+    xchg r13, r14
+    xor r15, 8
+.white_to_move:
 
     ; bishop pair
     mov rbx, LIGHT_SQUARES
@@ -443,7 +445,7 @@ evaluate:
     jc .no_blocked_passed_pawn
 
     vpshufd xmm2, xmm2, 01h
-.no_blocked_passed_pawn
+.no_blocked_passed_pawn:
 
     vpaddw xmm0, xmm0, xmm2
 .no_passed_pawn:
@@ -486,10 +488,6 @@ evaluate:
 
     vpxor xmm1, xmm1, xmm1
     vpsubw xmm0, xmm1, xmm0
-
-    xchg r10, r11
-    xchg r13, r14
-    xor r15, 8
 
     ; Since rsi is a pointer to a board, it must be aligned
     ; so we can loop twice by testing and complementing the
