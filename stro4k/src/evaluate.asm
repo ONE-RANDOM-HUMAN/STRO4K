@@ -5,15 +5,15 @@ MG_BISHOP_PAIR equ 28
 EG_BISHOP_PAIR equ 96
 
 MG_TEMPO equ 29
-EG_TEMPO equ 10
+EG_TEMPO equ 9
 
 section .rodata
 MATERIAL_EVAL:
-    dw  113,  212
-    dw  322,  479
-    dw  352,  492
-    dw  468,  885
-    dw 1291, 1293
+    dw  112,  210
+    dw  322,  474
+    dw  352,  488
+    dw  470,  873
+    dw 1281, 1272
 
 ; For smaller size
 BISHOP_PAIR_EVAL:
@@ -25,190 +25,191 @@ TEMPO_EVAL:
 MOBILITY_EVAL:
     db    8,   11
     db    7,    8
-    db    4,    4
-    db    2,   10
+    db    4,    5
+    db    2,   11
 
 PASSED_PAWN_EVAL:
-    db   -3,  -13
-    db  -11,    0
-    db  -10,   30
-    db   15,   51
-    db   45,   66
-    db   58,   87
+    db   -4,   -4
+    db   -4,  -14
+    db  -12,   -1
+    db   -2,   24
+    db   22,   48
+    db   41,   72
+    db  100,  102
 
 
 ; first two in each row are doubled mg and eg
 ; second two are isolated mg and eg
 DOUBLED_ISOLATED_PAWN_EVAL:
-    db  -50,  -84,    0,    9
-    db  -26,  -58,  -16,  -11
-    db  -21,  -37,  -13,  -15
-    db  -29,  -27,  -26,  -22
-    db  -15,  -36,  -25,  -22
-    db  -30,  -50,  -22,   -7
-    db  -17,  -62,  -18,   -9
-    db  -29,  -82,  -25,   12
+    db  -48,  -85,    0,   10
+    db  -25,  -58,  -15,  -10
+    db  -21,  -38,  -13,  -12
+    db  -28,  -28,  -26,  -21
+    db  -15,  -36,  -24,  -22
+    db  -27,  -48,  -23,   -6
+    db  -16,  -61,  -18,   -7
+    db  -28,  -82,  -25,   13
 
 
 OPEN_FILE_EVAL:
-    db   -3,  -10
-    db   -7,    1
-    db   32,    3
-    db  -11,   10
-    db  -50,  -10
+    db   -3,   -8
+    db   -7,    2
+    db   32,    1
+    db  -11,    9
+    db  -51,   -9
 
 SEMI_OPEN_FILE_EVAL:
-    db   -4,   12
-    db   -8,   26
-    db   16,   18
-    db    2,   16
-    db  -16,   17
+    db   -4,    8
+    db   -8,   25
+    db   16,   15
+    db    0,   14
+    db  -16,   15
 
 ; 0-4 pawns, 4 is max possible
 PAWN_SHIELD_EVAL:
-    db  -31,  -22
-    db   -7,  -20
-    db    8,    6
-    db   25,   35
-    db   23,   34
+    db  -29,  -23
+    db   -8,  -21
+    db    7,    5
+    db   25,   34
+    db   22,   34
 
 EVAL_WEIGHTS:
 PAWN_DEFENDED_EVAL:
-    db   14,   10
-    db    2,   12
-    db    1,   18
-    db    5,   20
-    db   -7,   30
-    db  -48,   33
+    db   14,   11
+    db    2,   13
+    db    1,   19
+    db    5,   19
+    db   -6,   30
+    db  -46,   35
 
 PAWN_ATTACKED_EVAL:
-    db    6,   23
-    db  -56,  -48
+    db    6,   21
+    db  -52,  -48
     db  -50,  -59
-    db  -48,  -49
-    db  -41,  -14
+    db  -45,  -48
+    db  -40,  -12
     db    0,    0
 
 RANK_PST:
     db    0,    0
-    db  -17,  -22
-    db  -23,  -35
-    db    2,  -36
-    db   22,  -25
-    db   39,   12
-    db   58,   87
+    db  -18,  -20
+    db  -24,  -32
+    db    2,  -33
+    db   20,  -23
+    db   45,   14
+    db   57,   81
     db    0,    0
 
 
-    db  -31,   -8
-    db  -15,   -7
-    db  -14,   -4
-    db    7,   19
-    db   24,   25
-    db   72,    5
-    db   53,    8
-    db  -64,   19
+    db  -30,   -8
+    db  -14,   -6
+    db  -14,   -3
+    db    6,   17
+    db   24,   26
+    db   71,    7
+    db   52,    8
+    db  -66,   21
 
 
-    db  -14,    0
-    db   -2,   -1
-    db    4,    0
+    db  -14,    1
+    db   -1,    0
+    db    3,    1
     db    4,    4
-    db    7,   11
-    db   40,    6
-    db   -3,   12
-    db  -49,   27
+    db    6,   12
+    db   42,    6
+    db   -2,   14
+    db  -46,   27
 
 
-    db  -17,   -7
-    db  -29,   -2
-    db  -23,    2
-    db  -17,   18
-    db    8,   24
-    db   34,   23
-    db   44,   32
+    db  -17,   -6
+    db  -29,   -1
+    db  -23,    4
+    db  -17,   19
+    db    6,   26
+    db   36,   24
+    db   45,   34
     db   62,   16
 
 
-    db    0,  -16
-    db   11,  -22
-    db    1,    1
-    db   -5,   28
-    db    0,   50
-    db   26,   59
-    db   14,   72
-    db   48,   26
+    db    1,  -12
+    db   12,  -21
+    db    2,    2
+    db   -4,   30
+    db   -1,   50
+    db   29,   60
+    db   16,   73
+    db   50,   30
 
 
-    db   13,  -56
+    db   14,  -55
     db   -2,  -18
-    db  -36,   -1
-    db  -38,   21
-    db  -14,   42
-    db   36,   58
-    db   60,   46
-    db   61,    8
+    db  -35,    1
+    db  -38,   20
+    db  -12,   42
+    db   37,   58
+    db   54,   43
+    db   58,    5
 
 
 FILE_PST:
     db  -26,    1
-    db   -3,   21
-    db  -15,    1
-    db    3,   -8
-    db    6,   -1
+    db   -4,   21
+    db  -16,    2
+    db    4,   -8
+    db    6,   -2
     db   22,   -4
-    db   15,    8
-    db   -9,  -20
+    db   13,    9
+    db   -9,  -21
 
 
-    db  -15,   -1
+    db  -15,    0
     db    1,    4
-    db   -6,    7
-    db    6,   13
-    db    4,   13
-    db    5,   -1
-    db   10,   12
-    db    0,    3
+    db   -7,    6
+    db    6,   14
+    db    5,   13
+    db    5,    1
+    db   10,   13
+    db    0,    4
 
 
     db    5,    5
-    db    8,    4
-    db   -4,    7
-    db   -7,    9
-    db   -6,    5
-    db   -8,    6
-    db   14,    3
-    db   14,   -2
+    db    9,    5
+    db   -4,    6
+    db   -7,   10
+    db   -5,    6
+    db   -8,    8
+    db   14,    4
+    db   15,   -1
 
 
-    db  -17,   18
-    db  -16,   21
-    db    1,   22
-    db   13,   15
-    db   13,    6
+    db  -18,   21
+    db  -16,   22
+    db    1,   23
+    db   13,   16
+    db   13,    8
     db   -3,   16
-    db    2,    8
-    db    3,   -2
+    db    3,    9
+    db    4,    1
 
 
-    db   -1,   14
-    db    0,   18
-    db    3,   25
-    db    0,   35
-    db    0,   39
-    db    5,   41
-    db   23,   33
-    db   36,   39
+    db    1,   15
+    db    1,   21
+    db    3,   27
+    db    1,   37
+    db    1,   41
+    db    8,   43
+    db   24,   36
+    db   39,   42
 
 
-    db   36,  -35
-    db   35,   -3
-    db    0,   13
-    db  -58,   27
-    db   -9,    9
-    db  -58,   20
-    db   24,   -8
-    db   19,  -33
+    db   38,  -36
+    db   35,   -2
+    db   -1,   13
+    db  -56,   27
+    db  -10,    9
+    db  -58,   21
+    db   25,   -8
+    db   20,  -34
 
 
 default rel
@@ -220,11 +221,13 @@ evaluate:
     push rbp
     push r13
     push r14
+    push r15
     lea rbp, [EVAL_WEIGHTS]
 
     ; Side to move
     mov r10, rsi
     lea r11, [rsi + Board.black_pieces]
+    lea r15, [rsi + Board.black]
 
     ; Pawn attacks
     mov r8, 0101010101010101h
@@ -249,6 +252,7 @@ evaluate:
     je .white_to_move
     xchg r10, r11
     xchg r13, r14
+    xor r15, 8
 .white_to_move:
     vpmovsxbw xmm0, qword [rbp + TEMPO_EVAL - EVAL_WEIGHTS]
 
@@ -410,12 +414,15 @@ evaluate:
 
     ; rdi - mask in front of pawn
     ; rdx - file mask
+    ; rax - stop square
     shlx rdi, r8, rbx
     shlx rdx, r8, rdx
+    lea eax, [rbx + 8]
     cmp r11, r10
     ja .pawn_eval_white_piece
 
     xor rdi, rdx
+    sub eax, 16
 .pawn_eval_white_piece:
     btr rdi, rbx
     test rdi, qword [r10]
@@ -431,6 +438,12 @@ evaluate:
 
     test rdi, r14
     jnz .no_passed_pawn
+
+    bt qword [r15], rax
+    jc .no_blocked_passed_pawn
+
+    vpshufd xmm2, xmm2, 01h
+.no_blocked_passed_pawn
 
     vpaddw xmm0, xmm0, xmm2
 .no_passed_pawn:
@@ -476,6 +489,7 @@ evaluate:
 
     xchg r10, r11
     xchg r13, r14
+    xor r15, 8
 
     ; Since rsi is a pointer to a board, it must be aligned
     ; so we can loop twice by testing and complementing the
@@ -507,6 +521,7 @@ evaluate:
     shr rcx, 63
     add eax, ecx
 
+    pop r15
     pop r14
     pop r13
     pop rbp
