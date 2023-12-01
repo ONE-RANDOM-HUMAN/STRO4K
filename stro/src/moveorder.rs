@@ -33,11 +33,13 @@ impl HistoryTable {
     }
 
     pub fn beta_cutoff(&mut self, mov: Move, depth: i32) {
-        self.0[(mov.0.get() & 0x0FFF) as usize] += i64::from(depth) * i64::from(depth);
+        let entry = &mut self.0[(mov.0.get() & 0x0FFF) as usize];
+        *entry += i64::from(depth) * i64::from(depth) * (1 - (*entry / 2048));
     }
 
     pub fn failed_cutoff(&mut self, mov: Move, depth: i32) {
-        self.0[(mov.0.get() & 0x0FFF) as usize] -= i64::from(depth) * i64::from(depth);
+        let entry = &mut self.0[(mov.0.get() & 0x0FFF) as usize];
+        *entry -= i64::from(depth) * i64::from(depth) * (1 + (*entry / 2048));
     }
 }
 

@@ -1101,13 +1101,29 @@ alpha_beta:
     and esi, 0FFFh
 
     ; subtract depth
-    sub qword [r8 + 8 * rsi], rax
+    mov r12, qword [r8 + 8 * rsi]
+    lea rcx, [r12 + 2047]
+    test r12, r12
+    cmovns rcx, r12
+    sar rcx, 11
+    inc rcx
+    imul rcx, rax
+
+    sub qword [r8 + 8 * rsi], rcx
     inc edi
     jmp .decrease_history_head
 .decrease_history_end:
     ; increase history of move causing cutoff
     and edx, 0FFFh
-    add qword [r8 + 8 * rdx], rax
+    mov r12, qword [r8 + 8 * rdx]
+    lea rcx, [r12 + 2047]
+    test r12, r12
+    cmovns rcx, r12
+    sar rcx, 11
+    dec rcx
+    imul rcx, rax
+
+    sub qword [r8 + 8 * rdx], rcx
 
 .beta_cutoff_noisy:
     jmp .main_search_end
