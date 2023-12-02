@@ -536,6 +536,7 @@ alpha_beta:
     ; r13 - ply data
     mov rcx, qword [rbp + 16] ; ply count
     lea r13, [rbx + Search.ply_data + rcx * PlyData_size]
+    and dword [r13 + 2 * PlyData_size], 0 ; and makes it RMW, but is smaller
 
     ; store the static eval
     mov word [r13 + PlyData.static_eval], ax

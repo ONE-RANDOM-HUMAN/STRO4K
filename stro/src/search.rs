@@ -282,6 +282,7 @@ impl<'a> Search<'a> {
         }
 
         let static_eval = evaluate::evaluate(self.game.position());
+        self.ply[ply + 2] = PlyData::new();
         self.ply[ply].static_eval = static_eval as i16;
 
         let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
