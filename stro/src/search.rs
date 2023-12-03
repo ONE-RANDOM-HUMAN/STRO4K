@@ -234,6 +234,13 @@ impl<'a> Search<'a> {
         let mut ordered_moves = 0;
         let pv_node = beta - alpha != 1;
 
+
+        let mut static_eval = evaluate::evaluate(self.game.position());
+
+        // Use non-tt static eval to ensure continuity
+        self.ply[ply].static_eval = static_eval as i16;
+        let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
+
         // Probe tt
         let hash = self.game.position().hash();
         let mut tt_success = false;
@@ -256,8 +263,15 @@ impl<'a> Search<'a> {
                 ordered_moves = 1;
             }
 
+            let eval = tt_data.eval();
+            match tt_data.bound() {
+                Bound::None => (),
+                Bound::Lower => static_eval = cmp::max(static_eval, eval),
+                Bound::Upper => static_eval = cmp::min(static_eval, eval),
+                Bound::Exact => static_eval = eval,
+            }
+
             if !pv_node && tt_data.depth() >= depth {
-                let eval = tt_data.eval();
                 match tt_data.bound() {
                     Bound::None => (),
                     Bound::Lower => {
@@ -280,11 +294,6 @@ impl<'a> Search<'a> {
         if !tt_success && depth > 3 {
             depth -= 1;
         }
-
-        let static_eval = evaluate::evaluate(self.game.position());
-        self.ply[ply].static_eval = static_eval as i16;
-
-        let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
 
         // Null Move Pruning
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {

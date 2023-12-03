@@ -226,6 +226,8 @@ struc ABLocals
         resd 1 ; lower bits are ignored
     .alpha:
         resd 1
+    .static_eval:
+        resd 1
     .bound:
         resb 1
     .flags:
@@ -375,12 +377,32 @@ alpha_beta:
 .legal_move_found:
     ; Unmake move
     add qword [rbx], -Board_size
+    add rsi, -Board_size
 
     ; check 50 move rule
-    ; rsi is now at board + Board_size
     xor eax, eax
-    cmp byte [rsi - Board_size + Board.fifty_moves], 100
+    cmp byte [rsi + Board.fifty_moves], 100
     jge .fifty_move_draw
+
+    ; get the static eval
+    call evaluate
+
+    ; r13 - ply data
+    mov rcx, qword [rbp + 16] ; ply count
+    lea r13, [rbx + Search.ply_data + rcx * PlyData_size]
+
+    ; store the static eval
+    mov dword [rbp - 128 + ABLocals.static_eval], eax
+    mov word [r13 + PlyData.static_eval], ax
+
+    ; calculate the improving variable
+    cmp dword [rbp + 16], 2
+    jnae .not_improving
+    cmp ax, word [r13 - 2 * PlyData_size + PlyData.static_eval]
+    jng .not_improving
+
+    or byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
+.not_improving:
 
     ; determine if this is a pv node
     mov edx, dword [rbp + 32]
@@ -394,13 +416,13 @@ alpha_beta:
     ; probe the tt
 
     ; hash the position
-    mov eax, dword [rsi - Board_size + Board.side_to_move]
+    mov eax, dword [rsi + Board.side_to_move]
     and eax, 00FFFFFFh
     vmovd xmm0, eax
 
     mov eax, 12
 .hash_loop_head:
-    vaesenc xmm0, xmm0, oword [rsi - Board_size + Board.pieces + 8 * rax]
+    vaesenc xmm0, xmm0, oword [rsi + Board.pieces + 8 * rax]
     dec eax
     jns .hash_loop_head
 
@@ -443,7 +465,7 @@ alpha_beta:
     jne .tt_miss
 
     ; check that the move is legal
-    mov r13, rdi ; index + 2
+    mov r15, rdi ; index + 2
     mov r12, rax ; TT entry
 
     movzx edx, ax ; TODO
@@ -467,10 +489,10 @@ alpha_beta:
 
     ; read dwords, write words
     mov ecx, dword [rsp]
-    mov edx, dword [r13 - 2]
+    mov edx, dword [r15 - 2]
 
     mov word [rsp], dx
-    mov word [r13 - 2], cx
+    mov word [r15 - 2], cx
 
     ; set the number of ordered moves
     inc dword [rbp - 128 + ABLocals.ordered_moves]
@@ -483,6 +505,27 @@ alpha_beta:
     shr rdx, 34
     and edx, (1 << 14) - 1
 
+    ; tt static eval
+    sar eax, 16 ; eval
+    shr r12, 32 ; bound
+    test r12b, 11b
+    jz .no_tt_static_eval
+    jpe .tt_static_eval
+
+    test r12b, BOUND_LOWER
+    jz .tt_static_upper_bound
+
+    ; lower bound
+    cmp eax, dword [rbp - 128 + ABLocals.static_eval]
+    jge .tt_static_eval
+    jmp .no_tt_static_eval
+.tt_static_upper_bound:
+    cmp eax, dword [rbp - 128 + ABLocals.static_eval]
+    jnle .no_tt_static_eval
+.tt_static_eval:
+    mov dword [rbp - 128 + ABLocals.static_eval], eax
+.no_tt_static_eval:
+
     ; check for cutoff
     cmp edx, dword [rbp + 8]
     jnge .no_tt_cutoff
@@ -491,8 +534,8 @@ alpha_beta:
     jnz .no_tt_cutoff
 
     ; tt cutoffs
-    sar eax, 16 ; eval
-    shr r12, 32 ; bound
+    ; eax - eval
+    ; r12 - bound
     test r12b, 11b
     jz .no_tt_cutoff ; No bound
     jpe .end ; Exact bound
@@ -529,26 +572,6 @@ alpha_beta:
 .no_tt_cutoff:
 .no_tt_probe:
 
-    ; get the static evaluation
-    mov rsi, qword [rbx]
-    call evaluate
-
-    ; r13 - ply data
-    mov rcx, qword [rbp + 16] ; ply count
-    lea r13, [rbx + Search.ply_data + rcx * PlyData_size]
-
-    ; store the static eval
-    mov word [r13 + PlyData.static_eval], ax
-
-    ; calculate the improving variable
-    cmp dword [rbp + 16], 2
-    jnae .not_improving
-    cmp ax, word [r13 - 2 * PlyData_size + PlyData.static_eval]
-    jng .not_improving
-
-    or byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
-.not_improving:
-
     ; Null move pruning
     ; check depth
     mov ecx, dword [rbp + 8]
@@ -561,6 +584,7 @@ alpha_beta:
 
     ; check that the static eval exceeds beta
     ; eax - static eval - beta
+    mov eax, dword [rbp - 128 + ABLocals.static_eval]
     sub eax, dword [rbp + 32]
     jnge .no_null_move
 
@@ -688,8 +712,7 @@ alpha_beta:
 
 .order_noisy_no_moves:
     ; ecx - static eval
-    movsx ecx, word [r13 + PlyData.static_eval]
-
+    mov ecx, dword [rbp - 128 + ABLocals.static_eval]
     ; futility pruning
     ; edx - depth
     mov edx, dword [rbp + 8]
@@ -842,7 +865,7 @@ alpha_beta:
     jnle .no_delta_prune
 
     ; edi - eval
-    movsx edi, word [r13 + PlyData.static_eval]
+    mov edi, dword [rbp - 128 + ABLocals.static_eval]
     add edi, DELTA_BASE
 
     ; add improving bonus
