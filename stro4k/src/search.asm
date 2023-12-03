@@ -697,7 +697,7 @@ alpha_beta:
     cmp edx, 7
     jnle .no_fprune
 
-    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
+    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
     jnz .no_fprune
     
     ; depth + improving
