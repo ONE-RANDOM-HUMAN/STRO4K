@@ -94,16 +94,16 @@ endstruc
 %error "Search should be a multiple of 16 bytes in size"
 %endif
 
-struc SearchMove
+struc MovePlus
     alignb 4
-    .score:
-        resw 1
     .move:
+        resw 1
+    .score:
         resw 1
 endstruc
 
-%if SearchMove_size != 4
-%error "SearchMove should be 4 bytes in size"
+%if MovePlus_size != 4
+%error "MovePlus should be 4 bytes in size"
 %endif
 
 READ_SYSCALL equ 0

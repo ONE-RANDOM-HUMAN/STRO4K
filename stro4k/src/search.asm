@@ -76,54 +76,34 @@ root_search:
 %endif
     mov word [rbx + Search.ply_data + PlyData.static_eval], ax
 
-    ; memory for 256 moves, with stack alignment
-    lea rdi, [rsp - 512 - 8]
-
-
-    ; allocate memory for 256 SearchData's
-    ; this overlaps with the memory for moves, but it is fine
-    ; because the moves are never used afterwards
-    sub rsp, 256 * SearchMove_size + 8
+    ; allocate memory for 256 MovePlus's, with stack alignment
+    sub rsp, 256 * MovePlus_size + 8
 
     ; make a copy
-    push rdi ; Start of moves
+    ; rdi - Start of moves
+    push rsp
+    pop rdi
 
     ; rsi is preserved by evaluate
     call gen_moves
 
-    pop rsi ; Start of moves
-
-    push rsp ; SearchData
-    push rdi ; End of moves
-
-    pop rbp ; End of moves
-    pop rdi ; SearchData
-
-    mov eax, MIN_EVAL - 1
-.create_search_moves_head:
-    stosw ; MIN_EVAL
-    movsw ; move
-    cmp esi, ebp ; upper bits don't matter
-    jne .create_search_moves_head
-
     ; Check if there is only one move
     sub edi, esp ; upper bits don't matter
-    cmp edi, SearchMove_size
+    cmp edi, MovePlus_size
     jna .return
 
-    push rdi ; number of moves * SearchMove_size
-    pop r15
+    mov r15d, edi ; num moves * MovePlus_size
 
     xor r13d, r13d ; r13d - depth
 .iterative_deepening_head:
-    xor r14d, r14d ; searched moves * SearchMove_size
+    xor r14d, r14d ; searched moves * MovePlus_size
 
     mov ebp, MIN_EVAL ; alpha
 .root_search_moves_head:
     ; edx - move
-    movzx edx, word [rsp + r14 + SearchMove.move]
+    movzx edx, word [rsp + r14 + MovePlus.move]
     call game_make_move
-    jc .root_search_moves_tail
+    jc .root_search_illegal_move
 
     ; alpha
     mov esi, MIN_EVAL
@@ -148,12 +128,18 @@ root_search:
     jo .end_search
 
     ; update score and alpha
-    mov word [rsp + r14 + SearchMove.score], ax
+    mov word [rsp + r14 + MovePlus.score], ax
     cmp eax, ebp
     cmovg ebp, eax
 
+    jmp .root_search_moves_tail
+
+.root_search_illegal_move:
+    ; Make sure illegal moves are not selected as best
+    mov word [rsp + r14 + MovePlus.score], MIN_EVAL - 1
+
 .root_search_moves_tail:
-    add r14d, SearchMove_size
+    add r14d, MovePlus_size
     cmp r14d, r15d
     jne .root_search_moves_head
 
@@ -182,15 +168,15 @@ root_search:
     call sort_search_moves
 
 .return:
-    movzx ebx, word [rsp + SearchMove.move]
-    add rsp, 256 * SearchMove_size + 8
+    movzx ebx, word [rsp + MovePlus.move]
+    add rsp, 256 * MovePlus_size + 8
     ret
 
 ; rsp + 8 - search moves
 ; r14 - end of search moves
 sort_search_moves:
     ; rax - outer loop counter
-    push SearchMove_size
+    push MovePlus_size
     pop rax
 .outer_loop_head:
     cmp eax, r14d
@@ -199,16 +185,19 @@ sort_search_moves:
     mov ecx, dword [rsp + rax + 8]
     mov edi, eax
 .inner_loop_head:
-    mov edx, dword [rsp + rdi + 8 - SearchMove_size]
-    cmp cx, dx ; compare evals
+    mov edx, dword [rsp + rdi + 8 - MovePlus_size]
+    mov esi, edx
+    mov si, -1
+    ; or esi, 0FFFFh
+    cmp ecx, esi
     jle .inner_loop_end
 
     mov dword [rsp + rdi + 8], edx
-    sub edi, SearchMove_size
+    sub edi, MovePlus_size
     jnz .inner_loop_head
 .inner_loop_end:
     mov dword [rsp + rdi + 8], ecx
-    add eax, SearchMove_size
+    add eax, MovePlus_size
     jmp .outer_loop_head
 .end:
     ret
@@ -265,7 +254,7 @@ alpha_beta:
     push rcx
     push rbp
     mov rbp, rsp
-    sub rsp, 512 + 128
+    sub rsp, 1024 + 128
 
     ; check if we should stop
 %ifdef EXPORT_SYSV
@@ -347,14 +336,14 @@ alpha_beta:
     ; r14 - number of moves
     sub r14, rdi ; negative number
     jz .no_legal_moves
-    sar r14, 1
+    sar r14, 2
 
     ; r13 - loop counter - counts towards zero
     mov r13, r14
 
     neg r14d
 .find_legal_move_head:
-    movzx edx, word [r15 + 2 * r13]
+    movzx edx, word [r15 + 4 * r13]
 
     call game_make_move
     jnc .legal_move_found
@@ -437,17 +426,19 @@ alpha_beta:
     mov rdi, rsp
     ; ecx - number of moves
     mov ecx, r14d
-    repne scasw
+
+    ; clear score - scores are all zero since they came from movegen
+    mov r12, rax ; TT entry
+    movzx eax, ax
+    repne scasd
 
     ; move not found
     jne .tt_miss
 
     ; check that the move is legal
-    mov r13, rdi ; index + 2
-    mov r12, rax ; TT entry
+    mov r13, rdi ; index + 4
 
-    movzx edx, ax ; TODO
-
+    mov edx, eax
     call game_make_move
     jc .tt_miss
 
@@ -465,12 +456,11 @@ alpha_beta:
 .tt_move_order:
     ; swap the move with the first move
 
-    ; read dwords, write words
     mov ecx, dword [rsp]
-    mov edx, dword [r13 - 2]
+    mov edx, dword [r13 - 4]
 
-    mov word [rsp], dx
-    mov word [r13 - 2], cx
+    mov dword [rsp], edx
+    mov dword [r13 - 4], ecx
 
     ; set the number of ordered moves
     inc dword [rbp - 128 + ABLocals.ordered_moves]
@@ -639,7 +629,7 @@ alpha_beta:
 
     ; sort the moves by flags
 
-    lea r11, [rsp + 2 * rax] ; moves to sort
+    lea r11, [rsp + 4 * rax] ; moves to sort
 
     ; r12 - number of moves
     mov r12d, r14d
@@ -654,7 +644,7 @@ alpha_beta:
     ; find first non-promotion
     xor ecx, ecx
 .order_noisy_find_non_promo_head:
-    test byte [r11 + 2 * rcx + 1], PROMO_FLAG << 4
+    test byte [r11 + 4 * rcx + 1], PROMO_FLAG << 4
     jz .order_noisy_non_promo
 
     inc ecx
@@ -665,7 +655,7 @@ alpha_beta:
     jmp .order_noisy_sort_noisy
 .order_noisy_non_promo:
     ; r11 - first non-promo move
-    lea r11, [r11 + 2 * rcx]
+    lea r11, [r11 + 4 * rcx]
     add dword [rbp - 128 + ABLocals.ordered_moves], ecx
 
     ; r12 - number of non-promo moves
@@ -674,7 +664,7 @@ alpha_beta:
     ; count number of captures
 .order_noisy_find_quiet_head:
     ; check if last move was noisy
-    test byte [r11 + 2 * r12 - 1], (PROMO_FLAG | CAPTURE_FLAG) << 4
+    test byte [r11 + 4 * r12 - 4 + 1], (PROMO_FLAG | CAPTURE_FLAG) << 4
     jnz .order_noisy_sort_noisy
     
     dec r12d
@@ -779,20 +769,21 @@ alpha_beta:
     jz .order_killer_moves_end
 
     ; rdi - unordered moves
-    lea rdi, [rsp + 2 * rdx]
+    lea rdi, [rsp + 4 * rdx]
 
     ; ecx - number of unordered moves
     mov ecx, r14d
     sub ecx, edx
     jz .order_killer_moves_tail
 
-    repne scasw
+    ; FIXME: Currently the score are all zero, but this may change
+    repne scasd
     jne .order_killer_moves_tail
 
     ; swap the moves
-    mov ecx, dword [rsp + 2 * rdx]
-    mov word [rdi - 2], cx
-    mov word [rsp + 2 * rdx], ax
+    mov ecx, dword [rsp + 4 * rdx]
+    mov dword [rdi - 4], ecx
+    mov dword [rsp + 4 * rdx], eax
     
     inc edx ; increment ordered moves
 .order_killer_moves_tail:
@@ -802,7 +793,7 @@ alpha_beta:
 .order_killer_moves_end:
     
     ; sort moves by history
-    lea r11, [rsp + 2 * rdx]
+    lea r11, [rsp + 4 * rdx]
     mov r12d, r14d
     sub r12d, edx
 
@@ -818,7 +809,7 @@ alpha_beta:
 
 .main_search_no_order_moves:
     ; load the current move
-    movzx r12d, word [rsp + 2 * r15]
+    movzx r12d, word [rsp + 4 * r15]
 
 
     ; DEBUG: check that the move is noisy in qsearch
@@ -1097,7 +1088,7 @@ alpha_beta:
     jae .decrease_history_end
 
     ; get index
-    mov esi, dword [rsp + 2 * rdi]
+    mov esi, dword [rsp + 4 * rdi]
     and esi, 0FFFh
 
     ; subtract depth

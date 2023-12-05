@@ -303,7 +303,7 @@ _start:
     pop rdx
     call read
 
-    sub rsp, 512 ; allocate memory for moves
+    sub rsp, 1024 ; allocate memory for moves
 .position_make_moves:
     push 4 ; read the move
     pop rdx
@@ -321,7 +321,7 @@ _start:
     call gen_moves
 
 .position_find_move_head:
-    sub rdi, 2
+    sub rdi, 4
     movzx edx, word [rdi]
     mov ecx, edx
     and ch, 00001111b
@@ -356,7 +356,7 @@ _start:
     cmp al, `\n`
     jne .position_make_moves
 .position_end:
-    add rsp, 512
+    add rsp, 1024
     jmp .uci_loop_head
 
 %endif

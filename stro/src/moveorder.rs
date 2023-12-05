@@ -1,6 +1,6 @@
 use std::cmp;
 
-use crate::position::{Board, Move};
+use crate::position::{Board, Move, MovePlus};
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default, Debug)]
@@ -47,7 +47,7 @@ impl Default for HistoryTable {
     }
 }
 
-pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
+pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
     // Sorts in order of:
     // promos and promo-captures by promo piece
     // regular captures
@@ -55,18 +55,18 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     insertion_sort_flags(moves);
 
     // increases performance by about 3% but loses guaranteed reproducibility
-    // moves.sort_unstable_by_key(|mov| std::cmp::Reverse(mov.flags().0));
+    // moves.sort_unstable_by_key(|mov| std::cmp::Reverse(mov.mov.flags().0));
 
     // find first non-promo move
     let promo = moves
         .iter()
-        .position(|x| !x.flags().is_promo())
+        .position(|x| !x.mov.flags().is_promo())
         .unwrap_or(moves.len());
 
     // find first quiet move
     let noisy = moves[promo..]
         .iter()
-        .position(|x| !x.flags().is_capture())
+        .position(|x| !x.mov.flags().is_capture())
         .map_or(moves.len(), |x| x + promo);
 
     insertion_sort_by(&mut moves[promo..noisy], |lhs, rhs| {
@@ -76,7 +76,11 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [Move]) -> usize {
     noisy
 }
 
-pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable, history: &HistoryTable) -> usize {
+pub fn order_quiet_moves(
+    mut moves: &mut [MovePlus],
+    kt: KillerTable,
+    history: &HistoryTable,
+) -> usize {
     // killers
     let len = moves.len();
     for mov in kt.0 {
@@ -84,7 +88,7 @@ pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable, history: &Hist
             break;
         };
 
-        if let Some(index) = moves.iter().position(|&x| x == mov) {
+        if let Some(index) = moves.iter().position(|x| x.mov == mov) {
             moves.swap(0, index);
             moves = &mut moves[1..];
         }
@@ -98,7 +102,7 @@ pub fn order_quiet_moves(mut moves: &mut [Move], kt: KillerTable, history: &Hist
     len
 }
 
-fn insertion_sort_by<F>(moves: &mut [Move], mut cmp: F)
+fn insertion_sort_by<F>(moves: &mut [MovePlus], mut cmp: F)
 where
     F: FnMut(Move, Move) -> cmp::Ordering,
 {
@@ -106,7 +110,7 @@ where
         let mov = moves[i];
         let mut j = i;
         while j > 0 {
-            if cmp(moves[j - 1], mov) == cmp::Ordering::Greater {
+            if cmp(moves[j - 1].mov, mov.mov) == cmp::Ordering::Greater {
                 moves[j] = moves[j - 1];
             } else {
                 break;
@@ -120,13 +124,13 @@ where
 }
 
 /// Allows the use of a special comparison for flags
-fn insertion_sort_flags(moves: &mut [Move]) {
+fn insertion_sort_flags(moves: &mut [MovePlus]) {
     for i in 1..moves.len() {
         let mov = moves[i];
-        let cmp = mov.0.get() & 0xF000;
+        let cmp = mov.mov.0.get() & 0xF000;
         let mut j = i;
         while j > 0 {
-            if moves[j - 1].0.get() < cmp {
+            if moves[j - 1].mov.0.get() < cmp {
                 moves[j] = moves[j - 1];
             } else {
                 break;
