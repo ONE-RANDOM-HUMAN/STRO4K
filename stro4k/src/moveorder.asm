@@ -52,7 +52,6 @@ sort_moves_mvvlva:
     cmp ebp, r12d
     jae .end
 
-    ; movzx r10d, word [r11 + 2 * rbp]
     mov r10d, dword [r11 + 4 * rbp]
     mov r9d, ebp
 

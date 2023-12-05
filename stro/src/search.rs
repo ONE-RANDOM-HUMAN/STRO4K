@@ -135,12 +135,6 @@ impl<'a> Search<'a> {
         let mut buffer = MoveBuf::uninit();
         let moves = gen_moves(self.game.position(), &mut buffer);
 
-        let mut moves = moves
-            .iter()
-            .filter(|&&mov| self.game.is_legal(mov.mov))
-            .copied()
-            .collect::<Vec<_>>();
-
         if moves.len() == 1 {
             let score = evaluate::evaluate(self.game().position());
             return (moves[0].mov, score);
@@ -148,28 +142,53 @@ impl<'a> Search<'a> {
 
         let mut searched = 0;
         'a: for depth in 0.. {
-            let mut alpha = MIN_EVAL;
+            let best_score = i32::from(moves[0].score);
+
+            let mut window = 32;
+            let mut alpha = cmp::max(MIN_EVAL, best_score - window);
+            let mut beta = cmp::min(MAX_EVAL, best_score + window);
             searched = 0;
 
-            for mov in &mut moves {
+            for (i, mov) in moves.iter_mut().enumerate() {
                 unsafe {
-                    assert!(self.game.make_move(mov.mov));
+                    // Illegal are not filtered out before searching
+                    // to match STRO4K behaviour when the first move
+                    // is illegal
+                    if !self.game.make_move(mov.mov) {
+                        mov.score = MIN_EVAL as i16 - 1;
+                        continue;
+                    }
                 }
 
-                let score = self.alpha_beta(MIN_EVAL, -alpha, depth, 1);
+                let score = loop {
+                    let score = match self.alpha_beta(-beta, -alpha, depth, 1) {
+                        Some(x) => -x,
+                        None => {
+                            unsafe {
+                                self.game.unmake_move();
+                            }
+                            break 'a;
+                        }
+                    };
 
-                // unmake the move before doing anything else
+                    if score <= alpha && i == 0 && score != MIN_EVAL {
+                        window *= 2;
+                        alpha = cmp::max(MIN_EVAL, score - window);
+                    } else if score >= beta && score != MAX_EVAL {
+                        window *= 2;
+                        beta = cmp::min(MAX_EVAL, score + window);
+                    } else {
+                        break score;
+                    }
+                };
+
                 unsafe {
                     self.game.unmake_move();
                 }
 
-                let score = match score {
-                    Some(x) => -x,
-                    None => break 'a,
-                };
-
                 mov.score = score as i16;
-                alpha = cmp::max(alpha, score);
+                alpha = cmp::min(MAX_EVAL - 1, cmp::max(alpha, score));
+                beta = alpha + 1;
 
                 searched += 1;
             }
