@@ -106,9 +106,9 @@ impl<'a> Game<'a> {
         let moves = gen_moves(self.position(), &mut buffer);
 
         let mut count = 0;
-        for mov in moves {
+        for mov in moves.iter().map(|x| x.mov) {
             unsafe {
-                if !self.make_move(*mov) {
+                if !self.make_move(mov) {
                     continue;
                 }
 
@@ -121,7 +121,7 @@ impl<'a> Game<'a> {
     }
 
     /// # Safety
-    /// See `perft
+    /// See `perft`
     pub unsafe fn divide(&mut self, depth: usize) -> Vec<(Move, u64)> {
         if depth == 0 {
             return Vec::new();
@@ -129,7 +129,7 @@ impl<'a> Game<'a> {
 
         let mut buffer = MoveBuf::uninit();
         let moves = gen_moves(self.position(), &mut buffer);
-        let mut moves = moves.iter().map(|&mov| (mov, 0)).collect::<Vec<_>>();
+        let mut moves = moves.iter().map(|mov| (mov.mov, 0)).collect::<Vec<_>>();
 
         for (mov, count) in &mut moves {
             unsafe {

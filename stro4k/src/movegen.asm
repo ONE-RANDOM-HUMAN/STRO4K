@@ -62,7 +62,7 @@ gen_moves:
     ; destination square
     shl ebp, 6
     or eax, ebp
-    stosw
+    stosd
     jmp .serialise_loop
 .serialise_end:
     jmp .gen_piece_loop
@@ -145,7 +145,7 @@ gen_moves:
     shl ebp, 6
     sub al, bl ; offset
     or eax, ebp
-    stosw
+    stosd
 .ep_loop_no_ep:
     xchg bh, bl
     inc ecx
@@ -172,6 +172,7 @@ gen_moves:
     sub al, bl
     or eax, ebp
 
+    movzx eax, ax
     sub edx, 8
     cmp edx, 48
     jnae .no_promo
@@ -180,14 +181,14 @@ gen_moves:
 
 .promo_serialise_head:
     xor ah, dl
-    stosw
+    stosd
     xor ah, dl
     sub dl, 10h
 
     ; knight promo happens after .no_promo
     jnz .promo_serialise_head
 .no_promo:
-    stosw
+    stosd
     jmp .pawn_serialise_inner_head
 .pawn_serialise_end:
     shr ecx, 8
@@ -212,7 +213,7 @@ gen_moves:
     lea eax, [edx + (QUEENSIDE_CASTLE_FLAG << 6) - 2]
     shl eax, 6
     or eax, edx
-    stosw
+    stosd
 .no_queenside_castling:
     test cl, 10b
     jz .no_kingside_castling
@@ -223,7 +224,7 @@ gen_moves:
     lea eax, [edx + (KINGSIDE_CASTLE_FLAG << 6) + 2]
     shl eax, 6
     or eax, edx
-    stosw
+    stosd
 .no_kingside_castling:
     pop rbx
     pop rbp

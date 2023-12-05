@@ -557,3 +557,16 @@ impl MoveFlags {
             .then(|| Piece::from_index((self.0 & 0b11) + 1).unwrap())
     }
 }
+
+#[repr(C)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct MovePlus {
+    pub mov: Move,
+    pub score: i16,
+}
+
+impl From<Move> for MovePlus {
+    fn from(mov: Move) -> Self {
+        Self { mov, score: 0 }
+    }
+}

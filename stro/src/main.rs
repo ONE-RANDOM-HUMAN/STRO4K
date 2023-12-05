@@ -77,7 +77,13 @@ fn uci_loop() {
 
                 unsafe {
                     assert!(
-                        search.make_move(*moves.iter().find(|x| x.to_string() == mov).unwrap()),
+                        search.make_move(
+                            moves
+                                .iter()
+                                .map(|x| x.mov)
+                                .find(|x| x.to_string() == mov)
+                                .unwrap()
+                        ),
                         "illegal move"
                     );
                 }

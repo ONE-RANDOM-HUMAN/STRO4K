@@ -3,7 +3,6 @@ section .text
 
 ; moves - r11
 ; move count - r12
-; less function - r15
 ; preserves rbx, rbp, r8, r11, r12, r13, r14, r15
 sort_moves_flags:
     push rbx
@@ -15,22 +14,22 @@ sort_moves_flags:
     cmp ebp, r12d
     jae .end
 
-    movzx r10d, word [r11 + 2 * rbp]
+    mov r10d, dword [r11 + 4 * rbp]
     mov edx, r10d
     and edx, 0F000h
     mov r9d, ebp
 .inner_loop_head:
-    movzx edi, word [r11 + 2 * r9 - 2]
+    mov edi, dword [r11 + 4 * r9 - 4]
 
     ; compare moves
-    cmp edx, edi
+    cmp dx, di
     jna .inner_loop_end
 
-    mov word [r11 + 2 * r9], di
+    mov dword [r11 + 4 * r9], edi
     dec r9d
     jnz .inner_loop_head
 .inner_loop_end:
-    mov word [r11 + 2 * r9], r10w
+    mov dword [r11 + 4 * r9], r10d
     inc ebp
     jmp .outer_loop_head
 .end:
@@ -42,7 +41,6 @@ sort_moves_flags:
 ; board - rsi
 ; moves - r11
 ; move count - r12
-; less function - r15
 ; preserves rbx, rbp, r8, r11, r12, r13, r14, r15
 sort_moves_mvvlva:
     push rbx
@@ -54,11 +52,12 @@ sort_moves_mvvlva:
     cmp ebp, r12d
     jae .end
 
-    movzx r10d, word [r11 + 2 * rbp]
+    ; movzx r10d, word [r11 + 2 * rbp]
+    mov r10d, dword [r11 + 4 * rbp]
     mov r9d, ebp
 
     ; attacker
-    mov edx, r10d
+    movzx edx, r10w
     call board_get_piece
     mov ebx, eax
     shr edx, 6
@@ -72,10 +71,10 @@ sort_moves_mvvlva:
     xor r8, 48
 
 .inner_loop_head:
-    movzx edi, word [r11 + 2 * r9 - 2]
+    mov edi, dword [r11 + 4 * r9 - 4]
 
     ; attacker
-    mov edx, edi
+    movzx edx, di
     call board_get_piece ; rhs attacker
     mov esi, eax
     shr edx, 6
@@ -92,11 +91,11 @@ sort_moves_mvvlva:
     cmp ebx, esi
     jnl .inner_loop_end
 
-    mov word [r11 + 2 * r9], di
+    mov dword [r11 + 4 * r9], edi
     dec r9d
     jnz .inner_loop_head
 .inner_loop_end:
-    mov word [r11 + 2 * r9], r10w
+    mov dword [r11 + 4 * r9], r10d
     inc ebp
     jmp .outer_loop_head
 .end:
@@ -118,14 +117,14 @@ sort_moves_history:
     cmp ebp, r12d
     jae .end
 
-    movzx r10d, word [r11 + 2 * rbp]
+    mov r10d, dword [r11 + 4 * rbp]
     mov edx, r10d
     and edx, 0FFFh
     mov rdx, qword [r8 + 8 * rdx]
 
     mov r9d, ebp
 .inner_loop_head:
-    movzx edi, word [r11 + 2 * r9 - 2]
+    mov edi, dword [r11 + 4 * r9 - 4]
 
     mov esi, edi
     and esi, 0FFFh
@@ -134,11 +133,11 @@ sort_moves_history:
     cmp rdx, qword [r8 + 8 * rsi]
     jng .inner_loop_end
 
-    mov word [r11 + 2 * r9], di
+    mov dword [r11 + 4 * r9], edi
     dec r9d
     jnz .inner_loop_head
 .inner_loop_end:
-    mov word [r11 + 2 * r9], r10w
+    mov dword [r11 + 4 * r9], r10d
     inc ebp
     jmp .outer_loop_head
 .end:

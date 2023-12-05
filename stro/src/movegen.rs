@@ -3,13 +3,13 @@
 //!
 
 use crate::consts::{AB_FILE, ALL, A_FILE, H_FILE};
-use crate::position::{Bitboard, Board, Color, Move, MoveFlags, Square};
+use crate::position::{Bitboard, Board, Color, Move, MoveFlags, MovePlus, Square};
 
 pub type MoveFn = fn(Bitboard, Bitboard) -> Bitboard;
-pub type MoveBuf = std::mem::MaybeUninit<[Move; 256]>;
+pub type MoveBuf = std::mem::MaybeUninit<[MovePlus; 256]>;
 
-pub fn gen_moves<'a>(position: &Board, buf: &'a mut MoveBuf) -> &'a mut [Move] {
-    let start: *mut Move = buf.as_mut_ptr().cast();
+pub fn gen_moves<'a>(position: &Board, buf: &'a mut MoveBuf) -> &'a mut [MovePlus] {
+    let start: *mut MovePlus = buf.as_mut_ptr().cast();
     let mut ptr = start;
 
     {
@@ -87,12 +87,12 @@ pub fn king_moves(pieces: Bitboard, _occ: Bitboard) -> Bitboard {
 /// # Safety
 /// `ptr` must be valid for a sufficient number of writes.
 pub(super) unsafe fn gen_piece(
-    mut ptr: *mut Move,
+    mut ptr: *mut MovePlus,
     mut pieces: Bitboard,
     occ: Bitboard,
     side: Bitboard,
     movement: MoveFn,
-) -> *mut Move {
+) -> *mut MovePlus {
     while pieces != 0 {
         let square = pieces & pieces.wrapping_neg();
         let dests = movement(square, occ) & !side;
@@ -111,12 +111,12 @@ pub(super) unsafe fn gen_piece(
 /// # Safety
 /// `ptr` must be valid for a sufficient number of writes.
 pub(super) unsafe fn gen_pawn(
-    mut ptr: *mut Move,
+    mut ptr: *mut MovePlus,
     position: &Board,
     pawns: Bitboard,
     occ: Bitboard,
     enemy: Bitboard,
-) -> *mut Move {
+) -> *mut MovePlus {
     let consts: [i8; 4] = if position.side_to_move() == Color::White {
         [8, 16, 9, 7]
     } else {
@@ -134,11 +134,14 @@ pub(super) unsafe fn gen_pawn(
         if target.intersects(queenside_attacks) {
             // SAFETY: The ptr is valid by the safety requirements of the function
             unsafe {
-                ptr.write(Move::new(
-                    target.offset(-consts[3]).unwrap(),
-                    target,
-                    MoveFlags::EN_PASSANT,
-                ));
+                ptr.write(
+                    Move::new(
+                        target.offset(-consts[3]).unwrap(),
+                        target,
+                        MoveFlags::EN_PASSANT,
+                    )
+                    .into(),
+                );
                 ptr = ptr.add(1);
             }
         }
@@ -146,11 +149,14 @@ pub(super) unsafe fn gen_pawn(
         if target.intersects(kingside_attacks) {
             // SAFETY: The ptr is valid by the safety requirements of the function
             unsafe {
-                ptr.write(Move::new(
-                    target.offset(-consts[2]).unwrap(),
-                    target,
-                    MoveFlags::EN_PASSANT,
-                ));
+                ptr.write(
+                    Move::new(
+                        target.offset(-consts[2]).unwrap(),
+                        target,
+                        MoveFlags::EN_PASSANT,
+                    )
+                    .into(),
+                );
                 ptr = ptr.add(1);
             }
         }
@@ -179,7 +185,11 @@ pub(super) unsafe fn gen_pawn(
 
 /// # Safety
 /// `ptr` must be valid for a sufficient number of writes.
-pub(super) unsafe fn gen_castle(mut ptr: *mut Move, position: &Board, occ: Bitboard) -> *mut Move {
+pub(super) unsafe fn gen_castle(
+    mut ptr: *mut MovePlus,
+    position: &Board,
+    occ: Bitboard,
+) -> *mut MovePlus {
     let (castle, occ, origin) = if position.side_to_move() == Color::White {
         (position.castling(), occ, Square::E1)
     } else {
@@ -190,11 +200,14 @@ pub(super) unsafe fn gen_castle(mut ptr: *mut Move, position: &Board, occ: Bitbo
     if castle & 0b1 != 0 && occ & 0b0000_1110 == 0 {
         // SAFETY: The ptr is valid by the safety requirements of the function
         unsafe {
-            ptr.write(Move::new(
-                origin,
-                origin.offset(-2).unwrap(),
-                MoveFlags::QUEENSIDE_CASTLE,
-            ));
+            ptr.write(
+                Move::new(
+                    origin,
+                    origin.offset(-2).unwrap(),
+                    MoveFlags::QUEENSIDE_CASTLE,
+                )
+                .into(),
+            );
             ptr = ptr.add(1);
         }
     }
@@ -202,11 +215,14 @@ pub(super) unsafe fn gen_castle(mut ptr: *mut Move, position: &Board, occ: Bitbo
     if castle & 0b10 != 0 && occ & 0b0110_0000 == 0 {
         // SAFETY: The ptr is valid by the safety requirements of the function
         unsafe {
-            ptr.write(Move::new(
-                origin,
-                origin.offset(2).unwrap(),
-                MoveFlags::KINGSIDE_CASTLE,
-            ));
+            ptr.write(
+                Move::new(
+                    origin,
+                    origin.offset(2).unwrap(),
+                    MoveFlags::KINGSIDE_CASTLE,
+                )
+                .into(),
+            );
             ptr = ptr.add(1);
         }
     }
@@ -217,25 +233,28 @@ pub(super) unsafe fn gen_castle(mut ptr: *mut Move, position: &Board, occ: Bitbo
 /// # Safety
 /// `ptr` must be valid for a sufficient number of writes.
 pub(super) unsafe fn serialise(
-    mut ptr: *mut Move,
+    mut ptr: *mut MovePlus,
     origin: Square,
     mut dests: Bitboard,
     enemy: Bitboard,
-) -> *mut Move {
+) -> *mut MovePlus {
     while dests != 0 {
         let dest = Square::from_index(dests.trailing_zeros() as u8).unwrap();
 
         // SAFETY: The ptr is valid by the safety requirements of the function
         unsafe {
-            ptr.write(Move::new(
-                origin,
-                dest,
-                if dest.intersects(enemy) {
-                    MoveFlags::CAPTURE
-                } else {
-                    MoveFlags::NONE
-                },
-            ));
+            ptr.write(
+                Move::new(
+                    origin,
+                    dest,
+                    if dest.intersects(enemy) {
+                        MoveFlags::CAPTURE
+                    } else {
+                        MoveFlags::NONE
+                    },
+                )
+                .into(),
+            );
             ptr = ptr.add(1);
         }
 
@@ -248,11 +267,11 @@ pub(super) unsafe fn serialise(
 /// # Safety
 /// `ptr` must be valid for a sufficient number of writes.
 pub(super) unsafe fn pawn_serialise(
-    mut ptr: *mut Move,
+    mut ptr: *mut MovePlus,
     mut squares: Bitboard,
     offset: i8,
     flags: MoveFlags,
-) -> *mut Move {
+) -> *mut MovePlus {
     while squares != 0 {
         let index = squares.trailing_zeros() as u8;
         let dest = Square::from_index(index).unwrap();
@@ -267,14 +286,14 @@ pub(super) unsafe fn pawn_serialise(
 
                 // SAFETY: The ptr is valid by the safety requirements of the function
                 unsafe {
-                    ptr.write(Move::new(origin, dest, flags));
+                    ptr.write(Move::new(origin, dest, flags).into());
                     ptr = ptr.add(1);
                 }
             }
         } else {
             // SAFETY: The ptr is valid by the safety requirements of the function
             unsafe {
-                ptr.write(Move::new(origin, dest, flags));
+                ptr.write(Move::new(origin, dest, flags).into());
                 ptr = ptr.add(1);
             }
         }

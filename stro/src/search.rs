@@ -7,7 +7,7 @@ use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{gen_moves, MoveBuf};
 use crate::moveorder::{self, HistoryTable, KillerTable};
-use crate::position::{Board, Move};
+use crate::position::{Board, Move, MovePlus};
 use crate::tt::{self, Bound, TTData};
 
 #[no_mangle]
@@ -137,11 +137,8 @@ impl<'a> Search<'a> {
 
         let mut moves = moves
             .iter()
-            .filter(|&&mov| self.game.is_legal(mov))
-            .map(|&mov| SearchMove {
-                score: MIN_EVAL as i16,
-                mov,
-            })
+            .filter(|&&mov| self.game.is_legal(mov.mov))
+            .copied()
             .collect::<Vec<_>>();
 
         if moves.len() == 1 {
@@ -238,7 +235,7 @@ impl<'a> Search<'a> {
 
         // Checkmate and stalemate
         let is_check = self.game.position().is_check();
-        if !moves.iter().any(|&mov| self.game.is_legal(mov)) {
+        if !moves.iter().any(|&mov| self.game.is_legal(mov.mov)) {
             return Some(if is_check { MIN_EVAL } else { 0 });
         }
 
@@ -263,14 +260,15 @@ impl<'a> Search<'a> {
             };
             let best_move = tt_data.best_move();
 
-            let Some(index) = moves.iter().position(|&x| x == best_move) else {
+            let Some(index) = moves.iter().position(|&x| x.mov == best_move) else {
                 break 'tt;
             };
-            if !self.game.is_legal(moves[index]) {
+
+            if !self.game.is_legal(moves[index].mov) {
                 break 'tt;
             }
 
-            if depth > 0 || moves[index].flags().is_noisy() {
+            if depth > 0 || moves[index].mov.flags().is_noisy() {
                 moves.swap(0, index);
                 ordered_moves = 1;
             }
@@ -381,7 +379,7 @@ impl<'a> Search<'a> {
                 }
             }
 
-            let mov = moves[i];
+            let mov = moves[i].mov;
             if depth <= 0 {
                 assert!(mov.flags().is_noisy(), "{mov:?}");
             }
@@ -493,7 +491,7 @@ impl<'a> Search<'a> {
                     #[allow(clippy::needless_range_loop)]
                     for i in first_quiet..i {
                         self.history[self.game.position().side_to_move() as usize]
-                            .failed_cutoff(moves[i], depth);
+                            .failed_cutoff(moves[i].mov, depth);
                     }
                 }
 
@@ -659,7 +657,7 @@ impl<'a> Search<'a> {
     unsafe fn make_move_str(&mut self, mov: &str) -> bool {
         let mut buffer = MoveBuf::uninit();
         let moves = gen_moves(self.game().position(), &mut buffer);
-        let Some(&mov) = moves.iter().find(|x| x.to_string() == mov) else {
+        let Some(mov) = moves.iter().map(|x| x.mov).find(|x| x.to_string() == mov) else {
             return false;
         };
 
@@ -669,13 +667,6 @@ impl<'a> Search<'a> {
     fn time_up(&self, search_time: u64) -> bool {
         elapsed_nanos(&self.start) > search_time
     }
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-struct SearchMove {
-    score: i16,
-    mov: Move,
 }
 
 #[repr(C, align(8))]
@@ -695,7 +686,7 @@ impl PlyData {
 }
 
 #[no_mangle]
-fn search_print_info_sysv(search: &mut Search, depth: i32, mov: &SearchMove) {
+fn search_print_info_sysv(search: &mut Search, depth: i32, mov: &MovePlus) {
     println!(
         "info depth {} nodes {} nps {} score cp {} pv {}",
         depth,
