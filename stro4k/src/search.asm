@@ -35,6 +35,7 @@ root_search_sysv:
 
     mov rbx, rdi
     mov r12d, esi
+    mov r11d, edx
     call root_search
     mov eax, ebx
 
@@ -53,6 +54,7 @@ thread_search:
 
 %ifdef EXPORT_SYSV
     xor r12d, r12d ; temp
+    mov r11d, -1
 %endif
     call root_search
 
@@ -69,7 +71,9 @@ root_search:
     mov rsi, qword [rbx]
 %ifdef EXPORT_SYSV
     push r12
+    push r11
     call evaluate
+    pop r11
     pop r12
 %else
     call evaluate
@@ -85,7 +89,13 @@ root_search:
     pop rdi
 
     ; rsi is preserved by evaluate
+%ifdef EXPORT_SYSV
+    push r11
     call gen_moves
+    pop r11
+%else
+    call gen_moves
+%endif
 
     ; Check if there is only one move
     sub edi, esp ; upper bits don't matter
@@ -151,20 +161,7 @@ root_search:
     jo .end_search
 
     neg eax
-    mov edx, MIN_EVAL
-    cmp eax, esi ; -score <= -beta
-    jnle .no_aspiration_fail_high
-
-    cmp eax, edx ; -score != -MAX_EVAL
-    je .no_aspiration_fail_high
-
-    ; fail high
-    shl ebp, 1
-    mov esi, eax
-    sub esi, ebp
-    jmp .root_search_moves_head
-.no_aspiration_fail_high:
-    neg edx
+    mov edx, MAX_EVAL
 
     ; This is approximately testing for the first move, but might be incorrect
     ; if the first move is illegal. However, it is smaller this way and this
@@ -184,16 +181,28 @@ root_search:
     lea edi, [rax + rbp]
     jmp .root_search_moves_head
 .no_aspiration_fail_low:
+    neg edx
+    cmp eax, esi ; -score <= -beta
+    jnle .no_aspiration_fail_high
+
+    cmp eax, edx ; -score != -MAX_EVAL
+    je .no_aspiration_fail_high
+
+    ; fail high
+    shl ebp, 1
+    mov esi, eax
+    sub esi, ebp
+    jmp .root_search_moves_head
+.no_aspiration_fail_high:
     ; Update alpha
     cmp edi, eax
     cmovg edi, eax ; -alpha > -eval
 
-    ; MAX_EVAL - 1
-    dec edx
+    inc edx ; -(MAX_EVAL - 1)
 
     ; alpha
     cmp edi, edx
-    cmovg edi, edx
+    cmovl edi, edx
 
     ; beta
     lea esi, [rdi - 1]
@@ -217,21 +226,33 @@ root_search:
 
 %ifdef EXPORT_SYSV
     test r12d, r12d
-    jz .iterative_deepening_head
+    jz .no_search_print_info
 
     mov rdi, rbx
     mov esi, r13d
     mov rdx, rsp
 
+    push r11
     push rbp
     mov rbp, rsp
     and rsp, -16
     call search_print_info_sysv
     leave
-%endif
+    pop r11
 
+.no_search_print_info
+    cmp r13d, r11d
+    jge .end_search
+
+    ; time_up clobbers r11 due to syscall
+    push r11
     mov rdx, qword [rbx + Search.min_search_time]
     call time_up
+    pop r11
+%else
+    mov rdx, qword [rbx + Search.min_search_time]
+    call time_up
+%endif
     jna .iterative_deepening_head
 .end_search: 
     call sort_search_moves

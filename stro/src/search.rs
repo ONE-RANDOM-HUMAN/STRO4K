@@ -84,8 +84,8 @@ impl<'a> Search<'a> {
             game,
             nodes: 0,
             start: time_now(),
-            min_search_time: 0,
-            max_search_time: 0,
+            min_search_time: u64::MAX,
+            max_search_time: u64::MAX,
             ply: [PlyData::new(); 6144],
             history: [HistoryTable::new(), HistoryTable::new()],
         }
@@ -98,38 +98,19 @@ impl<'a> Search<'a> {
         self.history[1].reset();
     }
 
-    #[cfg(feature = "asm")]
-    pub fn search_asm(&mut self, time_ms: u32, inc_ms: u32, main_thread: bool) -> Move {
-        self.min_search_time = if main_thread {
-            (time_ms as u64) * 1_000_000 / 40
-        } else {
-            u64::MAX
-        };
-
-        self.max_search_time = if main_thread {
-            (time_ms as u64) * (1_000_000 / 20) + (inc_ms as u64) * (1_000_000 / 2)
-        } else {
-            u64::MAX
-        };
-
-        unsafe { crate::asm::root_search_sysv(self, main_thread) }
+    pub fn set_time(&mut self, time_ms: u32, inc_ms: u32) {
+        self.min_search_time = (time_ms as u64) * (1_000_000 / 40);
+        self.max_search_time = (time_ms as u64) * (1_000_000 / 20)
+            + (inc_ms as u64) * (1_000_000 / 2);
     }
 
-    pub fn search(&mut self, time_ms: u32, inc_ms: u32, main_thread: bool) -> (Move, i32) {
+    #[cfg(feature = "asm")]
+    pub fn search_asm(&mut self, main_thread: bool, max_depth: i32) -> Move {
+        unsafe { crate::asm::root_search_sysv(self, main_thread, max_depth) }
+    }
+
+    pub fn search(&mut self, main_thread: bool, max_depth: i32) -> (Move, i32) {
         self.nodes = 0;
-
-        self.min_search_time = if main_thread {
-            (time_ms as u64) * 1_000_000 / 40
-        } else {
-            u64::MAX
-        };
-
-        self.max_search_time = if main_thread {
-            (time_ms as u64) * (1_000_000 / 20) + (inc_ms as u64) * (1_000_000 / 2)
-        } else {
-            u64::MAX
-        };
-
         self.ply[0].static_eval = evaluate::evaluate(self.game.position()) as i16;
 
         let mut buffer = MoveBuf::uninit();
@@ -141,7 +122,7 @@ impl<'a> Search<'a> {
         }
 
         let mut searched = 0;
-        'a: for depth in 0.. {
+        'a: for depth in 0..max_depth {
             let best_score = i32::from(moves[0].score);
 
             let mut window = 32;
@@ -520,7 +501,6 @@ impl<'a> Search<'a> {
         let mut buffer = GameBuf::uninit();
         let (game, start) = Game::startpos(&mut buffer);
         let mut search = Search::new(game);
-        search.max_search_time = u64::MAX;
 
         unsafe {
             tt::alloc((16 * 1024 * 1024).try_into().unwrap());
@@ -533,7 +513,9 @@ impl<'a> Search<'a> {
         let fens = include_str!("../../fens.txt");
 
         let mut duration = std::time::Duration::ZERO;
-        const BENCH_DEPTH: i32 = 7;
+        let mut nodes = 0;
+        const BENCH_DEPTH: i32 = 6;
+
         for fen in fens.lines() {
             tt::clear();
             search.new_game();
@@ -544,13 +526,15 @@ impl<'a> Search<'a> {
             }
 
             let start = std::time::Instant::now();
-            search.alpha_beta(MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
-            duration += start.elapsed()
+            search.search(false, BENCH_DEPTH);
+
+            nodes += search.nodes;
+            duration += start.elapsed();
         }
 
         #[cfg(feature = "asm")]
         {
-            let rust_node_count = search.nodes;
+            let rust_node_count = nodes;
 
             for fen in fens.lines() {
                 tt::clear();
@@ -562,17 +546,18 @@ impl<'a> Search<'a> {
                 }
 
                 let start = std::time::Instant::now();
-                crate::asm::alpha_beta(&mut search, MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
+                search.search_asm(false, BENCH_DEPTH);
+
+                nodes += search.nodes;
                 duration += start.elapsed()
             }
 
-            assert_eq!(rust_node_count, search.nodes - rust_node_count);
+            assert_eq!(rust_node_count, nodes - rust_node_count);
         }
 
         RUNNING.store(false, Ordering::Relaxed);
 
-        let nodes = search.nodes;
-        let nps = (search.nodes as f64 / duration.as_secs_f64()) as u64;
+        let nps = (nodes as f64 / duration.as_secs_f64()) as u64;
         println!("{nodes} nodes {nps} nps");
 
         unsafe { tt::dealloc() }
@@ -584,7 +569,6 @@ impl<'a> Search<'a> {
         let mut buffer = GameBuf::uninit();
         let (game, start) = Game::startpos(&mut buffer);
         let mut search = Search::new(game);
-        search.max_search_time = u64::MAX;
 
         unsafe {
             tt::alloc((16 * 1024 * 1024).try_into().unwrap());
@@ -598,7 +582,8 @@ impl<'a> Search<'a> {
             .collect();
 
         let mut duration = std::time::Duration::ZERO;
-        const BENCH_DEPTH: i32 = 8;
+        let mut nodes = 0;
+        const BENCH_DEPTH: i32 = 7;
 
         {
             tt::clear();
@@ -610,8 +595,10 @@ impl<'a> Search<'a> {
 
             for moves in moves.chunks_exact(2) {
                 let start = std::time::Instant::now();
-                search.alpha_beta(MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
+                search.search(false, BENCH_DEPTH);
+
                 duration += start.elapsed();
+                nodes += search.nodes;
 
                 unsafe {
                     assert!(search.make_move_str(moves[0]));
@@ -622,7 +609,7 @@ impl<'a> Search<'a> {
 
         #[cfg(feature = "asm")]
         {
-            let rust_node_count = search.nodes;
+            let rust_node_count = nodes;
 
             tt::clear();
             search.new_game();
@@ -633,8 +620,10 @@ impl<'a> Search<'a> {
 
             for moves in moves.chunks_exact(2) {
                 let start = std::time::Instant::now();
-                crate::asm::alpha_beta(&mut search, MIN_EVAL, MAX_EVAL, BENCH_DEPTH, 0);
+                search.search_asm(false, BENCH_DEPTH);
+
                 duration += start.elapsed();
+                nodes += search.nodes;
 
                 unsafe {
                     assert!(search.make_move_str(moves[0]));
@@ -642,13 +631,12 @@ impl<'a> Search<'a> {
                 }
             }
 
-            assert_eq!(rust_node_count, search.nodes - rust_node_count);
+            assert_eq!(rust_node_count, nodes - rust_node_count);
         }
 
         RUNNING.store(false, Ordering::Relaxed);
 
-        let nodes = search.nodes;
-        let nps = (search.nodes as f64 / duration.as_secs_f64()) as u64;
+        let nps = (nodes as f64 / duration.as_secs_f64()) as u64;
         println!("{nodes} nodes {nps} nps");
 
         unsafe { tt::dealloc() }
@@ -694,5 +682,5 @@ fn search_print_info_sysv(search: &mut Search, depth: i32, mov: &MovePlus) {
         (search.nodes as f64 / (elapsed_nanos(&search.start) as f64 / 1_000_000_000.0)) as u64,
         mov.score,
         mov.mov,
-    )
+    );
 }

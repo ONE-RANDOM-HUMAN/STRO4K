@@ -2,7 +2,7 @@ use crate::{position::Move, search::Search};
 
 #[allow(improper_ctypes)]
 extern "C" {
-    pub fn root_search_sysv(search: &mut Search, main_thread: bool) -> Move;
+    pub fn root_search_sysv(search: &mut Search, main_thread: bool, max_depth: i32) -> Move;
 }
 
 /// # Safety
