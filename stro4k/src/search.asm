@@ -98,19 +98,42 @@ root_search:
 .iterative_deepening_head:
     xor r14d, r14d ; searched moves * MovePlus_size
 
-    mov ebp, MIN_EVAL ; alpha
+    ; ebp - window
+    ; edi - -alpha
+    ; esi - -beta
+    mov ebp, 32
+
+    movsx esi, word [rsp + MovePlus.score]
+    neg esi
+
+    ; edi - -eval + window = -(eval - window)
+    lea edi, [rsi + rbp]
+
+    ; esi - -eval - window = -(eval + window)
+    sub esi, ebp
+
 .root_search_moves_head:
     ; edx - move
     movzx edx, word [rsp + r14 + MovePlus.move]
+    push rdi
+    push rsi
     call game_make_move
+    pop rsi
+    pop rdi
+
     jc .root_search_illegal_move
 
-    ; alpha
-    mov esi, MIN_EVAL
+    ; clamp -alpha and -beta
+    mov edx, MIN_EVAL
+    cmp esi, edx
+    cmovl esi, edx
 
-    ; beta
-    mov edi, ebp
-    neg edi
+    neg edx
+    cmp edi, edx
+    cmovg edi, edx
+
+    ; alpha - esi
+    ; beta - edi
 
     ; depth
     mov ecx, r13d
@@ -127,11 +150,57 @@ root_search:
     neg eax
     jo .end_search
 
-    ; update score and alpha
-    mov word [rsp + r14 + MovePlus.score], ax
-    cmp eax, ebp
-    cmovg ebp, eax
+    neg eax
+    mov edx, MIN_EVAL
+    cmp eax, esi ; -score <= -beta
+    jnle .no_aspiration_fail_high
 
+    cmp eax, edx ; -score != -MAX_EVAL
+    je .no_aspiration_fail_high
+
+    ; fail high
+    shl ebp, 1
+    mov esi, eax
+    sub esi, ebp
+    jmp .root_search_moves_head
+.no_aspiration_fail_high:
+    neg edx
+
+    ; This is approximately testing for the first move, but might be incorrect
+    ; if the first move is illegal. However, it is smaller this way and this
+    ; should only affect the lowest depth because the illegal moves will be
+    ; sorted to the end.
+    test r14d, r14d
+    jnz .no_aspiration_fail_low
+
+    cmp eax, edi ; -score >= -alpha
+    jnge .no_aspiration_fail_low
+
+    cmp eax, edx ; -score != -MIN_EVAL
+    je .no_aspiration_fail_low
+
+    ; fail low
+    shl ebp, 1
+    lea edi, [rax + rbp]
+    jmp .root_search_moves_head
+.no_aspiration_fail_low:
+    ; Update alpha
+    cmp edi, eax
+    cmovg edi, eax ; -alpha > -eval
+
+    ; MAX_EVAL - 1
+    dec edx
+
+    ; alpha
+    cmp edi, edx
+    cmovg edi, edx
+
+    ; beta
+    lea esi, [rdi - 1]
+
+    ; update score
+    neg eax
+    mov word [rsp + r14 + MovePlus.score], ax
     jmp .root_search_moves_tail
 
 .root_search_illegal_move:

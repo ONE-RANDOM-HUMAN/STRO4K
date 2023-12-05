@@ -135,20 +135,15 @@ impl<'a> Search<'a> {
         let mut buffer = MoveBuf::uninit();
         let moves = gen_moves(self.game.position(), &mut buffer);
 
-        let mut moves = moves
-            .iter()
-            .filter(|&&mov| self.game.is_legal(mov.mov))
-            .copied()
-            .collect::<Vec<_>>();
-
         if moves.len() == 1 {
             let score = evaluate::evaluate(self.game().position());
             return (moves[0].mov, score);
         }
 
         let mut searched = 0;
-        let mut best_score = 0;
         'a: for depth in 0.. {
+            let best_score = i32::from(moves[0].score);
+
             let mut window = 32;
             let mut alpha = cmp::max(MIN_EVAL, best_score - window);
             let mut beta = cmp::min(MAX_EVAL, best_score + window);
@@ -156,7 +151,13 @@ impl<'a> Search<'a> {
 
             for (i, mov) in moves.iter_mut().enumerate() {
                 unsafe {
-                    assert!(self.game.make_move(mov.mov));
+                    // Illegal are not filtered out before searching
+                    // to match STRO4K behaviour when the first move
+                    // is illegal
+                    if !self.game.make_move(mov.mov) {
+                        mov.score = MIN_EVAL as i16 - 1;
+                        continue;
+                    }
                 }
 
                 let score = loop {
@@ -193,7 +194,6 @@ impl<'a> Search<'a> {
             }
 
             moves.sort_by_key(|x| cmp::Reverse(x.score));
-            best_score = moves[0].score as i32;
 
             if main_thread {
                 println!(
