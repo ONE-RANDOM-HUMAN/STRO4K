@@ -111,80 +111,42 @@ impl<'a> Search<'a> {
 
     pub fn search(&mut self, main_thread: bool, max_depth: i32) -> (Move, i32) {
         self.nodes = 0;
-        self.ply[0].static_eval = evaluate::evaluate(self.game.position()) as i16;
+        let mut best_move = None;
+        let mut last_score = 0;
 
-        let mut buffer = MoveBuf::uninit();
-        let moves = gen_moves(self.game.position(), &mut buffer);
-
-        if moves.len() == 1 {
-            let score = evaluate::evaluate(self.game().position());
-            return (moves[0].mov, score);
-        }
-
-        let mut searched = 0;
-        'a: for depth in 0..max_depth {
-            let best_score = i32::from(moves[0].score);
-
+        'a: for depth in 1..=max_depth {
             let mut window = 32;
-            let mut alpha = cmp::max(MIN_EVAL, best_score - window);
-            let mut beta = cmp::min(MAX_EVAL, best_score + window);
-            searched = 0;
+            let mut alpha = cmp::max(MIN_EVAL, last_score - window);
+            let mut beta = cmp::min(MAX_EVAL, last_score + window);
 
-            for (i, mov) in moves.iter_mut().enumerate() {
-                unsafe {
-                    // Illegal are not filtered out before searching
-                    // to match STRO4K behaviour when the first move
-                    // is illegal
-                    if !self.game.make_move(mov.mov) {
-                        mov.score = MIN_EVAL as i16 - 1;
-                        continue;
-                    }
-                }
 
-                let score = loop {
-                    let score = match self.alpha_beta(-beta, -alpha, depth, 1) {
-                        Some(x) => -x,
-                        None => {
-                            unsafe {
-                                self.game.unmake_move();
-                            }
-                            break 'a;
-                        }
-                    };
-
-                    if score <= alpha && i == 0 && score != MIN_EVAL {
-                        window *= 2;
-                        alpha = cmp::max(MIN_EVAL, score - window);
-                    } else if score >= beta && score != MAX_EVAL {
-                        window *= 2;
-                        beta = cmp::min(MAX_EVAL, score + window);
-                    } else {
-                        break score;
-                    }
+            last_score = loop {
+                let Some(score) = self.alpha_beta(alpha, beta, depth, 0) else {
+                    break 'a;
                 };
 
-                unsafe {
-                    self.game.unmake_move();
+                if score <= alpha && score != MIN_EVAL {
+                    window *= 2;
+                    alpha = cmp::max(MIN_EVAL, score - window);
+                } else if score >= beta && score != MAX_EVAL {
+                    window *= 2;
+                    beta = cmp::min(MAX_EVAL, score + window);
+                } else {
+                    break score;
                 }
+            };
 
-                mov.score = score as i16;
-                alpha = cmp::min(MAX_EVAL - 1, cmp::max(alpha, score));
-                beta = alpha + 1;
-
-                searched += 1;
-            }
-
-            moves.sort_by_key(|x| cmp::Reverse(x.score));
+            best_move = self.ply[0].best_move;
 
             if main_thread {
                 println!(
                     "info depth {} nodes {} nps {} score cp {} pv {}",
-                    depth + 1,
+                    depth,
                     self.nodes,
                     (self.nodes as f64 / (elapsed_nanos(&self.start) as f64 / 1_000_000_000.0))
                         as u64,
-                    moves[0].score,
-                    moves[0].mov,
+                    last_score,
+                    best_move.unwrap(),
                 )
             }
 
@@ -193,36 +155,38 @@ impl<'a> Search<'a> {
             }
         }
 
-        moves[0..searched].sort_by_key(|x| cmp::Reverse(x.score));
-        (moves[0].mov, moves[0].score as i32)
+        (best_move.unwrap(), last_score)
     }
 
     pub fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: i32, ply: usize) -> Option<i32> {
-        // Check if should stop
-        if !RUNNING.load(Ordering::Relaxed)
-            || self.nodes % 4096 == 0 && self.time_up(self.max_search_time)
-        {
-            return None;
-        }
-
         self.nodes += 1;
-
-        if self.game.is_repetition() {
-            return Some(0);
-        }
 
         let mut buffer = MoveBuf::uninit();
         let moves = gen_moves(self.game.position(), &mut buffer);
 
         // Checkmate and stalemate
         let is_check = self.game.position().is_check();
-        if !moves.iter().any(|&mov| self.game.is_legal(mov.mov)) {
+        if let Some(mov) =  moves.iter().find(|&mov| self.game.is_legal(mov.mov)) {
+            self.ply[ply].best_move = Some(mov.mov);
+        } else {
             return Some(if is_check { MIN_EVAL } else { 0 });
         }
 
         // Only check 50mr after it is known that it is not checkmate
         if self.game.position().fifty_moves() >= 100 {
             return Some(0);
+        }
+
+        // Check for repetition
+        if self.game.is_repetition() {
+            return Some(0);
+        }
+
+        // Check if should stop
+        if !RUNNING.load(Ordering::Relaxed)
+            || self.nodes % 4096 == 0 && self.time_up(self.max_search_time)
+        {
+            return None;
         }
 
         // Check extension
@@ -485,6 +449,8 @@ impl<'a> Search<'a> {
             }
         }
 
+        self.ply[ply].best_move = best_move;
+
         // Store tt if not in qsearch
         if let Some(mov) = best_move {
             tt::store(hash, TTData::new(mov, bound, best_eval, depth, hash));
@@ -662,6 +628,7 @@ impl<'a> Search<'a> {
 struct PlyData {
     kt: KillerTable,
     static_eval: i16,
+    best_move: Option<Move>,
 }
 
 impl PlyData {
@@ -669,6 +636,7 @@ impl PlyData {
         Self {
             kt: KillerTable::new(),
             static_eval: 0,
+            best_move: None,
         }
     }
 }
