@@ -67,73 +67,24 @@ thread_search:
 root_search:
     mov qword [rbx + Search.nodes], 0
 
-    ; get static eval
-    mov rsi, qword [rbx]
-%ifdef EXPORT_SYSV
-    push r12
-    push r11
-    call evaluate
-    pop r11
-    pop r12
-%else
-    call evaluate
-%endif
-    mov word [rbx + Search.ply_data + PlyData.static_eval], ax
-
-    ; allocate memory for 256 MovePlus's, with stack alignment
-    sub rsp, 256 * MovePlus_size + 8
-
-    ; make a copy
-    ; rdi - Start of moves
-    push rsp
-    pop rdi
-
-    ; rsi is preserved by evaluate
-%ifdef EXPORT_SYSV
-    push r11
-    call gen_moves
-    pop r11
-%else
-    call gen_moves
-%endif
-
-    ; Check if there is only one move
-    sub edi, esp ; upper bits don't matter
-    cmp edi, MovePlus_size
-    jna .return
-
-    mov r15d, edi ; num moves * MovePlus_size
-
-    xor r13d, r13d ; r13d - depth
+    ; r13d - depth
+    ; r14d - last score
+    ; r15d - best move - does not need to be initialised
+    ; mov r13d, 1
+    xor r13d, r13d
+    xor r14d, r14d
 .iterative_deepening_head:
-    xor r14d, r14d ; searched moves * MovePlus_size
-
+    inc r13d
     ; ebp - window
-    ; edi - -alpha
-    ; esi - -beta
+    ; esi - alpha
+    ; edi - beta
     mov ebp, 32
 
-    movsx esi, word [rsp + MovePlus.score]
-    neg esi
-
-    ; edi - -eval + window = -(eval - window)
+    mov esi, r14d
     lea edi, [rsi + rbp]
-
-    ; esi - -eval - window = -(eval + window)
     sub esi, ebp
-
-.root_search_moves_head:
-    ; edx - move
-    movzx edx, word [rsp + r14 + MovePlus.move]
-    push rdi
-    push rsi
-    call game_make_move
-    pop rsi
-    pop rdi
-
-    jc .root_search_illegal_move
-
-    ; clamp -alpha and -beta
+.do_search:
+    ; clamp alpha and beta
     mov edx, MIN_EVAL
     cmp esi, edx
     cmovl esi, edx
@@ -149,80 +100,42 @@ root_search:
     mov ecx, r13d
 
     ; ply count
-    push 1
-    pop rdx
+    xor edx, edx
     call alpha_beta
 
-    ; unmake move
-    add qword [rbx], -Board_size
-
     ; check for search failure
-    neg eax
+    cmp edx, eax ; edx = 0
     jo .end_search
 
-    neg eax
-    mov edx, MAX_EVAL
+    mov edx, MIN_EVAL
 
-    ; This is approximately testing for the first move, but might be incorrect
-    ; if the first move is illegal. However, it is smaller this way and this
-    ; should only affect the lowest depth because the illegal moves will be
-    ; sorted to the end.
-    test r14d, r14d
-    jnz .no_aspiration_fail_low
+    cmp eax, esi ; score <= alpha
+    jnle .no_aspiration_fail_low
 
-    cmp eax, edi ; -score >= -alpha
-    jnge .no_aspiration_fail_low
-
-    cmp eax, edx ; -score != -MIN_EVAL
+    cmp eax, edx ; score != MIN_EVAL
     je .no_aspiration_fail_low
 
     ; fail low
     shl ebp, 1
-    lea edi, [rax + rbp]
-    jmp .root_search_moves_head
+    mov esi, eax
+    sub esi, ebp
+    jmp .do_search
 .no_aspiration_fail_low:
     neg edx
-    cmp eax, esi ; -score <= -beta
-    jnle .no_aspiration_fail_high
+    cmp eax, edi ; score >= beta
+    jnge .no_aspiration_fail_high
 
-    cmp eax, edx ; -score != -MAX_EVAL
+    cmp eax, edx ; score != MAX_EVAL
     je .no_aspiration_fail_high
 
     ; fail high
     shl ebp, 1
-    mov esi, eax
-    sub esi, ebp
-    jmp .root_search_moves_head
+    lea edi, [rax + rbp]
+    jmp .do_search
 .no_aspiration_fail_high:
-    ; Update alpha
-    cmp edi, eax
-    cmovg edi, eax ; -alpha > -eval
-
-    inc edx ; -(MAX_EVAL - 1)
-
-    ; alpha
-    cmp edi, edx
-    cmovl edi, edx
-
-    ; beta
-    lea esi, [rdi - 1]
-
-    ; update score
-    neg eax
-    mov word [rsp + r14 + MovePlus.score], ax
-    jmp .root_search_moves_tail
-
-.root_search_illegal_move:
-    ; Make sure illegal moves are not selected as best
-    mov word [rsp + r14 + MovePlus.score], MIN_EVAL - 1
-
-.root_search_moves_tail:
-    add r14d, MovePlus_size
-    cmp r14d, r15d
-    jne .root_search_moves_head
-
-    call sort_search_moves
-    inc r13d
+    ; update best move and last score
+    mov r14d, eax
+    movzx r15d, word [rbx + Search.ply_data + PlyData.best_move]
 
 %ifdef EXPORT_SYSV
     test r12d, r12d
@@ -230,7 +143,8 @@ root_search:
 
     mov rdi, rbx
     mov esi, r13d
-    mov rdx, rsp
+    mov edx, r15d
+    mov ecx, eax
 
     push r11
     push rbp
@@ -255,11 +169,7 @@ root_search:
 %endif
     jna .iterative_deepening_head
 .end_search: 
-    call sort_search_moves
-
-.return:
-    movzx ebx, word [rsp + MovePlus.move]
-    add rsp, 256 * MovePlus_size + 8
+    mov ebx, r15d
     ret
 
 ; rsp + 8 - search moves
@@ -346,25 +256,13 @@ alpha_beta:
     mov rbp, rsp
     sub rsp, 1024 + 128
 
-    ; check if we should stop
-%ifdef EXPORT_SYSV
-    test byte [RUNNING], 1
-    jz .stop_search
-%elif NUM_THREADS > 1
-    test byte [RUNNING_WORKER_THREADS], 80h
-    jz .stop_search
-%endif
-    ; nodes % 4096
-    test dword [rbx + Search.nodes], 0FFFh
-    jnz .no_stop_search
-
-    mov rdx, qword [rbx + Search.max_search_time]
-    call time_up
-    ja .stop_search
-.no_stop_search:
     ; could by replaced by dword since upper bits don't actually
     ; do anything for playing strength.
     inc qword [rbx + Search.nodes]
+
+    ; r13 - ply data
+    mov rcx, qword [rbp + 16] ; ply count
+    lea r13, [rbx + Search.ply_data + rcx * PlyData_size]
 
     ; clear non-hash locals
     vxorps xmm0, xmm0, xmm0
@@ -372,6 +270,74 @@ alpha_beta:
 
     ; rsi - current position
     mov rsi, qword [rbx]
+
+    ; determine if we are in check
+    ; preserves rsi
+    call board_is_check
+
+    ; IS_CHECK_FLAG = 1
+    mov byte [rbp - 128 + ABLocals.flags], al
+
+    ; check extension
+    movzx ecx, al
+    add dword [rbp + 8], ecx
+    
+    ; rdi - moves
+    mov rdi, rsp
+    mov r14, rdi
+
+    ; generate moves
+    ; preserves rsi
+    call gen_moves
+
+    ; find legal moves
+    
+    ; calculate the number of moves
+    ; r15 - end of moves
+    mov r15, rdi
+
+    ; r14 - number of moves
+    sub r14, rdi ; negative number
+    jz .no_legal_moves
+    sar r14, 2
+
+    ; r11 - loop counter - counts towards zero
+    mov r11, r14
+
+    neg r14d
+.find_legal_move_head:
+    movzx edx, word [r15 + 4 * r11]
+
+    call game_make_move
+    jnc .legal_move_found
+
+    inc r11
+    jnz .find_legal_move_head
+
+.no_legal_moves:
+    ; no legal moves
+    xor eax, eax
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG
+    jz .stalemated
+    mov eax, MIN_EVAL
+.stalemated:
+.fifty_move_draw:
+    jmp .end
+
+.legal_move_found:
+    ; Unmake move
+    add qword [rbx], -Board_size
+    add rsi, -Board_size
+
+    ; store as best move
+    mov edx, dword [r15 + 4 * r11]
+    mov word [r13 + PlyData.best_move], dx
+
+    ; check 50 move rule
+    ; rsi is now at board + Board_size
+    xor eax, eax
+    cmp byte [rsi + Board.fifty_moves], 100
+    jge .fifty_move_draw
 
     ; rdi - position to search
     mov rdi, rsi
@@ -399,67 +365,6 @@ alpha_beta:
     jnz .reptition_loop_head
     jmp .end
 .repetition_loop_end:
-    ; rsi - board - this is preserved by board_is_check
-    ; determine if we are in check
-    call board_is_check
-
-    ; IS_CHECK_FLAG = 1
-    mov byte [rbp - 128 + ABLocals.flags], al
-
-    ; check extension
-    movzx ecx, al
-    add dword [rbp + 8], ecx
-    
-    ; rdi - moves
-    mov rdi, rsp
-    mov r14, rdi
-
-    ; preserves rsi
-    call gen_moves
-
-    ; find legal moves
-    
-    ; calculate the number of moves
-    ; r15 - end of moves
-    mov r15, rdi
-
-    ; r14 - number of moves
-    sub r14, rdi ; negative number
-    jz .no_legal_moves
-    sar r14, 2
-
-    ; r13 - loop counter - counts towards zero
-    mov r13, r14
-
-    neg r14d
-.find_legal_move_head:
-    movzx edx, word [r15 + 4 * r13]
-
-    call game_make_move
-    jnc .legal_move_found
-
-    inc r13
-    jnz .find_legal_move_head
-
-.no_legal_moves:
-    ; no legal moves
-    xor eax, eax
-    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG
-    jz .stalemated
-    mov eax, MIN_EVAL
-.stalemated:
-.fifty_move_draw:
-    jmp .end
-
-.legal_move_found:
-    ; Unmake move
-    add qword [rbx], -Board_size
-
-    ; check 50 move rule
-    ; rsi is now at board + Board_size
-    xor eax, eax
-    cmp byte [rsi - Board_size + Board.fifty_moves], 100
-    jge .fifty_move_draw
 
     ; determine if this is a pv node
     mov edx, dword [rbp + 32]
@@ -470,16 +375,34 @@ alpha_beta:
     or byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
 .no_pv_node:
 
+    ; check if we should stop
+%ifdef EXPORT_SYSV
+    test byte [RUNNING], 1
+    jz .stop_search
+%elif NUM_THREADS > 1
+    test byte [RUNNING_WORKER_THREADS], 80h
+    jz .stop_search
+%endif
+    ; nodes % 4096
+    test dword [rbx + Search.nodes], 0FFFh
+    jnz .no_stop_search
+
+    mov rdx, qword [rbx + Search.max_search_time]
+    call time_up
+    ja .stop_search
+.no_stop_search:
+
     ; probe the tt
 
     ; hash the position
-    mov eax, dword [rsi - Board_size + Board.side_to_move]
+    mov rsi, qword [rbx]
+    mov eax, dword [rsi + Board.side_to_move]
     and eax, 00FFFFFFh
     vmovd xmm0, eax
 
     mov eax, 12
 .hash_loop_head:
-    vaesenc xmm0, xmm0, oword [rsi - Board_size + Board.pieces + 8 * rax]
+    vaesenc xmm0, xmm0, oword [rsi + Board.pieces + 8 * rax]
     dec eax
     jns .hash_loop_head
 
@@ -526,7 +449,7 @@ alpha_beta:
     jne .tt_miss
 
     ; check that the move is legal
-    mov r13, rdi ; index + 4
+    mov r11, rdi ; index + 4
 
     mov edx, eax
     call game_make_move
@@ -547,10 +470,10 @@ alpha_beta:
     ; swap the move with the first move
 
     mov ecx, dword [rsp]
-    mov edx, dword [r13 - 4]
+    mov edx, dword [r11 - 4]
 
     mov dword [rsp], edx
-    mov dword [r13 - 4], ecx
+    mov dword [r11 - 4], ecx
 
     ; set the number of ordered moves
     inc dword [rbp - 128 + ABLocals.ordered_moves]
@@ -612,10 +535,6 @@ alpha_beta:
     ; get the static evaluation
     mov rsi, qword [rbx]
     call evaluate
-
-    ; r13 - ply data
-    mov rcx, qword [rbp + 16] ; ply count
-    lea r13, [rbx + Search.ply_data + rcx * PlyData_size]
 
     ; store the static eval
     mov word [r13 + PlyData.static_eval], ax
@@ -803,7 +722,7 @@ alpha_beta:
     or byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
 .no_fprune:
     ; eax - best eval
-    mov eax, MIN_EVAL
+    mov eax, MIN_EVAL - 1
 
     ; stand pat in qsearch
     ; edx contains the depth
@@ -1210,9 +1129,10 @@ alpha_beta:
     ; eax - best eval
     mov eax, dword [rbp - 128 + ABLocals.best_eval]
 
-    ; store tt
     mov edx, dword [rbp - 128 + ABLocals.best_move]
+    mov word [r13 + PlyData.best_move], dx
 
+    ; store tt
     test edx, edx
     jz .no_store_tt
 

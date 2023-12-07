@@ -642,13 +642,13 @@ impl PlyData {
 }
 
 #[no_mangle]
-fn search_print_info_sysv(search: &mut Search, depth: i32, mov: &MovePlus) {
+fn search_print_info_sysv(search: &mut Search, depth: i32, mov: Move, score: i32) {
     println!(
         "info depth {} nodes {} nps {} score cp {} pv {}",
         depth,
         search.nodes,
         (search.nodes as f64 / (elapsed_nanos(&search.start) as f64 / 1_000_000_000.0)) as u64,
-        mov.score,
-        mov.mov,
+        score,
+        mov,
     );
 }
