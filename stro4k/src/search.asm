@@ -722,7 +722,7 @@ alpha_beta:
     or byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
 .no_fprune:
     ; eax - best eval
-    mov eax, MIN_EVAL - 1
+    mov eax, MIN_EVAL
 
     ; stand pat in qsearch
     ; edx contains the depth
@@ -1129,13 +1129,13 @@ alpha_beta:
     ; eax - best eval
     mov eax, dword [rbp - 128 + ABLocals.best_eval]
 
+    ; store tt and best move
     mov edx, dword [rbp - 128 + ABLocals.best_move]
-    mov word [r13 + PlyData.best_move], dx
-
-    ; store tt
     test edx, edx
     jz .no_store_tt
 
+    ; store best move
+    mov word [r13 + PlyData.best_move], dx
 
     ; load hash
     mov rdi, qword [rbp - 128 + ABLocals.hash]
