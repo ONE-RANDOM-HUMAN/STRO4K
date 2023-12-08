@@ -59,6 +59,8 @@ struc PlyData
         resw 2
     .static_eval:
         resw 1
+    .best_move:
+        resw 1
     alignb 8
 endstruc
 
