@@ -119,7 +119,6 @@ impl<'a> Search<'a> {
             let mut alpha = cmp::max(MIN_EVAL, last_score - window);
             let mut beta = cmp::min(MAX_EVAL, last_score + window);
 
-
             last_score = loop {
                 let Some(score) = self.alpha_beta(alpha, beta, depth, 0) else {
                     break 'a;
@@ -166,7 +165,7 @@ impl<'a> Search<'a> {
 
         // Checkmate and stalemate
         let is_check = self.game.position().is_check();
-        if let Some(mov) =  moves.iter().find(|&mov| self.game.is_legal(mov.mov)) {
+        if let Some(mov) = moves.iter().find(|&mov| self.game.is_legal(mov.mov)) {
             self.ply[ply].best_move = Some(mov.mov);
         } else {
             return Some(if is_check { MIN_EVAL } else { 0 });
@@ -195,6 +194,13 @@ impl<'a> Search<'a> {
         let mut ordered_moves = 0;
         let pv_node = beta - alpha != 1;
 
+        let mut static_eval = evaluate::evaluate(self.game.position());
+        let mut tt_static = false;
+
+        // Use non-tt static eval for eval continuity
+        self.ply[ply].static_eval = static_eval as i16;
+        let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
+
         // Probe tt
         let hash = self.game.position().hash();
         let mut tt_success = false;
@@ -218,8 +224,17 @@ impl<'a> Search<'a> {
                 ordered_moves = 1;
             }
 
+            let eval = tt_data.eval();
+            match tt_data.bound() {
+                Bound::None => (),
+                Bound::Lower => static_eval = cmp::max(static_eval, eval),
+                Bound::Upper => static_eval = cmp::min(static_eval, eval),
+                Bound::Exact => static_eval = eval,
+            }
+
+            tt_static = tt_data.bound() != Bound::None;
+
             if !pv_node && tt_data.depth() >= depth {
-                let eval = tt_data.eval();
                 match tt_data.bound() {
                     Bound::None => (),
                     Bound::Lower => {
@@ -242,11 +257,6 @@ impl<'a> Search<'a> {
         if !tt_success && depth > 3 {
             depth -= 1;
         }
-
-        let static_eval = evaluate::evaluate(self.game.position());
-        self.ply[ply].static_eval = static_eval as i16;
-
-        let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
 
         // Null Move Pruning
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
@@ -329,26 +339,30 @@ impl<'a> Search<'a> {
                 assert!(mov.flags().is_noisy(), "{mov:?}");
             }
 
-            if f_prune && depth <= 0 {
+            if !pv_node && depth <= 0 {
                 // Delta pruning
                 const PIECE_VALUES: [i32; 5] = [114, 425, 425, 648, 1246];
                 const DELTA_BASE: i32 = 97;
                 const IMPROVING_BONUS: i32 = 39;
 
-                let capture = self
-                    .game
-                    .position()
-                    .get_piece(mov.dest(), self.game.position().side_to_move().other())
-                    .map_or(0, |x| PIECE_VALUES[x as usize]);
+                let gain = if tt_static {
+                    0
+                } else {
+                    let capture = self
+                        .game
+                        .position()
+                        .get_piece(mov.dest(), self.game.position().side_to_move().other())
+                        .map_or(0, |x| PIECE_VALUES[x as usize]);
 
-                let promo = mov
-                    .flags()
-                    .promo_piece()
-                    .map_or(0, |x| PIECE_VALUES[x as usize]);
+                    let promo = mov
+                        .flags()
+                        .promo_piece()
+                        .map_or(0, |x| PIECE_VALUES[x as usize]);
 
-                if static_eval + capture + promo + DELTA_BASE + (improving as i32 * IMPROVING_BONUS)
-                    <= alpha
-                {
+                    capture + promo
+                };
+
+                if static_eval + gain + DELTA_BASE + (improving as i32 * IMPROVING_BONUS) <= alpha {
                     continue;
                 }
             }
@@ -448,7 +462,6 @@ impl<'a> Search<'a> {
                 alpha = eval;
             }
         }
-
 
         // Store tt if not in qsearch
         if let Some(mov) = best_move {
