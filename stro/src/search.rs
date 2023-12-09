@@ -295,7 +295,7 @@ impl<'a> Search<'a> {
             && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
 
         // Stand pat in qsearch
-        let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL - 1 };
+        let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
         let mut best_move = None;
         let mut bound = Bound::Upper;
 
@@ -449,10 +449,10 @@ impl<'a> Search<'a> {
             }
         }
 
-        self.ply[ply].best_move = best_move;
 
         // Store tt if not in qsearch
         if let Some(mov) = best_move {
+            self.ply[ply].best_move = best_move;
             tt::store(hash, TTData::new(mov, bound, best_eval, depth, hash));
         }
 
