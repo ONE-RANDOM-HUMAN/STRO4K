@@ -463,7 +463,7 @@ impl<'a> Search<'a> {
         &mut self.game
     }
 
-    pub fn bench() {
+    pub fn bench(depth: i32) {
         let mut buffer = GameBuf::uninit();
         let (game, start) = Game::startpos(&mut buffer);
         let mut search = Search::new(game);
@@ -480,8 +480,6 @@ impl<'a> Search<'a> {
 
         let mut duration = std::time::Duration::ZERO;
         let mut nodes = 0;
-        const BENCH_DEPTH: i32 = 6;
-
         for fen in fens.lines() {
             tt::clear();
             search.new_game();
@@ -492,7 +490,7 @@ impl<'a> Search<'a> {
             }
 
             let start = std::time::Instant::now();
-            search.search(false, BENCH_DEPTH);
+            search.search(false, depth);
 
             nodes += search.nodes;
             duration += start.elapsed();
@@ -512,7 +510,7 @@ impl<'a> Search<'a> {
                 }
 
                 let start = std::time::Instant::now();
-                search.search_asm(false, BENCH_DEPTH);
+                search.search_asm(false, depth);
 
                 nodes += search.nodes;
                 duration += start.elapsed()
@@ -531,7 +529,7 @@ impl<'a> Search<'a> {
 
     /// Bench a using sequence of moves from a game to simulate the effects
     /// of the state retained between moves such as the TT and history tables.
-    pub fn bench2() {
+    pub fn bench2(depth: i32) {
         let mut buffer = GameBuf::uninit();
         let (game, start) = Game::startpos(&mut buffer);
         let mut search = Search::new(game);
@@ -549,7 +547,6 @@ impl<'a> Search<'a> {
 
         let mut duration = std::time::Duration::ZERO;
         let mut nodes = 0;
-        const BENCH_DEPTH: i32 = 7;
 
         {
             tt::clear();
@@ -561,7 +558,7 @@ impl<'a> Search<'a> {
 
             for moves in moves.chunks_exact(2) {
                 let start = std::time::Instant::now();
-                search.search(false, BENCH_DEPTH);
+                search.search(false, depth);
 
                 duration += start.elapsed();
                 nodes += search.nodes;
@@ -586,7 +583,7 @@ impl<'a> Search<'a> {
 
             for moves in moves.chunks_exact(2) {
                 let start = std::time::Instant::now();
-                search.search_asm(false, BENCH_DEPTH);
+                search.search_asm(false, depth);
 
                 duration += start.elapsed();
                 nodes += search.nodes;

@@ -7,11 +7,18 @@ fn main() {
     match std::env::args().nth(1).as_deref() {
         Some("bench") => {
             // Openbench compat
-            stro::search::Search::bench();
+            let depth = std::env::args()
+                .nth(2)
+                .map_or(6, |x| x.parse().unwrap());
+            stro::search::Search::bench(depth);
             return;
         }
         Some("bench2") => {
-            stro::search::Search::bench2();
+            let depth = std::env::args()
+                .nth(2)
+                .map_or(7, |x| x.parse().unwrap());
+
+            stro::search::Search::bench2(depth);
             return;
         }
         _ => (),
