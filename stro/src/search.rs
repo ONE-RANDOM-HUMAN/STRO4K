@@ -373,15 +373,16 @@ impl<'a> Search<'a> {
             let eval = if best_move.is_none() || depth <= 0 {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
             } else {
+                let quiet_count = i as i32 - first_quiet as i32 + 1;
                 let lmr_depth = if depth >= 3
-                    && i >= 3
+                    && quiet_count >= 3
                     && !pv_node
                     && !mov.flags().is_noisy()
                     && !is_check
                     && !gives_check
                 {
                     // Round towards -inf is fine
-                    let reduction = (depth * 49 + i as i32 * 33 - improving as i32 * 197) >> 8;
+                    let reduction = (depth * 49 + quiet_count * 33 - improving as i32 * 197) >> 8;
                     let lmr_depth = depth - reduction - 1;
 
                     if lmr_depth < 1 {

@@ -931,16 +931,19 @@ alpha_beta:
     ; ecx - depth - 1
     ; edx - depth
     ; esi - - alpha - 1
+    ; eax - mov num - num_quiets = quiet_count - 1
     mov edx, dword [rbp + 8]
     lea ecx, [rdx - 1]
     lea esi, [rdi - 1]
+    mov eax, r15d
+    sub eax, dword [rbp - 128 + ABLocals.first_quiet]
 
     ; depth
     cmp edx, 3
     jnge .no_lmr_reduction
 
     ; move num
-    cmp r15d, 3
+    cmp eax, 2
     jnge .no_lmr_reduction
 
     ; non-pv node and is check
@@ -956,10 +959,10 @@ alpha_beta:
     jnz .no_lmr_reduction
 
     ; calculate lmr depth
-    ; depth * 49 + i * 33
-    imul eax, edx, 49
-    imul edx, r15d, 33
-    add eax, edx
+    ; depth * 49 + quiet_count * 33
+    imul edx, edx, 49
+    imul eax, eax, 33
+    lea eax, [rax + rdx + 33]
 
     ; decrease reduction if improving
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
