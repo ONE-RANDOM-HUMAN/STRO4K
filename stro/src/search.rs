@@ -331,7 +331,7 @@ impl<'a> Search<'a> {
 
             if f_prune && depth <= 0 {
                 // Delta pruning
-                const PIECE_VALUES: [i32; 5] = [114, 425, 425, 648, 1246];
+                const PIECE_VALUES: [i32; 5] = [165, 399, 420, 671, 1276];
                 const DELTA_BASE: i32 = 97;
                 const IMPROVING_BONUS: i32 = 39;
 

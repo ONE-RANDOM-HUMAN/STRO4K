@@ -11,11 +11,11 @@ DELTA_IMPROVING_BONUS equ 39
 
 section .rodata
 DELTA_PRUNE_PIECE_VALUES:
-    dw 114
-    dw 425
-    dw 425
-    dw 648
-    dw 1246
+    dw 165
+    dw 399
+    dw 420
+    dw 671
+    dw 1276
 
 default rel
 section .text
