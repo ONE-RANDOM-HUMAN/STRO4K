@@ -944,7 +944,7 @@ alpha_beta:
     jnge .no_lmr_reduction
 
     ; non-pv node and is check
-    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG
     jnz .no_lmr_reduction
 
     ; quiet move
@@ -972,6 +972,9 @@ alpha_beta:
 
     cmp ecx, 1
     jge .no_history_leaf_pruning
+
+    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
+    jnz .no_history_leaf_pruning
 
     ; history leaf pruning
     ; lead the history tables
