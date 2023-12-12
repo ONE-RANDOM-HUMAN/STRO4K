@@ -375,7 +375,6 @@ impl<'a> Search<'a> {
             } else {
                 let lmr_depth = if depth >= 3
                     && i >= 3
-                    && !pv_node
                     && !mov.flags().is_noisy()
                     && !is_check
                     && !gives_check
@@ -384,7 +383,7 @@ impl<'a> Search<'a> {
                     let reduction = (depth * 49 + i as i32 * 33 - improving as i32 * 197) >> 8;
                     let lmr_depth = depth - reduction - 1;
 
-                    if lmr_depth < 1 {
+                    if lmr_depth < 1 && !pv_node {
                         // History leaf pruning
                         let history =
                             &self.history[self.game.position().side_to_move().other() as usize];
