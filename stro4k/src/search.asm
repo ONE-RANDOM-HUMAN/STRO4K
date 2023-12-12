@@ -966,15 +966,20 @@ alpha_beta:
     jz .lmr_not_improving
     sub eax, 197
 .lmr_not_improving:
-    ; divide by 8
+    ; divide by 256
     sar eax, 8
+
+    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
+    jz .lmr_not_pv_node
+
+    sar eax, 1
+    sub ecx, eax
+    jmp .no_history_leaf_pruning
+.lmr_not_pv_node:
     sub ecx, eax
 
     cmp ecx, 1
     jge .no_history_leaf_pruning
-
-    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
-    jnz .no_history_leaf_pruning
 
     ; history leaf pruning
     ; lead the history tables

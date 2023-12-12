@@ -380,7 +380,11 @@ impl<'a> Search<'a> {
                     && !gives_check
                 {
                     // Round towards -inf is fine
-                    let reduction = (depth * 49 + i as i32 * 33 - improving as i32 * 197) >> 8;
+                    let mut reduction = (depth * 49 + i as i32 * 33 - improving as i32 * 197) >> 8;
+                    if pv_node {
+                        reduction >>= 1;
+                    }
+
                     let lmr_depth = depth - reduction - 1;
 
                     if lmr_depth < 1 && !pv_node {
