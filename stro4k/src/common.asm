@@ -2,8 +2,8 @@
 %define NUM_THREADS 4
 %endif
 
-MAX_BOARDS equ 6144
-THREAD_STACK_SIZE equ 8 * 1024 * 1024
+MAX_BOARDS equ 12288
+THREAD_STACK_SIZE equ 20 * 1024 * 1024
 
 %ifndef EXPORT_SYSV
 %ifndef TT_SIZE_MB
@@ -132,6 +132,10 @@ LIGHT_SQUARES equ 55AA55AA55AA55AAh
 
 section .rodata
 alignb 8
+%ifndef EXPORT_SYSV
+TT_MASK:
+    dq TT_ENTRY_COUNT - 1
+%endif
 ALL_MASK:
     dq 0FFFF_FFFF_FFFF_FFFFh
 NOT_A_FILE:

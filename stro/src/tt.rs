@@ -40,7 +40,6 @@ impl TTData {
     }
 
     pub fn best_move(self) -> Move {
-        // mov_unpack(self.0.get() as u16)
         Move((self.0.get() as u16).try_into().unwrap())
     }
 

@@ -154,7 +154,7 @@ root_search:
     leave
     pop r11
 
-.no_search_print_info
+.no_search_print_info:
     cmp r13d, r11d
     jge .end_search
 
@@ -413,7 +413,7 @@ alpha_beta:
     mov rcx, rdx
 
 %ifndef EXPORT_SYSV
-    and rdx, TT_ENTRY_COUNT - 1
+    and rdx, qword [TT_MASK]
     lea rax, [TT_MEM]
 %else
     and rdx, qword [TT_MASK]
@@ -1152,7 +1152,7 @@ alpha_beta:
 
 %ifndef EXPORT_SYSV
     lea r15, [TT_MEM]
-    and rdi, TT_ENTRY_COUNT - 1
+    and rdi, qword [TT_MASK]
 %else
     mov r15, qword [TT_PTR]
     and rdi, qword [TT_MASK]

@@ -54,9 +54,6 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
     // other moves
     insertion_sort_flags(moves);
 
-    // increases performance by about 3% but loses guaranteed reproducibility
-    // moves.sort_unstable_by_key(|mov| std::cmp::Reverse(mov.mov.flags().0));
-
     // find first non-promo move
     let promo = moves
         .iter()

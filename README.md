@@ -29,12 +29,13 @@ cargo build --release
 
 ## Current size
 ```
-4074 bytes
+4083 bytes
 ```
 ## Features
 * Search
     * Principal Variation Search
     * Transposition Table
+    * Aspiration Windows
     * MVV-LVA Move ordering
     * Killer Heuristic
     * History Heuristic

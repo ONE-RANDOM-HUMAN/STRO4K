@@ -3,7 +3,7 @@ use std::io::{self, Write};
 #[cfg(not(target_family = "unix"))]
 compile_error!("Unsupported target");
 
-const LINKERS: [&str; 4] = ["ld", "ld.gold", "ld.lld", "ld.mold"];
+const LINKERS: [&str; 3] = ["ld", "ld.gold", "ld.lld"];
 
 const LCS: [u8; 5] = [0, 1, 2, 3, 4];
 const LPS: [u8; 5] = [0, 1, 2, 3, 4];

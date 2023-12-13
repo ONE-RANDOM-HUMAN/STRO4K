@@ -58,7 +58,7 @@ pub struct Search<'a> {
     start: Time,
     min_search_time: u64, // min search time in nanoseconds
     max_search_time: u64, // max search time in nanoseconds
-    ply: [PlyData; 6144],
+    ply: [PlyData; 12288],
     history: [HistoryTable; 2],
 }
 
@@ -86,7 +86,7 @@ impl<'a> Search<'a> {
             start: time_now(),
             min_search_time: u64::MAX,
             max_search_time: u64::MAX,
-            ply: [PlyData::new(); 6144],
+            ply: [PlyData::new(); 12288],
             history: [HistoryTable::new(), HistoryTable::new()],
         }
     }
@@ -100,8 +100,8 @@ impl<'a> Search<'a> {
 
     pub fn set_time(&mut self, time_ms: u32, inc_ms: u32) {
         self.min_search_time = (time_ms as u64) * (1_000_000 / 40);
-        self.max_search_time = (time_ms as u64) * (1_000_000 / 20)
-            + (inc_ms as u64) * (1_000_000 / 2);
+        self.max_search_time =
+            (time_ms as u64) * (1_000_000 / 20) + (inc_ms as u64) * (1_000_000 / 2);
     }
 
     #[cfg(feature = "asm")]
@@ -118,7 +118,6 @@ impl<'a> Search<'a> {
             let mut window = 32;
             let mut alpha = cmp::max(MIN_EVAL, last_score - window);
             let mut beta = cmp::min(MAX_EVAL, last_score + window);
-
 
             last_score = loop {
                 let Some(score) = self.alpha_beta(alpha, beta, depth, 0) else {
@@ -166,7 +165,7 @@ impl<'a> Search<'a> {
 
         // Checkmate and stalemate
         let is_check = self.game.position().is_check();
-        if let Some(mov) =  moves.iter().find(|&mov| self.game.is_legal(mov.mov)) {
+        if let Some(mov) = moves.iter().find(|&mov| self.game.is_legal(mov.mov)) {
             self.ply[ply].best_move = Some(mov.mov);
         } else {
             return Some(if is_check { MIN_EVAL } else { 0 });
@@ -373,36 +372,33 @@ impl<'a> Search<'a> {
             let eval = if best_move.is_none() || depth <= 0 {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
             } else {
-                let lmr_depth = if depth >= 3
-                    && i >= 3
-                    && !mov.flags().is_noisy()
-                    && !is_check
-                    && !gives_check
-                {
-                    // Round towards -inf is fine
-                    let reduction = (depth * 49 + i as i32 * 33 - improving as i32 * 197) >> 8;
-                    let lmr_depth = depth - reduction - 1;
+                let lmr_depth =
+                    if depth >= 3 && i >= 3 && !mov.flags().is_noisy() && !is_check && !gives_check
+                    {
+                        // Round towards -inf is fine
+                        let reduction = (depth * 49 + i as i32 * 33 - improving as i32 * 197) >> 8;
+                        let lmr_depth = depth - reduction - 1;
 
-                    if lmr_depth < 1 && !pv_node {
-                        // History leaf pruning
-                        let history =
-                            &self.history[self.game.position().side_to_move().other() as usize];
-                        if history.get(mov) < 0 {
-                            unsafe {
-                                self.game.unmake_move();
+                        if lmr_depth < 1 && !pv_node {
+                            // History leaf pruning
+                            let history =
+                                &self.history[self.game.position().side_to_move().other() as usize];
+                            if history.get(mov) < 0 {
+                                unsafe {
+                                    self.game.unmake_move();
+                                }
+
+                                continue;
                             }
 
-                            continue;
+                            // minimum depth for lmr search
+                            1
+                        } else {
+                            lmr_depth
                         }
-
-                        // minimum depth for lmr search
-                        1
                     } else {
-                        lmr_depth
-                    }
-                } else {
-                    depth - 1
-                };
+                        depth - 1
+                    };
 
                 let eval =
                     -search! { self, self.alpha_beta(-alpha - 1, -alpha, lmr_depth, ply + 1) };
@@ -447,7 +443,6 @@ impl<'a> Search<'a> {
                 alpha = eval;
             }
         }
-
 
         // Store tt if not in qsearch
         if let Some(mov) = best_move {

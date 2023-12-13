@@ -2,7 +2,7 @@ use crate::movegen::{gen_moves, MoveBuf};
 use crate::position::{Board, Move};
 
 // Enough space to fit longest possible chess game with 50-mr
-pub type GameBuf = std::mem::MaybeUninit<[Board; 6144]>;
+pub type GameBuf = std::mem::MaybeUninit<[Board; 12288]>;
 
 /// Required to get around lifetimes
 pub struct GameStart<'a>(Game<'a>);

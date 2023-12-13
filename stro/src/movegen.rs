@@ -1,7 +1,3 @@
-//! Move generation:
-//! 850 bytes allocated for binary
-//!
-
 use crate::consts::{AB_FILE, ALL, A_FILE, H_FILE};
 use crate::position::{Bitboard, Board, Color, Move, MoveFlags, MovePlus, Square};
 

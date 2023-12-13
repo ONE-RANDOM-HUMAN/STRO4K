@@ -338,7 +338,12 @@ fn side_pst(pieces: &[Bitboard; 6], row_mask: u8) -> Eval {
 /// attacked which is not defended by an enemy pawn.
 ///
 /// Including queens would be >20 bytes larger
-fn side_mobility(side_pieces: &[Bitboard; 6], enemy_pieces: &[Bitboard; 6], occ: Bitboard, mask: Bitboard) -> Eval {
+fn side_mobility(
+    side_pieces: &[Bitboard; 6],
+    enemy_pieces: &[Bitboard; 6],
+    occ: Bitboard,
+    mask: Bitboard,
+) -> Eval {
     const MOVE_FNS: [MoveFn; 4] = [knight_moves, bishop_moves, rook_moves, queen_moves];
 
     let mut eval = Eval(0, 0);
@@ -549,8 +554,14 @@ pub fn evaluate(board: &Board) -> i32 {
         | ((board.pieces()[0][0] & !consts::A_FILE) << 7);
     let black_attacks = ((board.pieces()[1][0] >> 7) & !consts::A_FILE)
         | ((board.pieces()[1][0] & !consts::A_FILE) >> 9);
-    eval.accum(side_mobility(&board.pieces()[0], &board.pieces()[1], occ, !black_attacks), 1);
-    eval.accum(side_mobility(&board.pieces()[1], &board.pieces()[0], occ, !white_attacks), -1);
+    eval.accum(
+        side_mobility(&board.pieces()[0], &board.pieces()[1], occ, !black_attacks),
+        1,
+    );
+    eval.accum(
+        side_mobility(&board.pieces()[1], &board.pieces()[0], occ, !white_attacks),
+        -1,
+    );
 
     // doubled, isolated, and passed pawns
     eval.accum(
