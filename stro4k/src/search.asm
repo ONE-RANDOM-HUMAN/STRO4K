@@ -936,7 +936,7 @@ alpha_beta:
     lea esi, [rdi - 1]
 
     ; depth
-    cmp edx, 3
+    cmp edx, 2
     jnge .no_lmr_reduction
 
     ; move num
@@ -966,7 +966,7 @@ alpha_beta:
     jz .lmr_not_improving
     sub eax, 130
 .lmr_not_improving:
-    ; divide by 8
+    ; divide by 256
     sar eax, 8
     sub ecx, eax
 
