@@ -979,22 +979,20 @@ alpha_beta:
     ; history leaf pruning
     ; lead the history tables
     lea rax, [rbx + Search.white_history]
-    mov rcx, qword [rbx]
+    mov rdx, qword [rbx]
 
     ; This check occurs after the move has alreay been made,
     ; so we are actually testing if it is currently black's move.
-    test byte [rcx + Board.side_to_move], 1
+    test byte [rdx + Board.side_to_move], 1
     jnz .history_leaf_white
 
     add rax, Search.black_history - Search.white_history
 .history_leaf_white:
     ; get the history of the move
-    mov ecx, r12d
-    and ecx, 0FFFh
+    mov edx, r12d
+    and edx, 0FFFh
 
-
-    cmp qword [rax + 8 * rcx], 0
-    mov ecx, 1 ; set the minimum lmr depth
+    cmp qword [rax + 8 * rdx], 0
     jnl .no_history_leaf_pruning
 
     ; prune
