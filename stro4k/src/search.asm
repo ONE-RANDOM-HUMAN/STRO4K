@@ -959,7 +959,7 @@ alpha_beta:
     ; depth * 27 + i * 31
     imul eax, edx, 27
     imul edx, r15d, 31
-    add eax, edx
+    lea eax, [rax + rdx + 127]
 
     ; decrease reduction if improving
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
