@@ -973,9 +973,6 @@ alpha_beta:
     cmp ecx, 1
     jge .no_history_leaf_pruning
 
-    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
-    jnz .no_history_leaf_pruning
-
     ; history leaf pruning
     ; lead the history tables
     lea rax, [rbx + Search.white_history]
@@ -996,6 +993,9 @@ alpha_beta:
     cmp qword [rax + 8 * rcx], 0
     mov ecx, 1 ; set the minimum lmr depth
     jnl .no_history_leaf_pruning
+
+    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
+    jnz .no_history_leaf_pruning
 
     ; prune
     add qword [rbx], -Board_size
