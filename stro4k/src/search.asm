@@ -969,6 +969,7 @@ alpha_beta:
     ; divide by 256
     sar eax, 8
     sub ecx, eax
+    dec ecx ; additional reduction of 1
 
     cmp ecx, 1
     jge .no_history_leaf_pruning
