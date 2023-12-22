@@ -6,16 +6,16 @@ BOUND_EXACT equ 11b
 
 F_PRUNE_MARGIN equ 73
 STATIC_NULL_MOVE_MARGIN equ 72
-DELTA_BASE equ 156
+DELTA_BASE equ 119
 DELTA_IMPROVING_BONUS equ 19
 
 section .rodata
 DELTA_PRUNE_PIECE_VALUES:
-    dw 114
-    dw 425
-    dw 425
-    dw 648
-    dw 1246
+    dw 165
+    dw 414
+    dw 438
+    dw 678
+    dw 1306
 
 default rel
 section .text
