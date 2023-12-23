@@ -32,6 +32,24 @@ fn main() {
     println!("option name Threads type spin default 1 min 1 max 128");
     println!("option name asm type check default false");
 
+    // SPSA
+    println!("option name MinAspiration type spin default 32 min 0 max 1024");
+    println!("option name SNmp type spin default 80 min 0 max 1024");
+    println!("option name FPrune type spin default 128 min 0 max 1024");
+    println!("option name DeltaBase type spin default 96 min 0 max 1024");
+    println!("option name DeltaImprove type spin default 40 min 0 max 1024");
+    println!("option name LmrBase type string default 0.25");
+    println!("option name LmrDepth type string default 0.25");
+    println!("option name LmrMove type string default 0.128");
+    println!("option name LmrImprove type string default -1.0");
+    println!("option name NmrBase type string default 3.0");
+    println!("option name NmrDepth type string default 0.25");
+    println!("option name NmrImprove type string default -0.5");
+    println!("option name MinTimeFrac type string default 0.025");
+    println!("option name MinIncFrac type string default 0.0");
+    println!("option name MaxTimeFrac type string default 0.05");
+    println!("option name MaxIncFrac type string default 0.5");
+
     println!("uciok");
 
     uci_loop();
@@ -135,7 +153,55 @@ fn uci_loop() {
                     "false" => search.set_asm(false),
                     _ => (),
                 },
-                _ => (),
+                "minaspiration" => unsafe {
+                    stro::search::MIN_ASPIRATION_WINDOW_SIZE = value.parse().unwrap()
+                }
+                "snmp" => unsafe {
+                    stro::search::STATIC_NULL_MOVE_MARGIN = value.parse().unwrap()
+                }
+                "fprune" => unsafe {
+                    stro::search::F_PRUNE_MARGIN = value.parse().unwrap()
+                }
+                "deltabase" => unsafe {
+                    stro::search::DELTA_BASE = value.parse().unwrap()
+                }
+                "deltaimprove" => unsafe {
+                    stro::search::DELTA_IMPROVING_BONUS = value.parse().unwrap()
+                }
+                "lmrbase" => unsafe {
+                    stro::search::LMR_BASE = value.parse().unwrap()
+                }
+                "lmrdepth" => unsafe {
+                    stro::search::LMR_DEPTH = value.parse().unwrap()
+                }
+                "lmrmove" => unsafe {
+                    stro::search::LMR_MOVE = value.parse().unwrap()
+                }
+                "lmrimprove" => unsafe {
+                    stro::search::LMR_IMPROVING = value.parse().unwrap()
+                }
+                "nmrbase" => unsafe {
+                    stro::search::NMP_BASE = value.parse().unwrap()
+                }
+                "nmrdepth" => unsafe {
+                    stro::search::NMP_DEPTH = value.parse().unwrap()
+                }
+                "nmpimprove" => unsafe {
+                    stro::search::NMP_IMPROVING = value.parse().unwrap()
+                }
+                "mintimefrac" => unsafe {
+                    stro::search::MIN_TIME_FRACTION = value.parse().unwrap()
+                }
+                "minincfrac" => unsafe {
+                    stro::search::MIN_INC_FRACTION = value.parse().unwrap()
+                }
+                "maxtimefrac" => unsafe {
+                    stro::search::MAX_TIME_FRACTION = value.parse().unwrap()
+                }
+                "maxincfrac" => unsafe {
+                    stro::search::MAX_INC_FRACTION = value.parse().unwrap()
+                }
+                name => eprintln!("Unrecognised option: {name}"),
             }
         } else if line.starts_with("quit") {
             break;
