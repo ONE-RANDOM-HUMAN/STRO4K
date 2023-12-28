@@ -162,6 +162,10 @@ impl<'a> Search<'a> {
                 break;
             };
 
+            if pv.len() >= depth as usize && !next_move.flags().is_noisy() {
+                break;
+            }
+
             let mut buffer = MoveBuf::uninit();
             if !gen_moves(self.game.position(), &mut buffer).iter().any(|x| x.mov == next_move) {
                 break;
