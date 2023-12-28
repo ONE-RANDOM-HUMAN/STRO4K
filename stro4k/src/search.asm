@@ -143,8 +143,7 @@ root_search:
 
     mov rdi, rbx
     mov esi, r13d
-    mov edx, r15d
-    mov ecx, eax
+    mov edx, r14d
 
     push r11
     push rbp
