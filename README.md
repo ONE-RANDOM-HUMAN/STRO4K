@@ -3,28 +3,35 @@
 A chess engine designed to fit into 4096 bytes. A successor to we4k.
 
 ## Current Plan
-STRO4K targets 2700 elo (CCRL) on a single thread, while actually scaling with multiple threads (unlike we4k). This target is very unlikely to be met.
+STRO4K currently targets 2900 elo (CCRL) on a single thread. This target is very unlikely to be met.
 
 STRO is a non-4k version of STRO4K with more interface features, which is much easier to develop.
 
-## Version 1.0
+## Version 1.0 and 2.0
 STRO4K 1.0 is available in the `version_1.0` branch. It has the extra feature of displaying the evaluation and principal variation during search.
 
+STRO4K 2.0 is available in the `version_2.0` branch. It does not have the extra features of STRO4K 1.0 due to size limitations.
+
 ## Building
-Building STRO4K requires `nasm`, `xz` and [`sstrip`](https://github.com/aunali1/super-strip). A script is provided which attempts to download `sstrip` and build STRO4K.
+STRO4K has only been tested to build on Linux systems. Building STRO4K requires `nasm`, `xz` and [`sstrip`](https://github.com/aunali1/super-strip). A script is provided which attempts to download `sstrip` and build STRO4K.
 
 ```
 ./build4k <file_name> <thread_count> <hash_size_mb>
 ```
 
-Or, for a default build with 4 threads, 16mb hash, and output file `STRO4K`:
+For a default build with 4 threads, 16MB hash, and output file `STRO4K`:
 ```
 ./build4kdefault
 ```
 
-STRO can be build using a Rust nightly compiler. By default, this includes an `asm` option that will use STRO4K search and eval code.
+STRO can be built using a Rust nightly compiler. By default, this includes an `asm` option that will allow STRO4K search and eval code to be used. This will only work on Linux systems
 ```
 cargo build --release
+```
+
+STRO can also be built without the `asm` feature. This should also work on Windows.
+```
+cargo build --release --no-default-features
 ```
 
 ## Current size
@@ -32,6 +39,7 @@ cargo build --release
 4089 bytes
 ```
 ## Features
+* PV output in STRO
 * Search
     * Principal Variation Search
     * Transposition Table

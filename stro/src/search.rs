@@ -137,15 +137,7 @@ impl<'a> Search<'a> {
             best_move = self.ply[0].best_move;
 
             if main_thread {
-                println!(
-                    "info depth {} nodes {} nps {} score cp {} pv {}",
-                    depth,
-                    self.nodes,
-                    (self.nodes as f64 / (elapsed_nanos(&self.start) as f64 / 1_000_000_000.0))
-                        as u64,
-                    last_score,
-                    best_move.unwrap(),
-                )
+                self.print_uci_info(depth, last_score)
             }
 
             if self.time_up(self.min_search_time) {
@@ -154,6 +146,56 @@ impl<'a> Search<'a> {
         }
 
         (best_move.unwrap(), last_score)
+    }
+
+    pub fn print_uci_info(&mut self, depth: i32, score: i32) {
+        let mut pv = vec![self.ply[0].best_move.unwrap()];
+
+        unsafe {
+            assert!(self.game().make_move(pv[0]));
+        }
+
+        // Extract pv from transposition table
+        loop {
+            let hash = self.game.position().hash();
+            let Some(next_move) = tt::load(hash).map(TTData::best_move) else {
+                break;
+            };
+
+            let mut buffer = MoveBuf::uninit();
+            if !gen_moves(self.game.position(), &mut buffer).iter().any(|x| x.mov == next_move) {
+                break;
+            }
+
+            unsafe {
+                if !self.game().make_move(next_move) {
+                    break;
+                }
+            }
+
+            pv.push(next_move);
+        }
+
+        for _ in 0..pv.len() {
+            unsafe {
+                self.game.unmake_move();
+            }
+        }
+
+        print!(
+            "info depth {} nodes {} nps {} score cp {} pv",
+            depth,
+            self.nodes,
+            (self.nodes as f64 / (elapsed_nanos(&self.start) as f64 / 1_000_000_000.0))
+            as u64,
+            score,
+        );
+
+        for mov in pv {
+            print!(" {mov}");
+        }
+
+        println!();
     }
 
     pub fn alpha_beta(&mut self, mut alpha: i32, beta: i32, depth: i32, ply: usize) -> Option<i32> {
@@ -452,6 +494,7 @@ impl<'a> Search<'a> {
         Some(best_eval)
     }
 
+
     pub fn game(&mut self) -> &mut Game<'a> {
         &mut self.game
     }
@@ -632,13 +675,6 @@ impl PlyData {
 }
 
 #[no_mangle]
-fn search_print_info_sysv(search: &mut Search, depth: i32, mov: Move, score: i32) {
-    println!(
-        "info depth {} nodes {} nps {} score cp {} pv {}",
-        depth,
-        search.nodes,
-        (search.nodes as f64 / (elapsed_nanos(&search.start) as f64 / 1_000_000_000.0)) as u64,
-        score,
-        mov,
-    );
+fn search_print_info_sysv(search: &mut Search, depth: i32, score: i32) {
+    search.print_uci_info(depth, score);
 }
