@@ -287,13 +287,13 @@ impl<'a> Search<'a> {
             depth -= 1;
         }
 
-        let static_eval = evaluate::evaluate(self.game.position());
+        let (static_eval, phase) = evaluate::evaluate(self.game.position());
         self.ply[ply].static_eval = static_eval as i16;
 
         let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
 
         // Null Move Pruning
-        if depth > 0 && !pv_node && !is_check && static_eval >= beta {
+        if depth > 0 && phase >= 2 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 7 {
                 const STATIC_NULL_MOVE_MARGIN: i32 = 63;

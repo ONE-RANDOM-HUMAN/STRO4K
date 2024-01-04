@@ -517,7 +517,7 @@ fn pawn_piece(pieces: &[[Bitboard; 6]; 2]) -> Eval {
     eval
 }
 
-pub fn evaluate(board: &Board) -> i32 {
+pub fn evaluate(board: &Board) -> (i32, i32) {
     let mut eval = if board.side_to_move() == Color::White {
         TEMPO
     } else {
@@ -614,5 +614,5 @@ pub fn evaluate(board: &Board) -> i32 {
 
     eval.accum(pawn_piece(board.pieces()), 1);
 
-    resolve(board, eval)
+    (resolve(board, eval), i32::from(white_phase + black_phase))
 }

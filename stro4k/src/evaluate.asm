@@ -243,6 +243,7 @@ default rel
 section .text
 
 ; board - rsi
+; returns eval in eax and 2 * phase in edx
 evaluate:
     push rbx
     push rbp
@@ -545,16 +546,16 @@ evaluate:
 
     ; phase
     pop rcx
-    pop rax
-    add eax, ecx
+    pop rdx
+    add edx, ecx
 
     vmovd ecx, xmm0
     movsx ebx, cx
     sar ecx, 16
 
-    imul ebx, eax
+    imul ebx, edx
 
-    sub eax, 48 ; 2 * -(24 - phase)
+    lea eax, [rdx - 48] ; 2 * -(24 - phase)
     imul ecx, eax
 
     sub ebx, ecx
@@ -572,5 +573,7 @@ evaluate:
     pop r13
     pop rbp
     pop rbx
+
+    ; eax - eval, edx - 2 * phase
     ret
 

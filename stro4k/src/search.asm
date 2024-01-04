@@ -553,6 +553,10 @@ alpha_beta:
     cmp ecx, 0
     jng .no_null_move
 
+    ; check 2 * phase
+    cmp edx, 4
+    jnge .no_null_move
+
     ; check if we are in check or in a pv node
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_null_move
