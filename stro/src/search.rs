@@ -303,28 +303,6 @@ impl<'a> Search<'a> {
                     return Some(beta);
                 }
             }
-
-            // Null move pruning
-            if depth >= 3 {
-                // Round towards -inf is fine
-                let r = (684 + depth * 54 - 133 * improving as i32) >> 8;
-
-                unsafe {
-                    self.game.make_null_move();
-                }
-
-                let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
-
-                unsafe {
-                    self.game.unmake_move();
-                }
-
-                let eval = -eval?;
-
-                if eval >= beta {
-                    return Some(eval);
-                }
-            }
         }
 
         // Order the noisy moves
