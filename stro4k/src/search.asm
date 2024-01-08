@@ -171,36 +171,6 @@ root_search:
     mov ebx, r15d
     ret
 
-; rsp + 8 - search moves
-; r14 - end of search moves
-sort_search_moves:
-    ; rax - outer loop counter
-    push MovePlus_size
-    pop rax
-.outer_loop_head:
-    cmp eax, r14d
-    jae .end
-
-    mov ecx, dword [rsp + rax + 8]
-    mov edi, eax
-.inner_loop_head:
-    mov edx, dword [rsp + rdi + 8 - MovePlus_size]
-    mov esi, edx
-    mov si, -1
-    ; or esi, 0FFFFh
-    cmp ecx, esi
-    jle .inner_loop_end
-
-    mov dword [rsp + rdi + 8], edx
-    sub edi, MovePlus_size
-    jnz .inner_loop_head
-.inner_loop_end:
-    mov dword [rsp + rdi + 8], ecx
-    add eax, MovePlus_size
-    jmp .outer_loop_head
-.end:
-    ret
-
 struc ABLocals
     .hash:
         resq 1
