@@ -190,6 +190,8 @@ struc ABLocals
         resd 1 ; lower bits are ignored
     .alpha:
         resd 1
+    .static_eval:
+        resw 1
     .bound:
         resb 1
     .flags:
@@ -378,10 +380,26 @@ alpha_beta:
     jmp root_search.end_search
 .no_stop_search:
 
+    ; get the static evaluation
+    mov rsi, qword [rbx]
+    call evaluate
+
+    ; store the static eval
+    mov word [r13 + PlyData.static_eval], ax
+    mov word [rbp - 128 + ABLocals.static_eval], ax
+
+    ; calculate the improving variable
+    cmp dword [rbp + 16], 2
+    jnae .not_improving
+    cmp ax, word [r13 - 2 * PlyData_size + PlyData.static_eval]
+    jng .not_improving
+
+    or byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
+.not_improving:
+
     ; probe the tt
 
     ; hash the position
-    mov rsi, qword [rbx]
     mov eax, dword [rsi + Board.side_to_move]
     and eax, 00FFFFFFh
     vmovd xmm0, eax
@@ -472,37 +490,49 @@ alpha_beta:
     shr rdx, 34
     and edx, (1 << 14) - 1
 
-    ; check for cutoff
-    cmp edx, dword [rbp + 8]
-    jnge .no_tt_cutoff
-
-    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
-    jnz .no_tt_cutoff
-
-    ; tt cutoffs
+    ; tt cutoffs and static eval
     sar eax, 16 ; eval
     shr r12, 32 ; bound
     test r12b, 11b
-    jz .no_tt_cutoff ; No bound
-    jpe .end ; Exact bound
+    jz .tt_end ; No bound
+
+    ; cx - static eval
+    movsx ecx, word [r13 + PlyData.static_eval]
+    cmovpe ecx, eax
+    jpe .possible_tt_cutoff ; Exact bound
 
     ; upper or lower bound
     test r12b, BOUND_LOWER
     jz .tt_upper_bound
 
     ; lower bound - check against beta
+    cmp eax, ecx
+    cmovg ecx, eax
+
     cmp eax, dword [rbp + 32]
-    jge .end
-    jmp .tt_end
+    jge .possible_tt_cutoff
+    jmp .no_tt_cutoff
 .tt_upper_bound:
-    ; check against alpha
+    ; upper bound - check against alpha
+    cmp eax, ecx
+    cmovl ecx, eax
+
     cmp eax, dword [rbp + 24]
-    jnle .tt_end
+    jnle .no_tt_cutoff
 
     ; would reduce the number of non-short jumps required,
     ; but is larger after compression
-; .tt_cutoff: 
+.possible_tt_cutoff:
+    ; check for cutoff
+    cmp edx, dword [rbp + 8]
+    jnge .no_tt_cutoff
+
+    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
+    jnz .no_tt_cutoff
     jmp .end 
+.no_tt_cutoff:
+    mov word [rbp - 128 + ABLocals.static_eval], cx
+    jmp .tt_end
 .tt_miss:
     ; iir
     ; This gives slightly different results if depth is negative but
@@ -515,24 +545,7 @@ alpha_beta:
 ;     dec dword [rbp + 8]
 ; .no_iir:
 .tt_end:
-.no_tt_cutoff:
 .no_tt_probe:
-
-    ; get the static evaluation
-    mov rsi, qword [rbx]
-    call evaluate
-
-    ; store the static eval
-    mov word [r13 + PlyData.static_eval], ax
-
-    ; calculate the improving variable
-    cmp dword [rbp + 16], 2
-    jnae .not_improving
-    cmp ax, word [r13 - 2 * PlyData_size + PlyData.static_eval]
-    jng .not_improving
-
-    or byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
-.not_improving:
 
     ; Null move pruning
     ; check depth
@@ -546,6 +559,7 @@ alpha_beta:
 
     ; check that the static eval exceeds beta
     ; eax - static eval - beta
+    movsx eax, word [rbp - 128 + ABLocals.static_eval]
     sub eax, dword [rbp + 32]
     jnge .no_null_move
 
@@ -671,7 +685,7 @@ alpha_beta:
 
 .order_noisy_no_moves:
     ; ecx - static eval
-    movsx ecx, word [r13 + PlyData.static_eval]
+    movsx ecx, word [rbp - 128 + ABLocals.static_eval]
 
     ; futility pruning
     ; edx - depth
@@ -826,7 +840,7 @@ alpha_beta:
     jnle .no_delta_prune
 
     ; edi - eval
-    movsx edi, word [r13 + PlyData.static_eval]
+    movsx edi, word [rbp - 128 + ABLocals.static_eval]
     add edi, DELTA_BASE
 
     ; add improving bonus
