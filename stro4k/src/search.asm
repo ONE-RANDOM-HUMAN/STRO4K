@@ -34,10 +34,16 @@ root_search_sysv:
     push rbp
 
     mov rbx, rdi
+    push qword [rbx] ; save current position
+    push rbx
+
     mov r12d, esi
     mov r11d, edx
     call root_search
     mov eax, ebx
+
+    pop rbx
+    pop qword [rbx]
 
     pop rbp
     pop rbx
@@ -65,6 +71,10 @@ thread_search:
 ; time should be calculated before calling root_search
 ; returns best move in ebx
 root_search:
+%ifdef EXPORT_SYSV
+    ; Save in last plydata - should never be used
+    mov qword [rbx + Search.ply_data + (MAX_BOARDS - 1) * PlyData_size], rsp
+%endif
     mov qword [rbx + Search.nodes], 0
 
     ; r13d - depth
@@ -102,10 +112,6 @@ root_search:
     ; ply count
     xor edx, edx
     call alpha_beta
-
-    ; check for search failure
-    cmp edx, eax ; edx = 0
-    jo .end_search
 
     mov edx, MIN_EVAL
 
@@ -358,7 +364,18 @@ alpha_beta:
 
     mov rdx, qword [rbx + Search.max_search_time]
     call time_up
-    ja .stop_search
+    jna .no_stop_search
+.stop_search:
+    ; TODO
+%ifdef EXPORT_SYSV
+    mov rsp, qword [rbx + Search.ply_data + (MAX_BOARDS - 1) * PlyData_size]
+%else
+    lea rsp, [rbx - 8]
+%endif
+    ; restore r15 - it is the first register to be pushed by alpha_beta
+    ; after it is called by root_search.
+    mov r15d, dword [rsp - 16]
+    jmp root_search.end_search
 .no_stop_search:
 
     ; probe the tt
@@ -580,12 +597,10 @@ alpha_beta:
     lea edi, [rsi + 1]
 
     call alpha_beta
+    neg eax
 
     ; unmake move
     add qword [rbx], -Board_size
-
-    neg eax
-    jo .end
 
     ; beta cutoff
     cmp eax, dword [rbp + 32]
@@ -980,13 +995,12 @@ alpha_beta:
 
     call alpha_beta
     neg eax
-    jo .pvs_search_failure
 
     ; possibly re-search
 
     ; check alpha
     cmp eax, dword [rbp - 128 + ABLocals.alpha]
-    jng .pvs_end_search
+    jng .pvs_no_research
 
     ; check beta
     cmp eax, dword [rbp + 32]
@@ -994,7 +1008,7 @@ alpha_beta:
 
     ; check depth
     cmp r11d, dword [rbp + 8]
-    je .pvs_end_search ; search with full depth already completed
+    je .pvs_no_research ; search with full depth already completed
 .pvs_search_full:
     ; -beta
     mov esi, dword [rbp + 32]
@@ -1010,13 +1024,8 @@ alpha_beta:
 
     call alpha_beta
     neg eax
-    jno .pvs_end_search
-.pvs_search_failure:
-    ; unmake move
-    add qword [rbx], -Board_size
-    jmp .end
-.pvs_end_search:
 
+.pvs_no_research:
     ; unmake move
     add qword [rbx], -Board_size
 
@@ -1148,9 +1157,6 @@ alpha_beta:
     ; store entry into tt
     mov qword [r15 + 8 * rdi], rsi
 .no_store_tt:
-    jmp .end
-.stop_search:
-    mov eax, NO_EVAL
 .end:
     leave
     pop rcx
