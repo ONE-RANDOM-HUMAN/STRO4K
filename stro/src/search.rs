@@ -167,7 +167,10 @@ impl<'a> Search<'a> {
             }
 
             let mut buffer = MoveBuf::uninit();
-            if !gen_moves(self.game.position(), &mut buffer).iter().any(|x| x.mov == next_move) {
+            if !gen_moves(self.game.position(), &mut buffer)
+                .iter()
+                .any(|x| x.mov == next_move)
+            {
                 break;
             }
 
@@ -190,8 +193,7 @@ impl<'a> Search<'a> {
             "info depth {} nodes {} nps {} score cp {} pv",
             depth,
             self.nodes,
-            (self.nodes as f64 / (elapsed_nanos(&self.start) as f64 / 1_000_000_000.0))
-            as u64,
+            (self.nodes as f64 / (elapsed_nanos(&self.start) as f64 / 1_000_000_000.0)) as u64,
             score,
         );
 
@@ -421,7 +423,8 @@ impl<'a> Search<'a> {
                     if depth >= 2 && i >= 3 && !mov.flags().is_noisy() && !is_check && !gives_check
                     {
                         // Round towards -inf is fine
-                        let reduction = (73 + depth * 28 + i as i32 * 29 - improving as i32 * 129) / 256;
+                        let reduction =
+                            (73 + depth * 28 + i as i32 * 29 - improving as i32 * 129) / 256;
                         let lmr_depth = depth - reduction - 1;
 
                         if lmr_depth < 1 && !pv_node {
@@ -497,7 +500,6 @@ impl<'a> Search<'a> {
 
         Some(best_eval)
     }
-
 
     pub fn game(&mut self) -> &mut Game<'a> {
         &mut self.game

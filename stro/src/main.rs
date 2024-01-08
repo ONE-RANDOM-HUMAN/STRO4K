@@ -17,6 +17,21 @@ fn main() {
             stro::search::Search::bench2(depth);
             return;
         }
+        Some("perft") => {
+            let depth = std::env::args().nth(2).map_or(6, |x| x.parse().unwrap());
+
+            let mut buf = stro::game::GameBuf::zeroed();
+            let (mut game, _) = stro::game::Game::startpos(&mut buf);
+
+            let start = std::time::Instant::now();
+            let perft = unsafe { game.perft(depth) };
+
+            let duration = start.elapsed();
+
+            println!("{perft} nodes, {}ms", duration.as_millis());
+            println!("{} nps", perft as f64 / duration.as_secs_f64());
+            return;
+        }
         _ => (),
     }
 
