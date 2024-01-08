@@ -563,13 +563,15 @@ alpha_beta:
     sub eax, dword [rbp + 32]
     jnge .no_null_move
 
+    ; save static_eval - beta
+    mov r15d, eax
+
     ; static null move pruning
     ; check depth
     cmp ecx, 7
     jnle .no_static_nmp
 
     ; set margin for static nmp
-
     imul edx, ecx, STATIC_NULL_MOVE_MARGIN
 
     cmp eax, edx
@@ -593,7 +595,7 @@ alpha_beta:
     ; ecx - reduced depth
     mov ecx, dword [rbp + 8]
     imul esi, ecx, 54
-    add esi, 684 + 256 ; + 256 since formula is depth - r - 1
+    lea esi, [rsi + 2 * r15 + 684 + 256] ; + 256 since formula is depth - r - 1
 
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .nmp_not_improving
