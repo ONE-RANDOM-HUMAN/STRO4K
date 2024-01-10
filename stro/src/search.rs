@@ -99,8 +99,8 @@ impl<'a> Search<'a> {
     }
 
     pub fn set_time(&mut self, time_ms: u32, inc_ms: u32) {
-        self.min_search_time = (time_ms as u64) * 29907 + (inc_ms as u64) * 10774;
-        self.max_search_time = (time_ms as u64) * 68392 + (inc_ms as u64) * 570577;
+        self.min_search_time = (time_ms as u64) * 26441 + (inc_ms as u64) * 13027;
+        self.max_search_time = (time_ms as u64) * 79884 + (inc_ms as u64) * 568859;
     }
 
     #[cfg(feature = "asm")]
@@ -114,7 +114,7 @@ impl<'a> Search<'a> {
         let mut last_score = 0;
 
         'a: for depth in 1..=max_depth {
-            let mut window = 24;
+            let mut window = 11;
             let mut alpha = cmp::max(MIN_EVAL, last_score - window);
             let mut beta = cmp::min(MAX_EVAL, last_score + window);
 
@@ -307,7 +307,7 @@ impl<'a> Search<'a> {
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 7 {
-                const STATIC_NULL_MOVE_MARGIN: i32 = 63;
+                const STATIC_NULL_MOVE_MARGIN: i32 = 82;
                 let margin = depth * STATIC_NULL_MOVE_MARGIN;
 
                 if static_eval >= beta + margin {
@@ -318,7 +318,7 @@ impl<'a> Search<'a> {
             // Null move pruning
             if depth >= 3 {
                 // Round towards -inf is fine
-                let r = (684 + depth * 54 + 2 * (static_eval - beta) - 133 * improving as i32) >> 8;
+                let r = (777 + depth * 56 + 2 * (static_eval - beta) - 166 * improving as i32) >> 8;
 
                 unsafe {
                     self.game.make_null_move();
@@ -345,7 +345,7 @@ impl<'a> Search<'a> {
         // Futility pruning
         let f_prune = depth <= 7 && !is_check && !pv_node;
 
-        const F_PRUNE_MARGIN: i32 = 78;
+        const F_PRUNE_MARGIN: i32 = 76;
         let f_prune = f_prune
             && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
 
@@ -387,8 +387,8 @@ impl<'a> Search<'a> {
             if f_prune && depth <= 0 {
                 // Delta pruning
                 const PIECE_VALUES: [i32; 5] = [114, 425, 425, 648, 1246];
-                const DELTA_BASE: i32 = 178;
-                const IMPROVING_BONUS: i32 = 11;
+                const DELTA_BASE: i32 = 155;
+                const IMPROVING_BONUS: i32 = 24;
 
                 let capture = self
                     .game
@@ -433,7 +433,7 @@ impl<'a> Search<'a> {
                     {
                         // Round towards -inf is fine
                         let reduction =
-                            (73 + depth * 28 + i as i32 * 29 - improving as i32 * 129) / 256;
+                            (86 + depth * 18 + i as i32 * 34 - improving as i32 * 113) / 256;
                         let lmr_depth = depth - reduction - 1;
 
                         if lmr_depth < 1 && !pv_node {
