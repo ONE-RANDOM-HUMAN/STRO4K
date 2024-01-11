@@ -1,3 +1,12 @@
+section .data
+print_info:
+    db "info depth 1 score cp "
+.score:
+    db `      \nbestmove `
+.bestmove:
+    db `     \n`
+.end:
+
 default rel
 section .text
 
@@ -78,9 +87,9 @@ _start:
     mov qword [rsi], rdi
 
     ; clear Boards
-    sub rdi, Search_size - 8
-    mov ecx, MAX_BOARDS * Board_size + Search_size - 8
-    rep stosb
+    ; sub rdi, Search_size - 8
+    ; mov ecx, MAX_BOARDS * Board_size + Search_size - 8
+    ; rep stosb
 
     ; set search time - time elapsed cannot be greater
     ; without overflowing
@@ -113,6 +122,7 @@ _start:
     ; isready
     mov rdx, `readyok\n`
     call write8
+.ucinewgame: ; engine should be restarted between games
     call read_until_newline
     jmp .uci_loop_head
 .not_isready_or_go:
@@ -132,16 +142,6 @@ _start:
     pop rax
     xor edi, edi
     syscall
-.ucinewgame:
-    lea rdi, [TT_MEM]
-    mov rcx, TT_SIZE_BYTES
-    xor eax, eax
-    rep stosb
-
-    call read_until_newline
-
-    ; reset threads
-    jmp .setup_threads
 .go:
     mov eax, CLOCK_GETTIME_SYSCALL
     push CLOCK_MONOTONIC
@@ -249,31 +249,48 @@ _start:
     lock and byte [RUNNING_WORKER_THREADS], 7Fh
     jnz .go_wait_for_threads
 
-    ; mov in bx
-    mov rdx, "bestmove"
-    call write8
+    lea rsi, [print_info]
 
-    mov ecx, ebx
-    mov eax, 07070707h
-    pdep eax, ecx, eax
+    mov ebx, 07070707h
+    pdep eax, ecx, ebx
     add eax, "a1a1"
-
-    push ' '
-    mov dword [rsp + 1], eax ; add move
-    test ch, PROMO_FLAG << 4
+    mov dword [rsi + print_info.bestmove - print_info], eax
 
     mov dl, ' '
+    test ch, PROMO_FLAG << 4
     jz .print_move_no_promo
     mov edx, "nbrq"
     shr ecx, 9
-
     and cl, 11000b
     shr edx, cl
 .print_move_no_promo:
-    mov byte [rsp + 5], dl
-    mov word [rsp + 6], ` \n`
+    mov byte [rsi + print_info.bestmove - print_info + 4], dl
+
+    mov ecx, r14d
+    mov dx, " 0"
+
+    test ecx, ecx
+    jns .print_info_positive_score
+    mov dl, '-'
+    neg ecx
+.print_info_positive_score:
+    pdep eax, ecx, ebx
+    add eax, "0000"
+    bswap eax
+    mov dword [rsi + print_info.score - print_info + 2], eax
+
+    shr ecx, 12
+    add dh, cl
+    mov word [rsi + print_info.score - print_info], dx
+
+    push 1
+    pop rax ; syscall 1
+    mov edi, eax ; stdout fd
+
+    push print_info.end - print_info
     pop rdx
-    call write8
+
+    syscall
 
     jmp .uci_loop_head
 
@@ -281,12 +298,8 @@ _start:
     ; read 2 * 8 bytes
     push 8
     pop rdx
-    xor ebx, ebx
-.position_read_startpos: ; read 16 bytes 'osition startpos'
     call read
-    dec ebx
-    jpe .position_read_startpos ; loops twice
-
+    call read
 
     ; rbx - game
     push rsp

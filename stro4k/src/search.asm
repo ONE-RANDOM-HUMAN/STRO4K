@@ -40,7 +40,7 @@ root_search_sysv:
     mov r12d, esi
     mov r11d, edx
     call root_search
-    mov eax, ebx
+    mov eax, ecx
 
     pop rbx
     pop qword [rbx]
@@ -69,7 +69,8 @@ thread_search:
 %endif
 ; search - rbx
 ; time should be calculated before calling root_search
-; returns best move in ebx
+; returns best move in ecx
+; returns score in r14d
 root_search:
 %ifdef EXPORT_SYSV
     ; Save in last plydata - should never be used
@@ -174,7 +175,7 @@ root_search:
 %endif
     jna .iterative_deepening_head
 .end_search: 
-    mov ebx, r15d
+    mov ecx, r15d
     ret
 
 struc ABLocals
@@ -377,6 +378,7 @@ alpha_beta:
     ; restore r15 - it is the first register to be pushed by alpha_beta
     ; after it is called by root_search.
     mov r15d, dword [rsp - 16]
+    mov r14d, dword [rsp - 24] ; restory r14
     jmp root_search.end_search
 .no_stop_search:
 
