@@ -70,9 +70,6 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
     }
 
     insertion_sort_by_score(moves);
-    if moves.iter().skip_while(|x| x.mov.flags().is_noisy()).any(|x| x.mov.flags().is_noisy()) {
-        panic!("{moves:?}")
-    }
     moves
         .iter()
         .position(|x| !x.mov.flags().is_noisy())
