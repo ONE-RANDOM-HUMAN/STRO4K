@@ -49,28 +49,34 @@ impl Default for HistoryTable {
 
 pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
     // Sorts in order of:
-    // promos and promo-captures by promo piece
-    // regular captures
+    // promos and promo-captures by promo piece and mvvlva
+    // regular captures by mvvlva
     // other moves
-    insertion_sort_flags(moves);
 
-    // find first non-promo move
-    let promo = moves
+    for MovePlus { mov, score } in moves.iter_mut() {
+        *score = i16::from(mov.flags().0) << 11;
+
+        if mov.flags().is_capture() {
+            let victim = position
+                .get_piece(mov.dest(), position.side_to_move().other())
+                .map_or(-1, |x| x as i16);
+
+            let attacker = position
+                .get_piece(mov.origin(), position.side_to_move())
+                .unwrap() as i16;
+
+            *score |= ((victim + 1) << 3) - attacker;
+        }
+    }
+
+    insertion_sort_by_score(moves);
+    if moves.iter().skip_while(|x| x.mov.flags().is_noisy()).any(|x| x.mov.flags().is_noisy()) {
+        panic!("{moves:?}")
+    }
+    moves
         .iter()
-        .position(|x| !x.mov.flags().is_promo())
-        .unwrap_or(moves.len());
-
-    // find first quiet move
-    let noisy = moves[promo..]
-        .iter()
-        .position(|x| !x.mov.flags().is_capture())
-        .map_or(moves.len(), |x| x + promo);
-
-    insertion_sort_by(&mut moves[promo..noisy], |lhs, rhs| {
-        cmp_mvv(position, lhs, rhs).then_with(|| cmp_lva(position, lhs, rhs))
-    });
-
-    noisy
+        .position(|x| !x.mov.flags().is_noisy())
+        .unwrap_or(moves.len())
 }
 
 pub fn order_quiet_moves(
@@ -99,6 +105,24 @@ pub fn order_quiet_moves(
     len
 }
 
+fn insertion_sort_by_score(moves: &mut [MovePlus]) {
+    for i in 1..moves.len() {
+        let mov = moves[i];
+        let mut j = i;
+        while j > 0 {
+            if moves[j - 1].score < mov.score {
+                moves[j] = moves[j - 1];
+            } else {
+                break;
+            }
+
+            j -= 1
+        }
+
+        moves[j] = mov;
+    }
+}
+
 fn insertion_sort_by<F>(moves: &mut [MovePlus], mut cmp: F)
 where
     F: FnMut(Move, Move) -> cmp::Ordering,
@@ -120,46 +144,3 @@ where
     }
 }
 
-/// Allows the use of a special comparison for flags
-fn insertion_sort_flags(moves: &mut [MovePlus]) {
-    for i in 1..moves.len() {
-        let mov = moves[i];
-        let cmp = mov.mov.0.get() & 0xF000;
-        let mut j = i;
-        while j > 0 {
-            if moves[j - 1].mov.0.get() < cmp {
-                moves[j] = moves[j - 1];
-            } else {
-                break;
-            }
-
-            j -= 1
-        }
-
-        moves[j] = mov;
-    }
-}
-
-fn cmp_mvv(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
-    // 0 is ep
-    let lhs_v = position
-        .get_piece(lhs.dest(), position.side_to_move().other())
-        .map_or(-1, |x| x as i8);
-
-    let rhs_v = position
-        .get_piece(rhs.dest(), position.side_to_move().other())
-        .map_or(-1, |x| x as i8);
-
-    lhs_v.cmp(&rhs_v).reverse()
-}
-
-fn cmp_lva(position: &Board, lhs: Move, rhs: Move) -> cmp::Ordering {
-    let lhs_a = position
-        .get_piece(lhs.origin(), position.side_to_move())
-        .unwrap();
-    let rhs_a = position
-        .get_piece(rhs.origin(), position.side_to_move())
-        .unwrap();
-
-    (lhs_a as u8).cmp(&(rhs_a as u8))
-}
