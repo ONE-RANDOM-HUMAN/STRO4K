@@ -1,5 +1,3 @@
-use std::cmp;
-
 use crate::position::{Board, Move, MovePlus};
 
 #[repr(transparent)]
@@ -13,6 +11,10 @@ impl KillerTable {
     pub fn beta_cutoff(&mut self, mov: Move) {
         self.0[1] = self.0[0];
         self.0[0] = Some(mov);
+    }
+
+    pub fn index(&self, mov: Move) -> Option<usize> {
+        self.0.iter().position(|&x| x == Some(mov))
     }
 }
 
@@ -77,29 +79,22 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
 }
 
 pub fn order_quiet_moves(
-    mut moves: &mut [MovePlus],
+    moves: &mut [MovePlus],
     kt: KillerTable,
     history: &HistoryTable,
 ) -> usize {
-    // killers
-    let len = moves.len();
-    for mov in kt.0 {
-        let Some(mov) = mov else {
-            break;
-        };
+    for mov in &mut *moves {
+        let score = history.get(mov.mov) as f32;
+        mov.score = (score.to_bits() >> 16) as i16;
 
-        if let Some(index) = moves.iter().position(|x| x.mov == mov) {
-            moves.swap(0, index);
-            moves = &mut moves[1..];
+        // killers
+        if let Some(index) = kt.index(mov.mov) {
+            mov.score = i16::MAX - index as i16
         }
     }
 
-    // sort by history
-    insertion_sort_by(moves, |lhs, rhs| {
-        history.get(lhs).cmp(&history.get(rhs)).reverse()
-    });
-
-    len
+    insertion_sort_by_score(moves);
+    moves.len()
 }
 
 fn insertion_sort_by_score(moves: &mut [MovePlus]) {
@@ -108,27 +103,6 @@ fn insertion_sort_by_score(moves: &mut [MovePlus]) {
         let mut j = i;
         while j > 0 {
             if moves[j - 1].score < mov.score {
-                moves[j] = moves[j - 1];
-            } else {
-                break;
-            }
-
-            j -= 1
-        }
-
-        moves[j] = mov;
-    }
-}
-
-fn insertion_sort_by<F>(moves: &mut [MovePlus], mut cmp: F)
-where
-    F: FnMut(Move, Move) -> cmp::Ordering,
-{
-    for i in 1..moves.len() {
-        let mov = moves[i];
-        let mut j = i;
-        while j > 0 {
-            if cmp(moves[j - 1].mov, mov.mov) == cmp::Ordering::Greater {
                 moves[j] = moves[j - 1];
             } else {
                 break;
