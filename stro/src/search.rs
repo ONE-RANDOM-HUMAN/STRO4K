@@ -268,6 +268,7 @@ impl<'a> Search<'a> {
 
             if depth > 0 || moves[index].mov.flags().is_noisy() {
                 moves.swap(0, index);
+                moves[0].score = i16::MAX;
                 ordered_moves = 1;
             }
 

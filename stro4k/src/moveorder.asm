@@ -4,7 +4,7 @@ section .text
 ; moves - r11
 ; move count - r12
 ; preserves rbx, rbp, r8, r11, r12, r13, r14, r15
-sort_moves_flags:
+sort_moves_by_score:
     push rbx
     push rbp
 
@@ -16,79 +16,14 @@ sort_moves_flags:
 
     mov r10d, dword [r11 + 4 * rbp]
     mov edx, r10d
-    and edx, 0F000h
+    and edx, 0FFF_0000h
     mov r9d, ebp
 .inner_loop_head:
     mov edi, dword [r11 + 4 * r9 - 4]
 
     ; compare moves
-    cmp dx, di
+    cmp edx, edi
     jna .inner_loop_end
-
-    mov dword [r11 + 4 * r9], edi
-    dec r9d
-    jnz .inner_loop_head
-.inner_loop_end:
-    mov dword [r11 + 4 * r9], r10d
-    inc ebp
-    jmp .outer_loop_head
-.end:
-    pop rbp
-    pop rbx
-    ret
-
-
-; board - rsi
-; moves - r11
-; move count - r12
-; preserves rbx, rbp, r8, r11, r12, r13, r14, r15
-sort_moves_mvvlva:
-    push rbx
-    push rbp
-
-    ; ebp - inner loop counter
-    mov ebp, 1
-.outer_loop_head:
-    cmp ebp, r12d
-    jae .end
-
-    mov r10d, dword [r11 + 4 * rbp]
-    mov r9d, ebp
-
-    ; attacker
-    movzx edx, r10w
-    call board_get_piece
-    mov ebx, eax
-    shr edx, 6
-
-    ; victim
-    xor r8, 48 ; switch pieces, taking advantage of 128 byte alignment
-    call board_get_piece
-    shl eax, 3 
-    sub ebx, eax
-
-    xor r8, 48
-
-.inner_loop_head:
-    mov edi, dword [r11 + 4 * r9 - 4]
-
-    ; attacker
-    movzx edx, di
-    call board_get_piece ; rhs attacker
-    mov esi, eax
-    shr edx, 6
-
-    ; victim
-    xor r8, 48
-    call board_get_piece ; rhs victim
-    shl eax, 3
-    sub esi, eax
-
-    xor r8, 48
-
-    ; compare moves
-    cmp ebx, esi
-    jnl .inner_loop_end
 
     mov dword [r11 + 4 * r9], edi
     dec r9d
