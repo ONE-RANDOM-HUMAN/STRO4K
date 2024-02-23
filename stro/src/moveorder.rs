@@ -54,7 +54,7 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
     // other moves
 
     for MovePlus { mov, score } in moves.iter_mut() {
-        *score = i16::from(mov.flags().0) << 11;
+        *score = i16::from(mov.flags().0) << 8;
 
         if mov.flags().is_capture() {
             let victim = position

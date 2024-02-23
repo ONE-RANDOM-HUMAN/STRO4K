@@ -479,6 +479,9 @@ alpha_beta:
     mov dword [rsp], edx
     mov dword [r11 - 4], ecx
 
+    ; give the first move the highest score
+    mov word [rsp + 2], 7FFFh
+
     ; set the number of ordered moves
     inc dword [rbp - 128 + ABLocals.ordered_moves]
 
@@ -622,66 +625,79 @@ alpha_beta:
 .no_null_move:
 
     ; order the noisy moves
-    mov eax, dword [rbp - 128 + ABLocals.ordered_moves]
-    mov rsi, qword [rbx]
+    mov r12d, dword [rbp - 128 + ABLocals.ordered_moves]
 
     ; r8 - pieces
-    mov r8, rsi
-    test byte [rsi + Board.side_to_move], 1
+    mov r8, qword [rbx]
+    test byte [r8 + Board.side_to_move], 1
     jz .order_noisy_white_move
 
     xor r8, 48
 
 .order_noisy_white_move:
 
-    ; sort the moves by flags
-
-    lea r11, [rsp + 4 * rax] ; moves to sort
-
-    ; r12 - number of moves
-    mov r12d, r14d
-    sub r12d, eax
+    ; sort the moves by flags and mvvlva
 
     ; noisy move ordering assumes the existance of at least
     ; one move to order
-    jz .order_noisy_no_moves
+    cmp r12d, r14d
+    jae .order_noisy_no_moves
 
-    call sort_moves_flags
+    ; edi - loop counter
+    mov edi, r12d
+.order_noisy_score_head:
+    ; edx - move
+    movzx edx, word [rsp + 4 * rdi + MovePlus.move]
 
-    ; find first non-promotion
-    xor ecx, ecx
-.order_noisy_find_non_promo_head:
-    test byte [r11 + 4 * rcx + 1], PROMO_FLAG << 4
-    jz .order_noisy_non_promo
+    ; eax - score
+    xor eax, eax
 
-    inc ecx
-    cmp ecx, r12d
-    jne .order_noisy_find_non_promo_head
+    test dh, CAPTURE_FLAG << 4
+    jz .order_noisy_non_capture
 
-    ; no quiet moves, just sort
-    jmp .order_noisy_sort_noisy
-.order_noisy_non_promo:
-    ; r11 - first non-promo move
-    lea r11, [r11 + 4 * rcx]
-    add dword [rbp - 128 + ABLocals.ordered_moves], ecx
+    ; esi - attacker
+    call board_get_piece
+    mov esi, eax
 
-    ; r12 - number of non-promo moves
-    sub r12d, ecx
+    ; eax - victim
+    shr edx, 6
+    xor r8, 48
+    call board_get_piece
+    xor r8, 48
 
-    ; count number of captures
-.order_noisy_find_quiet_head:
-    ; check if last move was noisy
-    test byte [r11 + 4 * r12 - 4 + 1], (PROMO_FLAG | CAPTURE_FLAG) << 4
-    jnz .order_noisy_sort_noisy
-    
-    dec r12d
-    jnz .order_noisy_find_quiet_head
+    ; eax - 8 * (victim + 1) - attacker
+    neg esi
+    lea eax, [rax * 8 + 8 + rsi]
 
-    ; sorting zero captures
-.order_noisy_sort_noisy:
-    add dword [rbp - 128 + ABLocals.ordered_moves], r12d
-    call sort_moves_mvvlva
-    
+    shl edx, 6
+.order_noisy_non_capture:
+    shr edx, 12
+    mov ah, dl
+    mov word [rsp + 4 * rdi + MovePlus.score], ax
+
+    inc edi
+    cmp edi, r14d
+    jb .order_noisy_score_head
+
+
+    lea r11, [rsp + 4 * r12] ; moves to sort
+
+    sub r12d, r14d
+    neg r12d
+    call sort_moves_by_score
+
+    mov ecx, r14d
+
+    ; zero all quiet non-hash move score and find the first such move
+.find_noisy_head:
+    test byte [rsp + 4 * rcx - 4 + MovePlus.score + 1], CAPTURE_FLAG | PROMO_FLAG
+    jnz .find_noisy_end
+    mov word [rsp + 4 * rcx - 4 + MovePlus.score], 0
+
+    dec ecx
+    jnz .find_noisy_head
+.find_noisy_end:
+    mov dword [rbp - 128 + ABLocals.ordered_moves], ecx
 
 .order_noisy_no_moves:
     ; ecx - static eval
