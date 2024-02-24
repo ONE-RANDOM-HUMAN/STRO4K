@@ -55,8 +55,13 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
     // regular captures by mvvlva
     // other moves
 
+    let mut noisy_count = 0;
     for MovePlus { mov, score } in moves.iter_mut() {
         *score = i16::from(mov.flags().0) << 8;
+
+        if mov.flags().is_noisy() {
+            noisy_count += 1
+        }
 
         if mov.flags().is_capture() {
             let victim = position
@@ -71,11 +76,7 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
         }
     }
 
-    insertion_sort_by_score(moves);
-    moves
-        .iter()
-        .position(|x| !x.mov.flags().is_noisy())
-        .unwrap_or(moves.len())
+    noisy_count
 }
 
 pub fn order_quiet_moves(
@@ -99,25 +100,6 @@ pub fn order_quiet_moves(
         }
     }
 
-    insertion_sort_by_score(moves);
     moves.len()
-}
-
-fn insertion_sort_by_score(moves: &mut [MovePlus]) {
-    for i in 1..moves.len() {
-        let mov = moves[i];
-        let mut j = i;
-        while j > 0 {
-            if moves[j - 1].score < mov.score {
-                moves[j] = moves[j - 1];
-            } else {
-                break;
-            }
-
-            j -= 1
-        }
-
-        moves[j] = mov;
-    }
 }
 

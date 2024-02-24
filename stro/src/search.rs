@@ -380,7 +380,18 @@ impl<'a> Search<'a> {
                 }
             }
 
-            let mov = moves[i].mov;
+            let mov = {
+                let mut best_index = i;
+                for j in i + 1..moves.len() {
+                    if moves[j].score > moves[best_index].score {
+                        best_index = j;
+                    }
+                }
+
+                moves.swap(i, best_index);
+                moves[i].mov
+            };
+
             if depth <= 0 {
                 assert!(mov.flags().is_noisy(), "{mov:?}");
             }
