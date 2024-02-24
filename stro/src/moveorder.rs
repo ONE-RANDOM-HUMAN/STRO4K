@@ -84,8 +84,14 @@ pub fn order_quiet_moves(
     history: &HistoryTable,
 ) -> usize {
     for mov in &mut *moves {
-        let score = history.get(mov.mov) as f32;
-        mov.score = (score.to_bits() >> 16) as i16;
+        let mut score = (history.get(mov.mov) as f32).to_bits() as i32;
+
+        // Invert for negatives
+        if score.is_negative() {
+            score ^= 0x7FFF_FFFF;
+        }
+
+        mov.score = (score >> 16) as i16;
 
         // killers
         if let Some(index) = kt.index(mov.mov) {

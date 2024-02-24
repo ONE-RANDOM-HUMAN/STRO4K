@@ -649,6 +649,10 @@ alpha_beta:
     ; edx - move
     movzx edx, word [rsp + 4 * rdi + MovePlus.move]
 
+    ; if move > CAPTURE_FLAG, then it is a capture or promo
+    cmp edx, CAPTURE_FLAG << 12
+    sbb dword [rbp - 128 + ABLocals.ordered_moves], -1
+
     ; eax - score
     xor eax, eax
 
@@ -685,18 +689,6 @@ alpha_beta:
     sub r12d, r14d
     neg r12d
     call sort_moves_by_score
-
-    mov ecx, r14d
-
-    ; find the first quiet non-hash move
-.find_noisy_head:
-    test byte [rsp + 4 * rcx - 4 + MovePlus.score + 1], CAPTURE_FLAG | PROMO_FLAG
-    jnz .find_noisy_end
-
-    dec ecx
-    jnz .find_noisy_head
-.find_noisy_end:
-    mov dword [rbp - 128 + ABLocals.ordered_moves], ecx
 
 .order_noisy_no_moves:
     ; ecx - static eval
@@ -806,23 +798,32 @@ alpha_beta:
     mov edi, edx
     and edi, 0FFFh
 
+    ; Using VEX-encoded variants makes this 1 byte larger
     cvtsi2ss xmm0, qword [r8 + 8 * rdi]
-    pextrw word [r11 + 4 * rcx + MovePlus.score], xmm0, 1
+    movd esi, xmm0
+
+    mov edi, esi
+    xor edi, 7FFF_FFFFh
+
+    test esi, esi
+    cmovs esi, edi
+    shr esi, 16
 
     ; killers
     mov edi, 07FFFh
-    mov esi, eax
-.killer_moves_head:
-    cmp dx, si
-    je .killer
 
+    ; unrolling this loop compresses very well
+    cmp dx, ax
+    cmove esi, edi
+    ror eax, 16
     dec edi
-    shr esi, 16
-    jnz .killer_moves_head
-    jmp .no_killer
-.killer:
-    mov word [r11 + 4 * rcx + MovePlus.score], di
-.no_killer:
+
+    cmp dx, ax
+    cmove esi, edi
+    ror eax, 16
+    dec edi ; does nothing but is 1 byte smaller after compression
+
+    mov word [r11 + 4 * rcx + MovePlus.score], si
 
     inc ecx
     cmp ecx, r12d
