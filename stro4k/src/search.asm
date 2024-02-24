@@ -649,6 +649,10 @@ alpha_beta:
     ; edx - move
     movzx edx, word [rsp + 4 * rdi + MovePlus.move]
 
+    ; if move > CAPTURE_FLAG, then it is a capture or promo
+    cmp edx, CAPTURE_FLAG << 12
+    sbb dword [rbp - 128 + ABLocals.ordered_moves], -1
+
     ; eax - score
     xor eax, eax
 
@@ -685,19 +689,6 @@ alpha_beta:
     sub r12d, r14d
     neg r12d
     call sort_moves_by_score
-
-    mov ecx, r14d
-
-    ; zero all quiet non-hash move score and find the first such move
-.find_noisy_head:
-    test byte [rsp + 4 * rcx - 4 + MovePlus.score + 1], CAPTURE_FLAG | PROMO_FLAG
-    jnz .find_noisy_end
-    mov word [rsp + 4 * rcx - 4 + MovePlus.score], 0
-
-    dec ecx
-    jnz .find_noisy_head
-.find_noisy_end:
-    mov dword [rbp - 128 + ABLocals.ordered_moves], ecx
 
 .order_noisy_no_moves:
     ; ecx - static eval
@@ -784,38 +775,9 @@ alpha_beta:
     jng .main_search_end
 
     ; order quiet moves
-    xor esi, esi
-.order_killer_moves_head:
-    ; eax - killer move
-    movzx eax, word [r13 + PlyData.kt + 2 * rsi]
-    test eax, eax
-    jz .order_killer_moves_end
+    ; sort moves by history and killers
+    mov eax, dword [r13 + PlyData.kt]
 
-    ; rdi - unordered moves
-    lea rdi, [rsp + 4 * rdx]
-
-    ; ecx - number of unordered moves
-    mov ecx, r14d
-    sub ecx, edx
-    jz .order_killer_moves_tail
-
-    ; FIXME: Currently the score are all zero, but this may change
-    repne scasd
-    jne .order_killer_moves_tail
-
-    ; swap the moves
-    mov ecx, dword [rsp + 4 * rdx]
-    mov dword [rdi - 4], ecx
-    mov dword [rsp + 4 * rdx], eax
-    
-    inc edx ; increment ordered moves
-.order_killer_moves_tail:
-    inc esi
-    cmp esi, 2
-    jne .order_killer_moves_head
-.order_killer_moves_end:
-    
-    ; sort moves by history
     lea r11, [rsp + 4 * rdx]
     mov r12d, r14d
     sub r12d, edx
@@ -828,8 +790,47 @@ alpha_beta:
 
     add r8, Search.black_history - Search.white_history
 .order_quiet_white_moves:
-    call sort_moves_history
+    xor ecx, ecx
 
+    ; there must be at least one quiet move or the search would have ended
+.history_score_head:
+    movzx edx, word [r11 + 4 * rcx + MovePlus.move]
+    mov edi, edx
+    and edi, 0FFFh
+
+    ; Using VEX-encoded variants makes this 1 byte larger
+    cvtsi2ss xmm0, qword [r8 + 8 * rdi]
+    movd esi, xmm0
+
+    mov edi, esi
+    xor edi, 7FFF_FFFFh
+
+    test esi, esi
+    cmovs esi, edi
+    shr esi, 16
+
+    ; killers
+    mov edi, 07FFFh
+
+    ; unrolling this loop compresses very well
+    cmp dx, ax
+    cmove esi, edi
+    ror eax, 16
+    dec edi
+
+    cmp dx, ax
+    cmove esi, edi
+    ror eax, 16
+    dec edi ; does nothing but is 1 byte smaller after compression
+
+    mov word [r11 + 4 * rcx + MovePlus.score], si
+
+    inc ecx
+    cmp ecx, r12d
+    jne .history_score_head
+.history_score_end:
+
+    call sort_moves_by_score
 .main_search_no_order_moves:
     ; load the current move
     movzx r12d, word [rsp + 4 * r15]
