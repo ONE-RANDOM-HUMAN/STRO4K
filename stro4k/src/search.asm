@@ -625,7 +625,6 @@ alpha_beta:
 .no_null_move:
 
     ; order the noisy moves
-    mov r12d, dword [rbp - 128 + ABLocals.ordered_moves]
 
     ; r8 - pieces
     mov r8, qword [rbx]
@@ -640,11 +639,11 @@ alpha_beta:
 
     ; noisy move ordering assumes the existance of at least
     ; one move to order
-    cmp r12d, r14d
+    mov edi, dword [rbp - 128 + ABLocals.ordered_moves]
+    cmp edi, r14d
     jae .order_noisy_no_moves
 
     ; edi - loop counter
-    mov edi, r12d
 .order_noisy_score_head:
     ; edx - move
     movzx edx, word [rsp + 4 * rdi + MovePlus.move]
@@ -682,14 +681,6 @@ alpha_beta:
     inc edi
     cmp edi, r14d
     jb .order_noisy_score_head
-
-
-    lea r11, [rsp + 4 * r12] ; moves to sort
-
-    sub r12d, r14d
-    neg r12d
-    call sort_moves_by_score
-
 .order_noisy_no_moves:
     ; ecx - static eval
     movsx ecx, word [rbp - 128 + ABLocals.static_eval]
@@ -761,8 +752,8 @@ alpha_beta:
     xor r15d, r15d
 .main_search_loop_head:
     ; check if moves should be ordered
-    mov edx, dword [rbp - 128 + ABLocals.ordered_moves]
-    cmp r15d, edx
+    mov ecx, dword [rbp - 128 + ABLocals.ordered_moves]
+    cmp r15d, ecx
     jne .main_search_no_order_moves
 
     ; order the quiet moves
@@ -778,10 +769,6 @@ alpha_beta:
     ; sort moves by history and killers
     mov eax, dword [r13 + PlyData.kt]
 
-    lea r11, [rsp + 4 * rdx]
-    mov r12d, r14d
-    sub r12d, edx
-
     ; load history
     lea r8, [rbx + Search.white_history]
     mov rsi, qword [rbx]
@@ -790,11 +777,10 @@ alpha_beta:
 
     add r8, Search.black_history - Search.white_history
 .order_quiet_white_moves:
-    xor ecx, ecx
 
     ; there must be at least one quiet move or the search would have ended
 .history_score_head:
-    movzx edx, word [r11 + 4 * rcx + MovePlus.move]
+    movzx edx, word [rsp + 4 * rcx + MovePlus.move]
     mov edi, edx
     and edi, 0FFFh
 
@@ -823,18 +809,38 @@ alpha_beta:
     ror eax, 16
     dec edi ; does nothing but is 1 byte smaller after compression
 
-    mov word [r11 + 4 * rcx + MovePlus.score], si
+    mov word [rsp + 4 * rcx + MovePlus.score], si
 
     inc ecx
-    cmp ecx, r12d
+    cmp ecx, r14d
     jne .history_score_head
 .history_score_end:
 
-    call sort_moves_by_score
 .main_search_no_order_moves:
-    ; load the current move
-    movzx r12d, word [rsp + 4 * r15]
 
+    ; load the next move
+
+    ; find the move with the highest score
+    mov edi, r15d
+    mov esi, edi
+.find_highest_score_head:
+    inc edi
+    cmp edi, r14d
+    je .find_highest_score_end
+
+    movzx ecx, word [rsp + 4 * rdi + MovePlus.score]
+    cmp cx, word [rsp + 4 * rsi + MovePlus.score]
+    cmovg esi, edi
+
+    jmp .find_highest_score_head
+.find_highest_score_end:
+    ; swap with the next move in the sequence
+    mov edi, dword [rsp + 4 * rsi]
+    mov ecx, dword [rsp + 4 * r15]
+    mov dword [rsp + 4 * rsi], ecx
+    mov dword [rsp + 4 * r15], edi
+
+    movzx r12d, di
 
     ; DEBUG: check that the move is noisy in qsearch
 %ifdef DEBUG
