@@ -190,6 +190,8 @@ struc ABLocals
         resd 1 ; lower bits are ignored
     .alpha:
         resd 1
+    .num_quiets:
+        resd 1
     .static_eval:
         resw 1
     .bound:
@@ -923,10 +925,14 @@ alpha_beta:
     ; r8 - gives check
     movzx r8d, al
 
-    ; futility pruning
-    test al, al
-    jnz .no_fprune_move
     test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
+    jnz .noisy_move
+
+    inc dword [rbp - 128 + ABLocals.num_quiets]
+
+    ; futility pruning
+    ; we already know that it is a quiet move
+    test al, al
     jnz .no_fprune_move
     test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
     jz .no_fprune_move
@@ -935,6 +941,7 @@ alpha_beta:
     add qword [rbx], -Board_size
     jmp .main_search_tail
 .no_fprune_move:
+.noisy_move:
     ; edi - -alpha
     mov edi, dword [rbp - 128 + ABLocals.alpha]
     neg edi
@@ -1139,6 +1146,18 @@ alpha_beta:
     mov byte [rbp - 128 + ABLocals.bound], BOUND_EXACT
     mov dword [rbp - 128 + ABLocals.alpha], eax
 .no_alpha_improvement:
+    ; Move count pruning
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
+    jnz .no_move_count_pruning
+
+    mov edx, dword [rbp + 8]
+    imul edx, edx
+    add edx, edx
+
+    cmp edx, dword [rbp - 128 + ABLocals.num_quiets]
+    jle .main_search_end
+
+.no_move_count_pruning:
 .main_search_tail:
     inc r15d
     cmp r15d, r14d

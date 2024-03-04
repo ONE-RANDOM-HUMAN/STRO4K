@@ -366,6 +366,7 @@ impl<'a> Search<'a> {
 
         // first quiet, non-tt move
         let first_quiet = ordered_moves;
+        let mut num_quiets = 0;
 
         for i in 0..moves.len() {
             if i == ordered_moves {
@@ -424,6 +425,10 @@ impl<'a> Search<'a> {
                 if !self.game.make_move(mov) {
                     continue; // the move was illegal
                 }
+            }
+
+            if !mov.flags().is_noisy() {
+                num_quiets += 1;
             }
 
             let gives_check = self.game.position().is_check();
@@ -510,6 +515,14 @@ impl<'a> Search<'a> {
             if eval > alpha {
                 bound = Bound::Exact;
                 alpha = eval;
+            }
+
+            // Move count based pruning
+            if !self.game.position().is_check()
+                && !pv_node
+                && num_quiets >= 2 * depth * depth
+            {
+                break;
             }
         }
 
