@@ -520,7 +520,7 @@ impl<'a> Search<'a> {
             // Move count based pruning
             if !self.game.position().is_check()
                 && !pv_node
-                && num_quiets >= 2 * depth * depth
+                && num_quiets >= 2 + depth * depth
             {
                 break;
             }

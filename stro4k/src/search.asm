@@ -1150,11 +1150,11 @@ alpha_beta:
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_move_count_pruning
 
-    mov edx, dword [rbp + 8]
-    imul edx, edx
-    add edx, edx
+    mov eax, dword [rbp + 8]
+    imul eax, eax
+    add eax, 2
 
-    cmp edx, dword [rbp - 128 + ABLocals.num_quiets]
+    cmp eax, dword [rbp - 128 + ABLocals.num_quiets]
     jle .main_search_end
 
 .no_move_count_pruning:
