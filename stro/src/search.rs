@@ -518,9 +518,15 @@ impl<'a> Search<'a> {
             }
 
             // Move count based pruning
+            let search_quiet_count = if improving {
+                2 + depth * depth
+            } else {
+                (3 + depth * depth) / 2
+            };
+
             if !self.game.position().is_check()
                 && !pv_node
-                && num_quiets >= 2 + depth * depth
+                && num_quiets >= search_quiet_count
             {
                 break;
             }

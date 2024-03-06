@@ -1154,6 +1154,14 @@ alpha_beta:
     imul eax, eax
     add eax, 2
 
+    test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
+    jnz .move_count_pruning_improving
+
+    inc eax
+    shr eax, 1
+
+.move_count_pruning_improving:
+
     cmp eax, dword [rbp - 128 + ABLocals.num_quiets]
     jle .main_search_end
 
