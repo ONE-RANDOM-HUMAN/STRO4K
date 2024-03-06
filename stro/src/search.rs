@@ -427,10 +427,6 @@ impl<'a> Search<'a> {
                 }
             }
 
-            if !mov.flags().is_noisy() {
-                num_quiets += 1;
-            }
-
             let gives_check = self.game.position().is_check();
 
             if f_prune && !mov.flags().is_noisy() && !gives_check {
@@ -487,6 +483,10 @@ impl<'a> Search<'a> {
 
             unsafe {
                 self.game.unmake_move();
+            }
+
+            if !mov.flags().is_noisy() {
+                num_quiets += 1;
             }
 
             if eval > best_eval {
