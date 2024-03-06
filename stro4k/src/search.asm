@@ -925,15 +925,13 @@ alpha_beta:
     ; r8 - gives check
     movzx r8d, al
 
-    test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
-    jnz .noisy_move
-
-    inc dword [rbp - 128 + ABLocals.num_quiets]
-
     ; futility pruning
-    ; we already know that it is a quiet move
     test al, al
     jnz .no_fprune_move
+
+    test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
+    jnz .no_fprune_move
+
     test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
     jz .no_fprune_move
 
@@ -941,7 +939,6 @@ alpha_beta:
     add qword [rbx], -Board_size
     jmp .main_search_tail
 .no_fprune_move:
-.noisy_move:
     ; edi - -alpha
     mov edi, dword [rbp - 128 + ABLocals.alpha]
     neg edi
@@ -1073,6 +1070,10 @@ alpha_beta:
     ; unmake move
     add qword [rbx], -Board_size
 
+    test r12d, (CAPTURE_FLAG | PROMO_FLAG) << 12
+    jnz .noisy_move
+    inc dword [rbp - 128 + ABLocals.num_quiets]
+.noisy_move:
 
     ; check best move
     cmp eax, dword [rbp - 128 + ABLocals.best_eval]
