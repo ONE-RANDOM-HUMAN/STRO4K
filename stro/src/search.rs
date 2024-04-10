@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{gen_moves, MoveBuf};
-use crate::moveorder::{self, HistoryTable, KillerTable};
+use crate::moveorder::{self, simple_see, HistoryTable, KillerTable};
 use crate::position::{Board, Move};
 use crate::tt::{self, Bound, TTData};
 
@@ -394,6 +394,10 @@ impl<'a> Search<'a> {
 
             if depth <= 0 {
                 assert!(mov.flags().is_noisy(), "{mov:?}");
+
+                if !simple_see(mov, self.game.position()) {
+                    continue;
+                }
             }
 
             if f_prune && depth <= 0 {
