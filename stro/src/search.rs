@@ -395,32 +395,27 @@ impl<'a> Search<'a> {
             if depth <= 0 {
                 assert!(mov.flags().is_noisy(), "{mov:?}");
 
-                if !simple_see(mov, self.game.position()) {
+                let see = simple_see(mov, self.game.position());
+                if see.is_negative() {
                     continue;
                 }
-            }
 
-            if f_prune && depth <= 0 {
-                // Delta pruning
-                const PIECE_VALUES: [i32; 5] = [114, 425, 425, 648, 1246];
-                const DELTA_BASE: i32 = 178;
-                const IMPROVING_BONUS: i32 = 11;
+                if f_prune {
+                    // Delta pruning
+                    const PIECE_VALUES: [i32; 5] = [114, 425, 425, 648, 1246];
+                    const DELTA_BASE: i32 = 178;
+                    const IMPROVING_BONUS: i32 = 11;
 
-                let capture = self
-                    .game
-                    .position()
-                    .get_piece(mov.dest(), self.game.position().side_to_move().other())
-                    .map_or(0, |x| PIECE_VALUES[x as usize]);
+                    let promo = mov
+                        .flags()
+                        .promo_piece()
+                        .map_or(0, |x| PIECE_VALUES[x as usize]);
 
-                let promo = mov
-                    .flags()
-                    .promo_piece()
-                    .map_or(0, |x| PIECE_VALUES[x as usize]);
-
-                if static_eval + capture + promo + DELTA_BASE + (improving as i32 * IMPROVING_BONUS)
-                    <= alpha
-                {
-                    continue;
+                    if static_eval + see + promo + DELTA_BASE + (improving as i32 * IMPROVING_BONUS)
+                        <= alpha
+                    {
+                            continue;
+                    }
                 }
             }
 

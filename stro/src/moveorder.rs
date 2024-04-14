@@ -52,7 +52,7 @@ impl Default for HistoryTable {
 
 /// SEE, but we only evaluate at most one defender and always
 /// assume that we can capture it
-pub fn simple_see(mov: Move, position: &Board) -> bool {
+pub fn simple_see(mov: Move, position: &Board) -> i32 {
     // Same values as delta pruning, plus an eval for king
     const PIECE_VALUES: [i32; 6] = [114, 425, 425, 648, 1246, MAX_EVAL];
     let victim = position.get_piece(mov.dest(), position.side_to_move().other())
@@ -61,10 +61,10 @@ pub fn simple_see(mov: Move, position: &Board) -> bool {
     let mut gain = PIECE_VALUES[victim as usize];
     if let Some(piece) = position.area_attacked_by(mov.dest().as_mask()) {
         let attacker = position.get_piece(mov.origin(), position.side_to_move()).unwrap();
-        gain += PIECE_VALUES[piece as usize] - PIECE_VALUES[attacker as usize];
+        gain += std::cmp::min(0, PIECE_VALUES[piece as usize] - PIECE_VALUES[attacker as usize]);
     }
 
-    gain >= 0
+    gain
 }
 
 pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {

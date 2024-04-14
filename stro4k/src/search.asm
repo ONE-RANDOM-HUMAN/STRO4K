@@ -877,8 +877,13 @@ alpha_beta:
     ; get the attacking piece
     xor r8, 48
     call board_get_piece
+    ; xor ecx, ecx
     movzx eax, word [rsi + 2 * rax]
     sub edi, eax
+    ; cmovns edi, ecx
+    js .should_not_capture
+    xor edi, edi
+.should_not_capture:
     xor r8, 48
 
 .see_no_defender:
@@ -899,9 +904,9 @@ alpha_beta:
     test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
     jz .no_delta_prune
 
-    ; edi - eval
-    movsx edi, word [rbp - 128 + ABLocals.static_eval]
-    add edi, DELTA_BASE
+    ; edi - static eval + see
+    movsx eax, word [rbp - 128 + ABLocals.static_eval]
+    lea edi, [rdi + rax + DELTA_BASE]
 
     ; add improving bonus
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
@@ -909,43 +914,14 @@ alpha_beta:
 
     add edi, DELTA_IMPROVING_BONUS
 .delta_prune_not_improving:
-
-    ; rsi - piece values
-    lea rsi, [PIECE_VALUES]
-
-    ; edx - move
-    mov edx, r12d
-
-    ; get the promo score
-    test dh, PROMO_FLAG << 4
+    test dh, PROMO_FLAG >> 2
     jz .delta_prune_no_promo
 
-    mov ecx, edx
-    shr ecx, 12
-    and ecx, 11b
-
-    movzx ecx, word [rsi + 2 * rcx + 2]
+    shr edx, 6
+    and edx, 11b
+    movzx ecx, word [rsi + 2 * rdx + 2]
     add edi, ecx
 .delta_prune_no_promo:
-
-    ; get the capture score
-
-    ; r8 - enemy pieces
-    mov r8, qword [rbx]
-    test byte [r8 + Board.side_to_move], 1
-    jnz .delta_prune_black
-
-    add r8, 48
-.delta_prune_black:
-    shr edx, 6
-
-    call board_get_piece
-    cmp al, 0
-    jl .delta_prune_no_capture
-
-    movzx ecx, word [rsi + 2 * rax]
-    add edi, ecx
-.delta_prune_no_capture:
     cmp edi, dword [rbp - 128 + ABLocals.alpha]
     jle .main_search_tail
 .no_delta_prune:
