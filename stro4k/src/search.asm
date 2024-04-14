@@ -10,12 +10,14 @@ DELTA_BASE equ 178
 DELTA_IMPROVING_BONUS equ 11
 
 section .rodata
-DELTA_PRUNE_PIECE_VALUES:
+PIECE_VALUES:
     dw 114
     dw 425
     dw 425
     dw 648
     dw 1246
+    dw MAX_EVAL
+    dw 0
 
 default rel
 section .text
@@ -842,25 +844,60 @@ alpha_beta:
 
     movzx r12d, di
 
+    cmp dword [rbp + 8], 0
+    jnle .not_quiescence
+
     ; DEBUG: check that the move is noisy in qsearch
 %ifdef DEBUG
-    cmp dword [rbp + 8], 0
-    jnle .debug_not_quiescence
-
     test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
     jnz .debug_noisy
     int3
-.debug_not_quiescence:
 .debug_noisy:
 %endif
+    ; SEE pruning
+    ; rsi - board
+    mov rsi, qword [rbx]
+
+    ; edi - destination
+    xor edi, edi
+    mov edx, r12d
+    shr edx, 6
+    bts rdi, rdx
+
+    call board_area_attacked_by
+
+    lea rsi, [PIECE_VALUES]
+    mov r8, r10 ; r8 - enemy pieces
+    mov edx, r12d ; edx - move
+
+    ; edi - captured piece
+    movzx edi, word [rsi + 2 * rax]
+    jz .see_no_defender
+
+    ; get the attacking piece
+    xor r8, 48
+    call board_get_piece
+    movzx eax, word [rsi + 2 * rax]
+    sub edi, eax
+    xor r8, 48
+
+.see_no_defender:
+
+    ; Value of captured piece
+    shr edx, 6
+    call board_get_piece
+    jns .see_no_ep
+    xor eax, eax
+.see_no_ep:
+    movzx eax, word [rsi + 2 * rax]
+    add edi, eax
+    js .main_search_tail
+
+
     ; delta pruning
     ; check that futility pruning is enabled
     test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
     jz .no_delta_prune
-
-    ; check that we are in qsearch
-    cmp dword [rbp + 8], 0
-    jnle .no_delta_prune
 
     ; edi - eval
     movsx edi, word [rbp - 128 + ABLocals.static_eval]
@@ -874,7 +911,7 @@ alpha_beta:
 .delta_prune_not_improving:
 
     ; rsi - piece values
-    lea rsi, [DELTA_PRUNE_PIECE_VALUES]
+    lea rsi, [PIECE_VALUES]
 
     ; edx - move
     mov edx, r12d
@@ -912,6 +949,7 @@ alpha_beta:
     cmp edi, dword [rbp - 128 + ABLocals.alpha]
     jle .main_search_tail
 .no_delta_prune:
+.not_quiescence:
     ; make the move
     mov edx, r12d
     call game_make_move
