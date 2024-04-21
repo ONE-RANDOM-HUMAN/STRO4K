@@ -854,6 +854,9 @@ alpha_beta:
     int3
 .debug_noisy:
 %endif
+
+    test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
+    jz .no_see_delta_prune
     ; SEE pruning
     ; rsi - board
     mov rsi, qword [rbx]
@@ -900,10 +903,6 @@ alpha_beta:
 
 
     ; delta pruning
-    ; check that futility pruning is enabled
-    test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
-    jz .no_delta_prune
-
     ; edi - static eval + see
     movsx eax, word [rbp - 128 + ABLocals.static_eval]
     lea edi, [rdi + rax + DELTA_BASE]
@@ -924,7 +923,7 @@ alpha_beta:
 .delta_prune_no_promo:
     cmp edi, dword [rbp - 128 + ABLocals.alpha]
     jle .main_search_tail
-.no_delta_prune:
+.no_see_delta_prune:
 .not_quiescence:
     ; make the move
     mov edx, r12d
