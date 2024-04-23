@@ -396,7 +396,7 @@ impl<'a> Search<'a> {
                 assert!(mov.flags().is_noisy(), "{mov:?}");
 
                 let see = simple_see(mov, self.game.position());
-                if see.is_negative() {
+                if see.is_negative() && !pv_node && !is_check {
                     continue;
                 }
 

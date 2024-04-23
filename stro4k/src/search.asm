@@ -896,7 +896,11 @@ alpha_beta:
 .see_no_ep:
     movzx eax, word [rsi + 2 * rax]
     add edi, eax
-    js .main_search_tail
+    jns .no_see_pruning
+
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
+    jz .main_search_tail
+.no_see_pruning:
 
 
     ; delta pruning
