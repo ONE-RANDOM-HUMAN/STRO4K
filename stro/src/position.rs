@@ -344,7 +344,11 @@ impl Board {
             && self.castling == other.castling
     }
 
-    fn is_area_attacked(&self, area: Bitboard) -> bool {
+    pub fn is_area_attacked(&self, area: Bitboard) -> bool {
+        self.area_attacked_by(area).is_some()
+    }
+
+    pub fn area_attacked_by(&self, area: Bitboard) -> Option<Piece> {
         let enemy = self.pieces[self.side_to_move.other() as usize];
         let occ = self.colors[0] | self.colors[1];
 
@@ -355,7 +359,7 @@ impl Board {
         };
 
         if attacks & area != 0 {
-            return true;
+            return Some(Piece::Pawn)
         }
 
         let move_fns = [
@@ -368,11 +372,11 @@ impl Board {
 
         for i in 1..6 {
             if move_fns[i - 1](enemy[i], occ) & area != 0 {
-                return true;
+                return Piece::from_index(i as u8);
             }
         }
 
-        false
+        None
     }
 }
 

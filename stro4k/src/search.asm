@@ -10,12 +10,13 @@ DELTA_BASE equ 178
 DELTA_IMPROVING_BONUS equ 11
 
 section .rodata
-DELTA_PRUNE_PIECE_VALUES:
-    dw 114
-    dw 425
-    dw 425
-    dw 648
-    dw 1246
+PIECE_VALUES:
+    dd 114
+    dd 425
+    dd 425
+    dd 648
+    dd 1246
+    dd MAX_EVAL
 
 default rel
 section .text
@@ -842,29 +843,69 @@ alpha_beta:
 
     movzx r12d, di
 
+    cmp dword [rbp + 8], 0
+    jnle .not_quiescence
+
     ; DEBUG: check that the move is noisy in qsearch
 %ifdef DEBUG
-    cmp dword [rbp + 8], 0
-    jnle .debug_not_quiescence
-
     test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
     jnz .debug_noisy
     int3
-.debug_not_quiescence:
 .debug_noisy:
 %endif
+    ; SEE pruning
+    ; rsi - board
+    mov rsi, qword [rbx]
+
+    ; edi - destination
+    xor edi, edi
+    mov edx, r12d
+    shr edx, 6
+    bts rdi, rdx
+
+    call board_area_attacked_by
+
+    lea rsi, [PIECE_VALUES]
+    mov r8, r10 ; r8 - enemy pieces
+    mov edx, r12d ; edx - move
+    jz .see_no_defender
+
+    ; edi - recapturing piece
+    mov edi, dword [rsi + 4 * rax]
+
+
+    ; get the attacking piece
+    xor r8, 48
+    call board_get_piece
+    xor r8, 48
+
+    sub edi, dword [rsi + 4 * rax]
+    js .see_should_not_recapture
+.see_no_defender:
+    xor edi, edi
+.see_should_not_recapture:
+
+    ; Value of captured piece
+    shr edx, 6
+    call board_get_piece
+    jns .see_no_ep
+    xor eax, eax
+.see_no_ep:
+    add edi, dword [rsi + 4 * rax]
+    jns .no_see_pruning
+
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
+    jz .main_search_tail
+.no_see_pruning:
+
     ; delta pruning
     ; check that futility pruning is enabled
     test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
     jz .no_delta_prune
 
-    ; check that we are in qsearch
-    cmp dword [rbp + 8], 0
-    jnle .no_delta_prune
-
-    ; edi - eval
-    movsx edi, word [rbp - 128 + ABLocals.static_eval]
-    add edi, DELTA_BASE
+    ; edi - static eval + see
+    movsx eax, word [rbp - 128 + ABLocals.static_eval]
+    lea edi, [rdi + rax + DELTA_BASE]
 
     ; add improving bonus
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
@@ -872,46 +913,17 @@ alpha_beta:
 
     add edi, DELTA_IMPROVING_BONUS
 .delta_prune_not_improving:
-
-    ; rsi - piece values
-    lea rsi, [DELTA_PRUNE_PIECE_VALUES]
-
-    ; edx - move
-    mov edx, r12d
-
-    ; get the promo score
-    test dh, PROMO_FLAG << 4
+    test dh, PROMO_FLAG >> 2
     jz .delta_prune_no_promo
 
-    mov ecx, edx
-    shr ecx, 12
-    and ecx, 11b
-
-    movzx ecx, word [rsi + 2 * rcx + 2]
-    add edi, ecx
-.delta_prune_no_promo:
-
-    ; get the capture score
-
-    ; r8 - enemy pieces
-    mov r8, qword [rbx]
-    test byte [r8 + Board.side_to_move], 1
-    jnz .delta_prune_black
-
-    add r8, 48
-.delta_prune_black:
     shr edx, 6
-
-    call board_get_piece
-    cmp al, 0
-    jl .delta_prune_no_capture
-
-    movzx ecx, word [rsi + 2 * rax]
-    add edi, ecx
-.delta_prune_no_capture:
+    and edx, 11b
+    add edi, dword [rsi + 4 * rdx + 4]
+.delta_prune_no_promo:
     cmp edi, dword [rbp - 128 + ABLocals.alpha]
     jle .main_search_tail
 .no_delta_prune:
+.not_quiescence:
     ; make the move
     mov edx, r12d
     call game_make_move

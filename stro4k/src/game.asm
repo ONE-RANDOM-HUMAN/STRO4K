@@ -143,12 +143,12 @@ game_make_move:
     mov qword [rsi + Board.black], rbx
 
     ; rdi - area
-    call board_is_area_attacked
+    call board_area_attacked_by
     pop rdx ; restore move
     pop rbx ; restore game
 
-    ; Return with CF=1 for illegal move if al is not zero
-    add al, -1
+    ; Return with CF=1 for illegal move if al is not 6
+    sub al, 6
     jc .end
 
     ; rdi - origin
@@ -213,7 +213,9 @@ board_get_piece:
 
 ; board - rsi
 ; area - rdi
-board_is_area_attacked:
+; indicates that there is no attacker by eax = 6 and ZF=1
+; sets r10 to enemy pieces
+board_area_attacked_by:
     ; eax - enemy color
     movzx eax, byte [rsi + Board.side_to_move]
     xor al, 1
@@ -241,12 +243,13 @@ board_is_area_attacked:
     shl rdx, 7
     or rcx, rdx
 
-    test rdi, rcx
-    jnz .end
-
     ; area - r8
     test al, al
     cmovz r8, rdi ; enemy is white
+
+    xor eax, eax
+    test rdi, rcx
+    jnz .attacked_by_pawn
 
     ; r9 - occ
     mov r9, qword [rsi + Board.white]
@@ -254,20 +257,23 @@ board_is_area_attacked:
 
     
     ; possible performance improvement from iterating tho other way
-    lea rcx, [move_fns + 8]
-    mov edi, 5
+    lea rcx, [move_fns]
+    mov edi, 1
 .piece_moves_head:
     call rcx
     test rax, qword[r10 + 8 * rdi]
     jnz .end
-    sub rcx, 2
-    dec edi
-    jnz .piece_moves_head
+    add rcx, 2
+    inc edi
+    cmp edi, 6
+    jne .piece_moves_head ; jne = jnz
 .end:
-    setnz al
+    mov eax, edi
+.attacked_by_pawn:
     ret
 
 ; rsi - board
+; returns value in NZ flag and al
 board_is_check:
     movzx eax, byte [rsi + Board.side_to_move]
     shl eax, 4
@@ -275,5 +281,7 @@ board_is_check:
 
     mov rdi, qword [rsi + rax + 40] ; king
 
-    jmp board_is_area_attacked
+    call board_area_attacked_by
+    setnz al
+    ret
 

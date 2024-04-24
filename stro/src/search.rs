@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{gen_moves, MoveBuf};
-use crate::moveorder::{self, HistoryTable, KillerTable};
+use crate::moveorder::{self, simple_see, HistoryTable, KillerTable};
 use crate::position::{Board, Move};
 use crate::tt::{self, Bound, TTData};
 
@@ -394,29 +394,28 @@ impl<'a> Search<'a> {
 
             if depth <= 0 {
                 assert!(mov.flags().is_noisy(), "{mov:?}");
-            }
 
-            if f_prune && depth <= 0 {
-                // Delta pruning
-                const PIECE_VALUES: [i32; 5] = [114, 425, 425, 648, 1246];
-                const DELTA_BASE: i32 = 178;
-                const IMPROVING_BONUS: i32 = 11;
-
-                let capture = self
-                    .game
-                    .position()
-                    .get_piece(mov.dest(), self.game.position().side_to_move().other())
-                    .map_or(0, |x| PIECE_VALUES[x as usize]);
-
-                let promo = mov
-                    .flags()
-                    .promo_piece()
-                    .map_or(0, |x| PIECE_VALUES[x as usize]);
-
-                if static_eval + capture + promo + DELTA_BASE + (improving as i32 * IMPROVING_BONUS)
-                    <= alpha
-                {
+                let see = simple_see(mov, self.game.position());
+                if see.is_negative() && !pv_node && !is_check {
                     continue;
+                }
+
+                if f_prune {
+                    // Delta pruning
+                    const PIECE_VALUES: [i32; 5] = [114, 425, 425, 648, 1246];
+                    const DELTA_BASE: i32 = 178;
+                    const IMPROVING_BONUS: i32 = 11;
+
+                    let promo = mov
+                        .flags()
+                        .promo_piece()
+                        .map_or(0, |x| PIECE_VALUES[x as usize]);
+
+                    if static_eval + see + promo + DELTA_BASE + (improving as i32 * IMPROVING_BONUS)
+                        <= alpha
+                    {
+                            continue;
+                    }
                 }
             }
 
