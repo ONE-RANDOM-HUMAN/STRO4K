@@ -12,6 +12,8 @@ STRO4K 1.0 is available in the `version_1.0` branch. It has the extra feature of
 
 STRO4K 2.0 is available in the `version_2.0` branch. It does not have the extra features of STRO4K 1.0 due to size limitations.
 
+STRO4K 2.1 is available in the `version_2.1` branch. It displays the evaluation, but does not support resetting the engine state due to size limitations.
+
 ## Building
 STRO4K has only been tested to build on Linux systems. Building STRO4K requires `nasm`, `xz` and [`sstrip`](https://github.com/aunali1/super-strip). A script is provided which attempts to download `sstrip` and build STRO4K.
 
