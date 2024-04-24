@@ -11,13 +11,12 @@ DELTA_IMPROVING_BONUS equ 11
 
 section .rodata
 PIECE_VALUES:
-    dw 114
-    dw 425
-    dw 425
-    dw 648
-    dw 1246
-    dw MAX_EVAL
-    dw 0
+    dd 114
+    dd 425
+    dd 425
+    dd 648
+    dd 1246
+    dd MAX_EVAL
 
 default rel
 section .text
@@ -869,24 +868,22 @@ alpha_beta:
     lea rsi, [PIECE_VALUES]
     mov r8, r10 ; r8 - enemy pieces
     mov edx, r12d ; edx - move
-
-    ; edi - captured piece
-    movzx edi, word [rsi + 2 * rax]
     jz .see_no_defender
+
+    ; edi - recapturing piece
+    mov edi, dword [rsi + 4 * rax]
+
 
     ; get the attacking piece
     xor r8, 48
     call board_get_piece
-    ; xor ecx, ecx
-    movzx eax, word [rsi + 2 * rax]
-    sub edi, eax
-    ; cmovns edi, ecx
-    js .should_not_capture
-    xor edi, edi
-.should_not_capture:
     xor r8, 48
 
+    sub edi, dword [rsi + 4 * rax]
+    js .see_should_not_recapture
 .see_no_defender:
+    xor edi, edi
+.see_should_not_recapture:
 
     ; Value of captured piece
     shr edx, 6
@@ -894,14 +891,12 @@ alpha_beta:
     jns .see_no_ep
     xor eax, eax
 .see_no_ep:
-    movzx eax, word [rsi + 2 * rax]
-    add edi, eax
+    add edi, dword [rsi + 4 * rax]
     jns .no_see_pruning
 
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jz .main_search_tail
 .no_see_pruning:
-
 
     ; delta pruning
     ; check that futility pruning is enabled
@@ -923,8 +918,7 @@ alpha_beta:
 
     shr edx, 6
     and edx, 11b
-    movzx ecx, word [rsi + 2 * rdx + 2]
-    add edi, ecx
+    add edi, dword [rsi + 4 * rdx + 4]
 .delta_prune_no_promo:
     cmp edi, dword [rbp - 128 + ABLocals.alpha]
     jle .main_search_tail
