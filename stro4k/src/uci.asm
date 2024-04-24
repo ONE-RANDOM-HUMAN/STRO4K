@@ -279,14 +279,12 @@ _start:
 
 .position:
     ; read 2 * 8 bytes
+    ; 'osition startpos'
     push 8
     pop rdx
-    xor ebx, ebx
-.position_read_startpos: ; read 16 bytes 'osition startpos'
-    call read
-    dec ebx
-    jpe .position_read_startpos ; loops twice
 
+    call read
+    call read
 
     ; rbx - game
     push rsp

@@ -932,11 +932,8 @@ alpha_beta:
     ; rsi is a pointer to the current board
     call board_is_check
 
-    ; r8 - gives check
-    movzx r8d, al
-
     ; futility pruning
-    test al, al
+    ; is check
     jnz .no_fprune_move
     test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
     jnz .no_fprune_move
@@ -985,7 +982,7 @@ alpha_beta:
     jne .no_lmr_reduction
 
     ; gives check
-    test r8d, r8d
+    test al, al
     jnz .no_lmr_reduction
 
     ; calculate lmr depth
