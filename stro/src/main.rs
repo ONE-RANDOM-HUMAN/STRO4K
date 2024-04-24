@@ -57,10 +57,10 @@ fn main() {
     println!("option name LmrDepth type string default 0.25");
     println!("option name LmrMove type string default 0.128");
     println!("option name LmrImprove type string default -1.0");
-    println!("option name NmrBase type string default 3.0");
-    println!("option name NmrDepth type string default 0.25");
-    println!("option name NmrStaticEval type string default 0.01");
-    println!("option name NmrImprove type string default -0.5");
+    println!("option name NmpBase type string default 3.0");
+    println!("option name NmpDepth type string default 0.25");
+    println!("option name NmpStaticEval type string default 0.01");
+    println!("option name NmpImprove type string default -0.5");
     println!("option name MinTimeFrac type string default 0.025");
     println!("option name MinIncFrac type string default 0.0");
     println!("option name MaxTimeFrac type string default 0.05");
@@ -196,10 +196,10 @@ fn uci_loop() {
                 "lmrimprove" => unsafe {
                     stro::search::LMR_IMPROVING = value.parse().unwrap()
                 }
-                "nmrbase" => unsafe {
+                "nmpbase" => unsafe {
                     stro::search::NMP_BASE = value.parse().unwrap()
                 }
-                "nmrdepth" => unsafe {
+                "nmpdepth" => unsafe {
                     stro::search::NMP_DEPTH = value.parse().unwrap()
                 }
                 "nmpstaticeval" => unsafe {
