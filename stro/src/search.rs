@@ -319,7 +319,7 @@ impl<'a> Search<'a> {
             // Null move pruning
             if depth >= 3 {
                 // Round towards -inf is fine
-                let r = (635 + depth * 36 + 3 * (static_eval - beta) - 118 * improving as i32) >> 8;
+                let r = (635 + depth * 36 + 2 * (static_eval - beta) - 118 * improving as i32) >> 8;
 
                 unsafe {
                     self.game.make_null_move();

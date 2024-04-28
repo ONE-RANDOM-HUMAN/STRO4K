@@ -600,7 +600,6 @@ alpha_beta:
     mov ecx, dword [rbp + 8]
     imul esi, ecx, 36
     lea esi, [rsi + 2 * r15 + 635 + 256] ; + 256 since formula is depth - r - 1
-    add esi, r15d
 
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .nmp_not_improving
