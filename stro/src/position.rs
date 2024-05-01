@@ -1,7 +1,7 @@
 use std::fmt;
 use std::num::NonZeroU16;
 
-use crate::{consts, movegen};
+use crate::{consts, evaluate, movegen};
 
 pub type Bitboard = u64;
 
@@ -348,18 +348,19 @@ impl Board {
         self.area_attacked_by(area).is_some()
     }
 
-    pub fn area_attacked_by(&self, area: Bitboard) -> Option<Piece> {
+    pub fn area_attacked_by(&self, area: Bitboard) -> Option<(Piece, Bitboard)> {
         let enemy = self.pieces[self.side_to_move.other() as usize];
         let occ = self.colors[0] | self.colors[1];
 
         let attacks = if self.side_to_move == Color::White {
-            ((enemy[0] >> 7) & !consts::A_FILE) | ((enemy[0] & !consts::A_FILE) >> 9)
+            ((area << 9) & !consts::A_FILE) | ((area & !consts::A_FILE) << 7)
         } else {
-            ((enemy[0] << 9) & !consts::A_FILE) | ((enemy[0] & !consts::A_FILE) << 7)
+            ((area >> 7) & !consts::A_FILE) | ((area & !consts::A_FILE) >> 9)
         };
 
-        if attacks & area != 0 {
-            return Some(Piece::Pawn)
+        let attacks = attacks & enemy[0];
+        if attacks != 0 {
+            return Some((Piece::Pawn, attacks));
         }
 
         let move_fns = [
@@ -371,12 +372,73 @@ impl Board {
         ];
 
         for i in 1..6 {
-            if move_fns[i - 1](enemy[i], occ) & area != 0 {
-                return Piece::from_index(i as u8);
+            let attacks = move_fns[i - 1](area, occ) & enemy[i];
+            if attacks != 0 {
+                return Some((Piece::from_index(i as u8).unwrap(), attacks));
             }
         }
 
         None
+    }
+
+    #[must_use]
+    pub fn see(mut self, mov: Move) -> i32 {
+        self.side_to_move = self.side_to_move.other();
+
+        let mut eval = 0;
+
+        // Remove the captured piece
+        if let Some(captured_piece) = self.get_piece(mov.dest(), self.side_to_move) {
+            eval = evaluate::PIECE_VALUES[captured_piece as usize];
+            self.pieces[self.side_to_move as usize][captured_piece as usize] ^= mov.dest().as_mask();
+            self.colors[self.side_to_move as usize] ^= mov.dest().as_mask()
+        }
+
+        // Remove the attacking piece
+        let attacking_piece = self.get_piece(mov.origin(), self.side_to_move.other()).unwrap();
+        self.pieces[self.side_to_move.other() as usize][attacking_piece as usize] ^= mov.origin().as_mask();
+        self.colors[self.side_to_move.other() as usize] ^= mov.origin().as_mask();
+
+
+        let mut beta = eval;
+        eval -= evaluate::PIECE_VALUES[attacking_piece as usize];
+        let mut alpha = eval;
+
+        loop {
+            // Get piece opponent captures with
+            self.side_to_move = self.side_to_move.other();
+            if let Some((piece, attackers)) = self.area_attacked_by(mov.dest().as_mask()) {
+                self.pieces[self.side_to_move.other() as usize][piece as usize]
+                    ^= attackers & attackers.wrapping_neg();
+                self.colors[self.side_to_move.other() as usize] ^= attackers & attackers.wrapping_neg();
+                eval += evaluate::PIECE_VALUES[piece as usize];
+            } else {
+                return beta;
+            }
+
+            if eval <= alpha {
+                return alpha;
+            }
+
+            beta = std::cmp::min(beta, eval);
+
+            // Get piece we capture with
+            self.side_to_move = self.side_to_move.other();
+            if let Some((piece, attackers)) = self.area_attacked_by(mov.dest().as_mask()) {
+                self.pieces[self.side_to_move.other() as usize][piece as usize]
+                    ^= attackers & attackers.wrapping_neg();
+                self.colors[self.side_to_move.other() as usize] ^= attackers & attackers.wrapping_neg();
+                eval -= evaluate::PIECE_VALUES[piece as usize]
+            } else {
+                return alpha;
+            }
+
+            if eval >= beta {
+                return beta;
+            }
+
+            alpha = std::cmp::max(alpha, eval);
+        }
     }
 }
 
@@ -574,3 +636,4 @@ impl From<Move> for MovePlus {
         Self { mov, score: 0 }
     }
 }
+
