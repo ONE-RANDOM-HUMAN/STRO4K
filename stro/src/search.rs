@@ -241,7 +241,6 @@ impl<'a> Search<'a> {
         let mut ordered_moves = 0;
         let pv_node = beta - alpha != 1;
 
-
         let mut static_eval = evaluate::evaluate(self.game.position());
 
         // Use non-tt static eval to ensure continuity
@@ -414,7 +413,7 @@ impl<'a> Search<'a> {
                     if static_eval + see + promo + DELTA_BASE + (improving as i32 * IMPROVING_BONUS)
                         <= alpha
                     {
-                            continue;
+                        continue;
                     }
                 }
             }

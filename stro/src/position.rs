@@ -20,7 +20,7 @@ pub struct Board {
 unsafe fn _size_check() {
     // SAFETY: This is never called
     unsafe {
-        std::mem::transmute::<_, Board>([0_u8; 128]);
+        std::mem::transmute::<[u8; 128], Board>([0_u8; 128]);
     }
 }
 
@@ -359,7 +359,7 @@ impl Board {
         };
 
         if attacks & area != 0 {
-            return Some(Piece::Pawn)
+            return Some(Piece::Pawn);
         }
 
         let move_fns = [
@@ -410,7 +410,7 @@ impl Square {
     pub const fn from_index(index: u8) -> Option<Square> {
         if index < 64 {
             // SAFETY: Squares in 0..64 are valid
-            unsafe { std::mem::transmute(index) }
+            unsafe { Some(std::mem::transmute::<u8, Square>(index)) }
         } else {
             None
         }
@@ -477,7 +477,7 @@ impl Piece {
     pub const fn from_index(index: u8) -> Option<Piece> {
         if index < 6 {
             // SAFETY: Pieces in 0..6 are valid
-            unsafe { Some(std::mem::transmute(index)) }
+            unsafe { Some(std::mem::transmute::<u8, Piece>(index)) }
         } else {
             None
         }

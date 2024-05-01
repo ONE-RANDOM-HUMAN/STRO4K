@@ -55,13 +55,19 @@ impl Default for HistoryTable {
 pub fn simple_see(mov: Move, position: &Board) -> i32 {
     // Same values as delta pruning, plus an eval for king
     const PIECE_VALUES: [i32; 6] = [114, 425, 425, 648, 1246, MAX_EVAL];
-    let victim = position.get_piece(mov.dest(), position.side_to_move().other())
+    let victim = position
+        .get_piece(mov.dest(), position.side_to_move().other())
         .unwrap_or(Piece::Pawn);
 
     let mut gain = PIECE_VALUES[victim as usize];
     if let Some(piece) = position.area_attacked_by(mov.dest().as_mask()) {
-        let attacker = position.get_piece(mov.origin(), position.side_to_move()).unwrap();
-        gain += std::cmp::min(0, PIECE_VALUES[piece as usize] - PIECE_VALUES[attacker as usize]);
+        let attacker = position
+            .get_piece(mov.origin(), position.side_to_move())
+            .unwrap();
+        gain += std::cmp::min(
+            0,
+            PIECE_VALUES[piece as usize] - PIECE_VALUES[attacker as usize],
+        );
     }
 
     gain
@@ -97,11 +103,7 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
     noisy_count
 }
 
-pub fn order_quiet_moves(
-    moves: &mut [MovePlus],
-    kt: KillerTable,
-    history: &HistoryTable,
-) -> usize {
+pub fn order_quiet_moves(moves: &mut [MovePlus], kt: KillerTable, history: &HistoryTable) -> usize {
     for mov in &mut *moves {
         let mut score = (history.get(mov.mov) as f32).to_bits() as i32;
 
@@ -120,4 +122,3 @@ pub fn order_quiet_moves(
 
     moves.len()
 }
-
