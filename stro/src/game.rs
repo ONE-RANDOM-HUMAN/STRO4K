@@ -171,7 +171,7 @@ impl<'a> Game<'a> {
 
     /// # Safety
     /// The total number of position stored must not exceed 6144
-    /// The current position must not be in check
+    /// If the current position is in check, no further moves may be made.
     pub unsafe fn make_null_move(&mut self) -> bool {
         let mut board = unsafe { self.ptr.read() };
 
