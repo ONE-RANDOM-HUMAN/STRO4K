@@ -151,8 +151,8 @@ _start:
 
     ; load w/b
     mov bl, 'w',
-    mov rbp, qword [rsp]
-    cmp byte [rbp + Board.side_to_move], 0
+    mov rsi, qword [rsp]
+    cmp byte [rsi + Board.side_to_move], 0
     je .go_white_move
     mov bl, 'b'
 .go_white_move:
@@ -160,29 +160,47 @@ _start:
 
     ; find 'w/btime' - loop twice
     mov bh, 5
-.go_find_time_head:
+.go_find_time_head_1:
     call read1
     cmp al, bl
-    jne .go_find_time_head
+    jne .go_find_time_head_1
 
     movzx edx, bh
     call read
 
     xor ebp, ebp
-.go_read_number_loop_head:
+.go_read_number_loop_head_1:
     call read1
     cmp al, ' ' ; check for space or new line
-    jbe .go_read_number_end
+    jbe .go_read_number_end_1
 
-    ; 1 byte displacement is required anyway, so do the subtraction here
-    lea ebp, [rbp + 4 * rbp - ('0' / 2)]
-    lea ebp, [rax + 2 * rbp] ; multiply by 2 and add digit
-    jmp .go_read_number_loop_head
-.go_read_number_end:
+    imul ebp, ebp, 10
+    lea ebp, [rbp + rax - '0']
+    jmp .go_read_number_loop_head_1
+.go_read_number_end_1:
     push rbp
 
-    dec bh
-    jpo .go_find_time_head
+    mov bh, 4
+    ; dec bh
+.go_find_time_head_2:
+    call read1
+    cmp al, bl
+    jne .go_find_time_head_2
+
+    movzx edx, bh
+    call read
+
+    xor ebp, ebp
+.go_read_number_loop_head_2:
+    call read1
+    cmp al, ' ' ; check for space or new line
+    jbe .go_read_number_end_2
+
+    imul ebp, ebp, 10
+    lea ebp, [rbp + rax - '0']
+    jmp .go_read_number_loop_head_2
+.go_read_number_end_2:
+    push rbp
 
     ; read until end of line
 .go_read_until_newline_head:

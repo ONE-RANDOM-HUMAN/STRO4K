@@ -12,7 +12,7 @@ game_make_move:
     rep movsb ; rsi - new board
 
     mov al, 64
-    test dx, dx
+    test edx, edx
     jz .null_move
 
     push rbx

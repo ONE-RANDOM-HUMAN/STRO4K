@@ -631,8 +631,8 @@ alpha_beta:
 
     ; r8 - pieces
     mov r8, qword [rbx]
-    test byte [r8 + Board.side_to_move], 1
-    jz .order_noisy_white_move
+    cmp byte [r8 + Board.side_to_move], 0
+    je .order_noisy_white_move
 
     xor r8, 48
 
@@ -775,8 +775,8 @@ alpha_beta:
     ; load history
     lea r8, [rbx + Search.white_history]
     mov rsi, qword [rbx]
-    test byte [rsi + Board.side_to_move], 1
-    jz .order_quiet_white_moves
+    cmp byte [rsi + Board.side_to_move], 0
+    je .order_quiet_white_moves
 
     add r8, Search.black_history - Search.white_history
 .order_quiet_white_moves:
@@ -960,12 +960,8 @@ alpha_beta:
     je .pvs_search_full
 
     ; lmr search
-    ; ecx - depth - 1
     ; edx - depth
-    ; esi - - alpha - 1
     mov edx, dword [rbp + 8]
-    lea ecx, [rdx - 1]
-    lea esi, [rdi - 1]
 
     ; depth
     cmp edx, 2
@@ -990,8 +986,8 @@ alpha_beta:
     ; calculate lmr depth
     ; 86 + depth * 18 + i * 34
     imul eax, edx, 18
-    imul edx, r15d, 34
-    lea eax, [rax + rdx + 86]
+    imul ecx, r15d, 34
+    lea eax, [rax + rcx + 86]
 
     ; decrease reduction if improving
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
@@ -1000,9 +996,11 @@ alpha_beta:
 .lmr_not_improving:
     ; divide by 256
     sar eax, 8
-    sub ecx, eax
 
-    cmp ecx, 1
+    ; edx - lmr_depth + 1
+    sub edx, eax
+
+    cmp edx, 2
     jge .no_history_leaf_pruning
 
     test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
@@ -1011,12 +1009,12 @@ alpha_beta:
     ; history leaf pruning
     ; lead the history tables
     lea rax, [rbx + Search.white_history]
-    mov rcx, qword [rbx]
+    mov rsi, qword [rbx]
 
     ; This check occurs after the move has alreay been made,
     ; so we are actually testing if it is currently black's move.
-    test byte [rcx + Board.side_to_move], 1
-    jnz .history_leaf_white
+    cmp byte [rsi + Board.side_to_move], 0
+    jne .history_leaf_white
 
     add rax, Search.black_history - Search.white_history
 .history_leaf_white:
@@ -1026,7 +1024,7 @@ alpha_beta:
 
 
     cmp qword [rax + 8 * rcx], 0
-    mov ecx, 1 ; set the minimum lmr depth
+    mov edx, 2 ; set the minimum lmr depth + 1
     jnl .no_history_leaf_pruning
 
     ; prune
@@ -1035,7 +1033,13 @@ alpha_beta:
 .no_history_leaf_pruning:
 .no_lmr_reduction:
     ; save lmr depth + 1
-    lea r11d, [rcx + 1]
+    mov r11d, edx
+
+    ; ecx - lmr depth
+    lea ecx, [rdx - 1]
+
+    ; esi - -alpha - 1
+    lea esi, [rdi - 1]
 
     ; ply + 1
     mov edx, dword [rbp + 16]
@@ -1063,7 +1067,7 @@ alpha_beta:
     neg esi
 
     ; depth - 1
-    or ecx, -1
+    mov ecx, -1
     add ecx, dword [rbp + 8]
 
     ; ply + 1
@@ -1107,8 +1111,8 @@ alpha_beta:
     ; load history table
     lea r8, [rbx + Search.white_history]
     mov rsi, qword [rbx]
-    test byte [rsi + Board.side_to_move], 1
-    jz .decrease_white_history
+    cmp byte [rsi + Board.side_to_move], 0
+    je .decrease_white_history
 
     add r8, Search.black_history - Search.white_history
 
