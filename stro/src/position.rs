@@ -350,7 +350,9 @@ impl Board {
 
     pub fn area_attacked_by(&self, area: Bitboard) -> Option<(Piece, Bitboard)> {
         let enemy = self.pieces[self.side_to_move.other() as usize];
-        let occ = self.colors[0] | self.colors[1];
+
+        // Use xor to match asm implementation
+        let occ = self.colors[0] ^ self.colors[1];
 
         let attacks = if self.side_to_move == Color::White {
             ((area << 9) & !consts::A_FILE) | ((area & !consts::A_FILE) << 7)
@@ -391,13 +393,14 @@ impl Board {
         if let Some(captured_piece) = self.get_piece(mov.dest(), self.side_to_move) {
             eval = evaluate::PIECE_VALUES[captured_piece as usize];
             self.pieces[self.side_to_move as usize][captured_piece as usize] ^= mov.dest().as_mask();
-            self.colors[self.side_to_move as usize] ^= mov.dest().as_mask()
+            // match asm version
+            self.colors[0] ^= mov.dest().as_mask()
         }
 
         // Remove the attacking piece
         let attacking_piece = self.get_piece(mov.origin(), self.side_to_move.other()).unwrap();
         self.pieces[self.side_to_move.other() as usize][attacking_piece as usize] ^= mov.origin().as_mask();
-        self.colors[self.side_to_move.other() as usize] ^= mov.origin().as_mask();
+        self.colors[0] ^= mov.origin().as_mask();
 
 
         let mut beta = eval;
@@ -410,7 +413,7 @@ impl Board {
             if let Some((piece, attackers)) = self.area_attacked_by(mov.dest().as_mask()) {
                 self.pieces[self.side_to_move.other() as usize][piece as usize]
                     ^= attackers & attackers.wrapping_neg();
-                self.colors[self.side_to_move.other() as usize] ^= attackers & attackers.wrapping_neg();
+                self.colors[0] ^= attackers & attackers.wrapping_neg();
                 eval += evaluate::PIECE_VALUES[piece as usize];
             } else {
                 return beta;
@@ -427,7 +430,7 @@ impl Board {
             if let Some((piece, attackers)) = self.area_attacked_by(mov.dest().as_mask()) {
                 self.pieces[self.side_to_move.other() as usize][piece as usize]
                     ^= attackers & attackers.wrapping_neg();
-                self.colors[self.side_to_move.other() as usize] ^= attackers & attackers.wrapping_neg();
+                self.colors[0] ^= attackers & attackers.wrapping_neg();
                 eval -= evaluate::PIECE_VALUES[piece as usize]
             } else {
                 return alpha;
