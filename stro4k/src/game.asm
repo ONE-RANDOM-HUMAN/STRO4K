@@ -3,6 +3,7 @@ section .text
 
 ; rdx - move
 ; carry flag indicates illegality
+; Sets rsi to a pointer to the new board
 game_make_move:
     ; make copy of board
     mov ecx, Board_size
@@ -147,8 +148,8 @@ game_make_move:
     pop rdx ; restore move
     pop rbx ; restore game
 
-    ; Return with CF=1 for illegal move if al is not 6
-    sub al, 6
+    ; Return with CF=1 for illegal move if edi is not 6
+    cmp edi, 6
     jc .end
 
     ; rdi - origin
@@ -213,7 +214,9 @@ board_get_piece:
 
 ; board - rsi
 ; area - rdi
-; indicates that there is no attacker by eax = 6 and ZF=1
+; Returns attacker piece in edi and attacker squares in rax
+; indicates that there is no attacker by edi = 6 and ZF=1
+; interprets the occupied squares as white ^ black
 ; sets r10 to enemy pieces
 board_area_attacked_by:
     ; eax - enemy color
@@ -225,51 +228,50 @@ board_area_attacked_by:
     ; r10 - enemy pieces
     lea r10, [rsi + Board.pieces + rax]
 
-    ; r8 - enemy pawns
-    mov r8, qword [r10]
+    ; r8 - area
+    mov r8, rdi
+    mov r9, qword [NOT_A_FILE]
 
     test al, al
+    mov rax, rdi
     jz .enemy_white
 
-    ; exchange attacking pawns and area for black
-    xchg r8, rdi 
+    ; pawn moves from area
+    shl rax, 9
+    and rax, r9
+    and rdi, r9
+    shl rdi, 7
+    jmp .enemy_black
 .enemy_white:
-    mov r9, qword [NOT_A_FILE]
-    mov rcx, r8
-    mov rdx, r8
-    shl rcx, 9
-    and rcx, r9
-    and rdx, r9
-    shl rdx, 7
-    or rcx, rdx
+    shr rax, 7
+    and rax, r9
+    and rdi, r9
+    shr rdi, 9
+.enemy_black:
+    or rax, rdi
 
-    ; area - r8
-    test al, al
-    cmovz r8, rdi ; enemy is white
-
-    xor eax, eax
-    test rdi, rcx
-    jnz .attacked_by_pawn
+    ; pawn attacks
+    xor edi, edi
+    and rax, qword [r10]
+    jnz .end
 
     ; r9 - occ
+    ; Usually, white and black pieces are disjoint and xor is equivalent to or,
+    ; however using xor here allows a simpler SEE implementation
     mov r9, qword [rsi + Board.white]
-    or r9, qword [rsi + Board.black]
-
+    xor r9, qword [rsi + Board.black]
     
-    ; possible performance improvement from iterating tho other way
     lea rcx, [move_fns]
     mov edi, 1
 .piece_moves_head:
     call rcx
-    test rax, qword[r10 + 8 * rdi]
+    and rax, qword [r10 + 8 * rdi]
     jnz .end
     add rcx, 2
     inc edi
     cmp edi, 6
     jne .piece_moves_head ; jne = jnz
 .end:
-    mov eax, edi
-.attacked_by_pawn:
     ret
 
 ; rsi - board

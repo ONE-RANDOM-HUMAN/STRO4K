@@ -856,44 +856,120 @@ alpha_beta:
 .debug_noisy:
 %endif
     ; SEE pruning
-    ; rsi - board
-    mov rsi, qword [rbx]
+    push r15 ; beta
+    push r14 ; alpha
+    push r13 ; eval
+    lea r11, [PIECE_VALUES]
 
-    ; edi - destination
-    xor edi, edi
+    ; make null move
+    xor edx, edx
+    call game_make_move
+
+    mov r8, rsi
+
+    ; Load the enemy side to move (due to null-move)
+    test byte [rsi + Board.side_to_move], 1
+    jz .see_black_move
+
+    xor r8, 48
+.see_black_move:
+    ; edx - see target square
     mov edx, r12d
     shr edx, 6
+
+    ; edi - see target mask
+    xor edi, edi
+    bts rdi, rdx
+    push rdi
+
+    ; r13d - eval
+    xor r13d, r13d
+    call board_get_piece
+    js .see_no_captured_piece
+    ; remove captured piece
+    ; since board_area_attacked_by only takes the xor of white and black to
+
+    ; calculate occ, we can always xor into white occ
+    xor qword [r8 + 8 * rax], rdi
+    xor qword [rsi + Board.colors], rdi
+
+    mov r13d, dword [r11 + 4 * rax]
+.see_no_captured_piece:
+    mov r15d, r13d ; r15d - beta
+
+    xor r8, 48
+
+    ; edx - attacking piece square
+    mov edx, r12d
+    call board_get_piece
+
+    xor edi, edi
     bts rdi, rdx
 
+    ; remove attacking piece
+    xor qword [r8 + 8 * rax], rdi
+    xor qword [rsi + Board.colors], rdi
+
+    sub r13d, dword [r11 + 4 * rax]
+    mov r14d, r13d ; r13d - alpha
+.see_loop_head:
+    xor byte [rsi + Board.side_to_move], 1
+
+    mov rdi, qword [rsp]
     call board_area_attacked_by
+    jz .see_fail_high
 
-    lea rsi, [PIECE_VALUES]
-    mov r8, r10 ; r8 - enemy pieces
-    mov edx, r12d ; edx - move
-    jz .see_no_defender
+    blsi rax, rax
 
-    ; edi - recapturing piece
-    mov edi, dword [rsi + 4 * rax]
+    xor qword [r10 + 8 * rdi], rax
+    xor qword [rsi + Board.colors], rax
+
+    add r13d, dword [r11 + 4 * rdi]
+
+    ; check
+    cmp r13d, r14d
+    jle .see_fail_low
+
+    ; update beta
+    cmp r13d, r15d
+    cmovle r15d, r13d
 
 
-    ; get the attacking piece
-    xor r8, 48
-    call board_get_piece
-    xor r8, 48
 
-    sub edi, dword [rsi + 4 * rax]
-    js .see_should_not_recapture
-.see_no_defender:
-    xor edi, edi
-.see_should_not_recapture:
+    xor byte [rsi + Board.side_to_move], 1
 
-    ; Value of captured piece
-    shr edx, 6
-    call board_get_piece
-    jns .see_no_ep
-    xor eax, eax
-.see_no_ep:
-    add edi, dword [rsi + 4 * rax]
+    mov rdi, qword [rsp]
+    call board_area_attacked_by
+    jz .see_fail_low
+
+    blsi rax, rax
+
+    xor qword [r10 + 8 * rdi], rax
+    xor qword [rsi + Board.colors], rax
+
+    sub r13d, dword [r11 + 4 * rdi]
+
+    ; check beta
+    cmp r13d, r15d
+    jge .see_fail_high
+
+    ; update alpha
+    cmp r13d, r14d
+    cmovge r14d, r13d
+
+    jmp .see_loop_head
+.see_fail_high:
+    mov r14d, r15d
+.see_fail_low:
+    pop rdi
+    mov edi, r14d
+
+    pop r13
+    pop r14
+    pop r15
+    add qword [rbx], -128
+
+    test edi, edi
     jns .no_see_pruning
 
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
@@ -915,12 +991,13 @@ alpha_beta:
 
     add edi, DELTA_IMPROVING_BONUS
 .delta_prune_not_improving:
-    test dh, PROMO_FLAG >> 2
+    mov edx, r12d
+    test dh, PROMO_FLAG << 4
     jz .delta_prune_no_promo
 
-    shr edx, 6
+    shr edx, 12
     and edx, 11b
-    add edi, dword [rsi + 4 * rdx + 4]
+    add edi, dword [r11 + 4 * rdx + 4]
 .delta_prune_no_promo:
     cmp edi, dword [rbp - 128 + ABLocals.alpha]
     jle .main_search_tail
