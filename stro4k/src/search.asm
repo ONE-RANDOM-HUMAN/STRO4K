@@ -835,16 +835,9 @@ alpha_beta:
 
     movzx r12d, di
 
-    cmp dword [rbp + 8], 0
-    jnle .not_quiescence
+    cmp dword [rbp + 8], 1
+    jnle .not_quiescence_no_see
 
-    ; DEBUG: check that the move is noisy in qsearch
-%ifdef DEBUG
-    test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
-    jnz .debug_noisy
-    int3
-.debug_noisy:
-%endif
     ; SEE pruning
     push r15 ; beta
     push r14 ; alpha
@@ -954,6 +947,16 @@ alpha_beta:
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jz .main_search_tail
 .no_see_pruning:
+    cmp dword [rbp + 8], 0
+    jnle .not_quiescence
+
+    ; DEBUG: check that the move is noisy in qsearch
+%ifdef DEBUG
+    test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
+    jnz .debug_noisy
+    int3
+.debug_noisy:
+%endif
 
     ; delta pruning
     ; check that futility pruning is enabled
@@ -982,6 +985,7 @@ alpha_beta:
     jle .main_search_tail
 .no_delta_prune:
 .not_quiescence:
+.not_quiescence_no_see:
     ; make the move
     mov edx, r12d
     call game_make_move
