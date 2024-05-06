@@ -587,7 +587,6 @@ alpha_beta:
     jnge .no_null_move
 
     ; null move pruning
-    ; the value of edx is 0
     xor edx, edx
     call game_make_move
 
@@ -856,50 +855,41 @@ alpha_beta:
     xor edx, edx
     call game_make_move
 
-    mov r8, rsi
-
-    ; Load the enemy side to move (due to null-move)
-    cmp byte [rsi + Board.side_to_move], 0
-    jne .see_black_move
-
-    xor r8, 48
-.see_black_move:
+    ; r8 - pieces
     mov edx, r12d
     call board_get_move_pieces
 
-    ; edx - attacking piece square
-    xor edi, edi
-    bts rdi, rdx
-
-    ; remove attacking piece
-    ; since board_area_attacked_by only takes the xor of white and black to
-    ; calculate occ, we can always xor into white occ
-    xor qword [r8 + 8 * rax], rdi
-    xor qword [rsi + Board.colors], rdi
-
-    mov r13d, dword [r11 + 4 * rax]
-    neg r13d
-
-    ; edi - see target mask
     shr edx, 6
     xor edi, edi
     bts rdi, rdx
     push rdi
 
     ; r15d - beta
-    xor r15d, r15d
+    xor r13d, r13d
     test ecx, ecx
     js .see_no_captured_piece
 
-    ; remove captured piece
-    xor r8, 48
-    xor qword [r8 + 8 * rcx], rdi
-    xor qword [rsi + Board.colors], rdi
+    ; no need to remove captured piece
 
-    mov r15d, dword [r11 + 4 * rcx]
-    add r13d, r15d
+    ; This can't be replaced by cmovns because that always performs the load
+    mov edi, ecx
+    mov r13d, dword [r11 + 4 * rdi]
 .see_no_captured_piece:
-    mov r14d, r13d ; r15d - alpha
+    mov r15d, r13d ; r15d - beta
+
+    ; edx - attacking piece square
+    mov edi, eax
+    xor eax, eax
+    bts rax, r12
+
+    ; remove attacking piece
+    ; since board_area_attacked_by only takes the xor of white and black to
+    ; calculate occ, we can always xor into white occ
+    xor qword [r8 + 8 * rdi], rax
+    xor qword [rsi + Board.colors], rax
+
+    sub r13d, dword [r11 + 4 * rdi]
+    mov r14d, r13d
 
 .see_loop_head:
     xor byte [rsi + Board.side_to_move], 1

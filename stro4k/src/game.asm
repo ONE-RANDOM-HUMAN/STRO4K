@@ -4,6 +4,8 @@ section .text
 ; rdx - move
 ; carry flag indicates illegality
 ; Sets rsi to a pointer to the new board
+; Sets r8 to the pieces of the side that moved
+; Sets r9 to the pieces of the side to move
 game_make_move:
     ; make copy of board
     mov ecx, Board_size
@@ -12,12 +14,6 @@ game_make_move:
 
     rep movsb ; rsi - new board
 
-    mov al, 64
-    test edx, edx
-    jz .null_move
-
-    push rbx
-    push rdx
     lea r8, [rsi + Board.white_pieces]
     lea r9, [rsi + Board.black_pieces]
     cmp byte [rsi + Board.side_to_move], 0
@@ -25,6 +21,12 @@ game_make_move:
 
     xchg r8, r9
 .white_to_move:
+    mov al, 64
+    test edx, edx
+    jz .null_move
+
+    push rbx
+    push rdx
 
     ; ebx - flags
     mov ebx, edx
