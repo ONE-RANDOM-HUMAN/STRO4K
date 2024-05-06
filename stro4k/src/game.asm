@@ -17,31 +17,24 @@ game_make_move:
 
     push rbx
     push rdx
-    ; eax - side to move
-    movzx eax, byte [rsi + Board.side_to_move]
+    lea r8, [rsi + Board.white_pieces]
+    lea r9, [rsi + Board.black_pieces]
+    cmp byte [rsi + Board.side_to_move], 0
+    je .white_to_move
 
-    ; multiply by 48
-    shl eax, 4
-    lea eax, [rax + 2 * rax]
-
-    ; pieces - r8
-    lea r8, [rsi + Board.pieces + rax]
-
-    ; enemy - r9
-    xor al, 48
-    lea r9, [rsi + Board.pieces + rax]
+    xchg r8, r9
+.white_to_move:
 
     ; ebx - flags
     mov ebx, edx
     shr ebx, 12
 
+    ; eax - piece
+    call board_get_move_pieces
+
     ; dh - dest, dl - origin
     mov edi, 3F3Fh
     pdep edx, edx, edi
-    ; push rdx ; save move
-
-    ; eax - piece
-    call board_get_piece
 
     ; reset 50 move rule
     test al, al ; test for pawn
@@ -57,13 +50,6 @@ game_make_move:
     bts rdi, rdx
     xor qword [r8 + 8 * rax], rdi
 
-    ; switch origin and dest
-    xchg dl, dh
-
-    ; rdi - destination mask
-    xor edi, edi
-    bts rdi, rdx
-
     test bl, PROMO_FLAG
     jz .no_promo
     
@@ -72,43 +58,48 @@ game_make_move:
     and al, 11b
     inc al
 .no_promo:
-    ; update pieces
-    xor qword [r8 + 8 * rax], rdi
+    ; switch origin and dest
+    xchg dl, dh
 
-    ; rdi king area
-    mov rdi, qword [r8 + 40]
+    ; rdi - destination mask
+    xor edi, edi
+    bts rdi, rdx
+    xor qword [r8 + 8 * rax], rdi
 
     cmp al, 5 ; king can't be promo piece, so al has not changed
     jne .no_king_move
 
+    mov al, 1100b ; upper part of rax is irrelevant
+    cmp byte [rsi + Board.side_to_move], 0
+    je .white_king_move
+    shr eax, 2
+.white_king_move:
+    and byte [rsi + Board.castling], al
+
     ; rbx - castle rook mask
-    mov ecx, 00001001b
-    mov eax, 00011100b
-    cmp bl, QUEENSIDE_CASTLE_FLAG
+    mov eax, 00001001b
+    mov edi, 00011100b
+    cmp ebx, QUEENSIDE_CASTLE_FLAG
     je .castle
-    mov cl, 10100000b
-    mov al, 01110000b
-    cmp bl, KINGSIDE_CASTLE_FLAG
-    je .castle
-    jmp .no_castle
+    mov eax, 10100000b
+    mov edi, 01110000b
+    cmp ebx, KINGSIDE_CASTLE_FLAG
+    jne .no_castle
 
 .castle:
     cmp byte [rsi + Board.side_to_move], 0
     je .white_castle
 
-    bswap rcx
     bswap rax
+    bswap rdi
 .white_castle:
-    xor qword [r8 + 24], rcx
-    mov rdi, rax ; update king area
+    xor qword [r8 + 24], rax
+    jmp .king_move
 .no_castle:
-    mov cl, 1100b ; upper part of rcx is irrelevant
-    cmp byte [rsi + Board.side_to_move], 0
-    je .white_king_move
-    shr ecx, 2
-.white_king_move:
-    and byte [rsi + Board.castling], cl
 .no_king_move:
+    ; rdi king area
+    mov rdi, qword [r8 + 40]
+.king_move:
     test bl, CAPTURE_FLAG
     jz .no_capture
 
@@ -119,15 +110,12 @@ game_make_move:
     ; edx - captured index
     mov eax, 3807h ; rank of origin, file of dest
     pext edx, edx, eax
-    xor eax, eax ; 0 = pawn
-    jmp .remove_captured
+    xor ecx, ecx ; 0 = pawn
 .no_ep:
-    mov r8, r9 ; r8 - enemy pieces
-    call board_get_piece
-.remove_captured:
-    xor ebx, ebx
-    bts rbx, rdx
-    xor qword [r9 + 8 * rax], rbx
+    ; remove the captured piece
+    xor eax, eax
+    bts rax, rdx
+    xor qword [r9 + 8 * rcx], rax
 .no_capture:
 
     xor eax, eax
@@ -197,17 +185,32 @@ game_make_move:
     ret
 
 ; pieces - r8
-; square - rdx
-board_get_piece:
-    mov eax, 5
-.loop_head:
-    mov rcx, qword [r8 + 8 * rax]
-    bt rcx, rdx
-    jc .end
-    dec eax
-    jns .loop_head
+; move - rdx
+; returns origin in eax, dest in ecx
+; clobbers rax, rcx, rdi
+board_get_move_pieces:
+    mov ecx, 5
+.loop_head_1:
+    mov rdi, qword [r8 + 8 * rcx]
+    bt rdi, rdx
+    jc .end_1
+    dec ecx
+    jns .loop_head_1
+.end_1:
+    xor r8, 48
+    ror edx, 6
+    mov eax, ecx
 
-.end:
+    mov ecx, 5
+.loop_head_2:
+    mov rdi, qword [r8 + 8 * rcx]
+    bt rdi, rdx
+    jc .end_2
+    dec ecx
+    jns .loop_head_2
+.end_2:
+    xor r8, 48
+    rol edx, 6
     ret
     
 

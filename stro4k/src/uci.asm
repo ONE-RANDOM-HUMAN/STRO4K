@@ -181,7 +181,6 @@ _start:
     push rbp
 
     mov bh, 4
-    ; dec bh
 .go_find_time_head_2:
     call read1
     cmp al, bl

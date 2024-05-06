@@ -642,14 +642,14 @@ alpha_beta:
 
     ; noisy move ordering assumes the existance of at least
     ; one move to order
-    mov edi, dword [rbp - 128 + ABLocals.ordered_moves]
-    cmp edi, r14d
+    mov esi, dword [rbp - 128 + ABLocals.ordered_moves]
+    cmp esi, r14d
     jae .order_noisy_no_moves
 
     ; edi - loop counter
 .order_noisy_score_head:
     ; edx - move
-    movzx edx, word [rsp + 4 * rdi + MovePlus.move]
+    movzx edx, word [rsp + 4 * rsi + MovePlus.move]
 
     ; if move > CAPTURE_FLAG, then it is a capture or promo
     cmp edx, CAPTURE_FLAG << 12
@@ -661,28 +661,19 @@ alpha_beta:
     test dh, CAPTURE_FLAG << 4
     jz .order_noisy_non_capture
 
-    ; esi - attacker
-    call board_get_piece
-    mov esi, eax
+    ; eax - attacker, ecx - victim
+    call board_get_move_pieces
 
-    ; eax - victim
-    shr edx, 6
-    xor r8, 48
-    call board_get_piece
-    xor r8, 48
-
-    ; eax - 8 * (victim + 1) - attacker
-    neg esi
-    lea eax, [rax * 8 + 8 + rsi]
-
-    shl edx, 6
+    ; eax - (8 * victim + 1) - attacker
+    neg eax
+    lea eax, [rax + 8 * rcx + 8]
 .order_noisy_non_capture:
     shr edx, 12
     mov ah, dl
-    mov word [rsp + 4 * rdi + MovePlus.score], ax
+    mov word [rsp + 4 * rsi + MovePlus.score], ax
 
-    inc edi
-    cmp edi, r14d
+    inc esi
+    cmp esi, r14d
     jb .order_noisy_score_head
 .order_noisy_no_moves:
     ; ecx - static eval
@@ -860,44 +851,42 @@ alpha_beta:
     mov rsi, qword [rbx]
 
     ; edi - destination
-    xor edi, edi
     mov edx, r12d
     shr edx, 6
+    xor edi, edi
     bts rdi, rdx
 
     call board_area_attacked_by
-
-    lea rsi, [PIECE_VALUES]
     mov r8, r10 ; r8 - enemy pieces
     mov edx, r12d ; edx - move
-    jz .see_no_defender
+    mov esi, eax ; esi - attacked by piece
 
-    ; edi - recapturing piece
-    mov edi, dword [rsi + 4 * rax]
-
-
-    ; get the attacking piece
+    ; rax - capturing piece
+    ; rcx - captured piece
     xor r8, 48
-    call board_get_piece
-    xor r8, 48
+    call board_get_move_pieces
 
-    sub edi, dword [rsi + 4 * rax]
-    js .see_should_not_recapture
-.see_no_defender:
+    ; edi - captured piece handling
     xor edi, edi
-.see_should_not_recapture:
+    test ecx, ecx
+    cmovns edi, ecx
 
-    ; Value of captured piece
-    shr edx, 6
-    call board_get_piece
-    jns .see_no_ep
-    xor eax, eax
-.see_no_ep:
-    add edi, dword [rsi + 4 * rax]
+    lea rcx, [PIECE_VALUES]
+    mov edi, dword [rcx + 4 * rdi]
+    cmp esi, 6
+    je .see_no_defender
+
+    mov esi, dword [rcx + 4 * rsi]
+    sub esi, dword [rcx + 4 * rax]
+    jns .see_should_not_recapture
+
+    add edi, esi
     jns .no_see_pruning
 
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jz .main_search_tail
+.see_should_not_recapture:
+.see_no_defender:
 .no_see_pruning:
 
     ; delta pruning
@@ -915,12 +904,12 @@ alpha_beta:
 
     add edi, DELTA_IMPROVING_BONUS
 .delta_prune_not_improving:
-    test dh, PROMO_FLAG >> 2
+    test dh, PROMO_FLAG << 4
     jz .delta_prune_no_promo
 
-    shr edx, 6
+    shr edx, 12
     and edx, 11b
-    add edi, dword [rsi + 4 * rdx + 4]
+    add edi, dword [rcx + 4 * rdx + 4]
 .delta_prune_no_promo:
     cmp edi, dword [rbp - 128 + ABLocals.alpha]
     jle .main_search_tail
