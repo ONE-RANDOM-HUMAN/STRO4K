@@ -234,6 +234,8 @@ struc ABLocals
         resb 1
     .flags:
         resb 1
+    .f_prune_base:
+        resd 1
 endstruc
 
 IS_CHECK_FLAG equ 0001b
@@ -751,6 +753,8 @@ alpha_beta:
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_fprune
 
+    or byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
+
     ; depth + improving
     xor esi, esi
 
@@ -765,14 +769,11 @@ alpha_beta:
 
     imul eax, eax, F_PRUNE_MARGIN
 
-    ; check if margin + static_eval is less than alpha
+    ; store static_eval + margin
     add eax, ecx
-    cmp eax, dword [rbp + 24]
-    jnle .no_fprune
-
-    or byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
-.no_fprune_no_lmp:
+    mov dword [rbp - 128 + ABLocals.f_prune_base], eax
 .no_fprune:
+.no_fprune_no_lmp:
     ; eax - best eval
     mov eax, MIN_EVAL
 
@@ -889,8 +890,8 @@ alpha_beta:
 
     movzx r12d, di
 
-    cmp dword [rbp + 8], 7
-    jnle .not_quiescence_no_see
+    test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
+    jz .no_see_pruning
 
     ; SEE pruning
     push r15 ; beta
@@ -987,15 +988,12 @@ alpha_beta:
     mov r14d, r15d
 .see_fail_low:
     pop rdi
-    mov edi, r14d
+    mov r11d, r14d
 
     pop r13
     pop r14
     pop r15
     add qword [rbx], -128
-
-    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
-    jnz .no_see_pruning
 
     xor esi, esi
     imul eax, dword [rbp + 8], SEE_PRUNE_MARGIN
@@ -1004,10 +1002,9 @@ alpha_beta:
     cmp esi, eax
     cmovnl esi, eax
 
-    cmp edi, esi
+    cmp r11d, esi
     jl .main_search_tail
 .no_see_pruning:
-
 
     ; DEBUG: check that the move is noisy in qsearch
 %ifdef DEBUG
@@ -1021,7 +1018,6 @@ alpha_beta:
 .not_quiescence:
 %endif
 
-.not_quiescence_no_see:
     ; make the move
     mov edx, r12d
     call game_make_move
@@ -1041,6 +1037,10 @@ alpha_beta:
     jz .no_fprune_move
     cmp dword [rbp - 128 + ABLocals.best_eval], MIN_EVAL
     jle .no_fprune_move
+
+    add r11d, dword [rbp - 128 + ABLocals.f_prune_base]
+    cmp r11d, dword [rbp + 24]
+    jnle .no_fprune_move
 
     ; prune
     add qword [rbx], -Board_size
