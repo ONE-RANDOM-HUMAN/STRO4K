@@ -391,13 +391,19 @@ impl<'a> Search<'a> {
                 moves[i].mov
             };
 
-            if depth <= 0 {
-                assert!(mov.flags().is_noisy(), "{mov:?}");
-
+            let see = if depth <= 7 {
                 let see = self.game.position().see(mov);
-                if see.is_negative() && !pv_node && !is_check {
+                if see < cmp::min(0, depth * -96) && !pv_node && !is_check {
                     continue;
                 }
+
+                see
+            } else {
+                0
+            };
+
+            if depth <= 0 {
+                assert!(mov.flags().is_noisy(), "{mov:?}");
 
                 if f_prune {
                     // Delta pruning
