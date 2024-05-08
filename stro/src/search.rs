@@ -345,9 +345,8 @@ impl<'a> Search<'a> {
         // Futility pruning
         let f_prune = depth <= 7 && !is_check && !pv_node;
 
-        const F_PRUNE_MARGIN: i32 = 76;
-        let f_prune = f_prune
-            && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
+        const F_PRUNE_MARGIN: i32 = 92;
+        let f_prune_base = static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN;
 
         // Stand pat in qsearch
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
@@ -391,9 +390,9 @@ impl<'a> Search<'a> {
                 moves[i].mov
             };
 
-            let see = if depth <= 7 {
+            let see = if f_prune {
                 let see = self.game.position().see(mov);
-                if see < cmp::min(0, depth * -96) && !pv_node && !is_check {
+                if see < cmp::min(0, depth * -96) {
                     continue;
                 }
 
@@ -431,7 +430,7 @@ impl<'a> Search<'a> {
 
             let gives_check = self.game.position().is_check();
 
-            if f_prune && !mov.flags().is_noisy() && !gives_check {
+            if f_prune && !mov.flags().is_noisy() && !gives_check && see + f_prune_base <= alpha {
                 unsafe {
                     self.game.unmake_move();
                 }

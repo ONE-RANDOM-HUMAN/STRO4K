@@ -4,7 +4,7 @@ BOUND_LOWER equ 01b
 BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
-F_PRUNE_MARGIN equ 76
+F_PRUNE_MARGIN equ 92
 STATIC_NULL_MOVE_MARGIN equ 82
 DELTA_BASE equ 155
 DELTA_IMPROVING_BONUS equ 24
@@ -197,6 +197,8 @@ struc ABLocals
         resb 1
     .flags:
         resb 1
+    .f_prune_base:
+        resd 1
 endstruc
 
 IS_CHECK_FLAG equ 0001b
@@ -687,6 +689,8 @@ alpha_beta:
 
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_fprune
+
+    or byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
     
     ; depth + improving
     xor esi, esi
@@ -703,12 +707,8 @@ alpha_beta:
 
     imul esi, esi, F_PRUNE_MARGIN
 
-    ; check if margin + static_eval is less than alpha
     add esi, ecx
-    cmp esi, dword [rbp + 24]
-    jnle .no_fprune
-
-    or byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
+    mov dword [rbp - 128 + ABLocals.f_prune_base], esi
 .no_fprune:
     ; eax - best eval
     mov eax, MIN_EVAL
@@ -777,9 +777,8 @@ alpha_beta:
     mov edi, edx
     and edi, 0FFFh
 
-    ; Using VEX-encoded variants makes this 1 byte larger
-    cvtsi2ss xmm0, qword [r8 + 8 * rdi]
-    movd esi, xmm0
+    vcvtsi2ss xmm0, qword [r8 + 8 * rdi]
+    vmovd esi, xmm0
 
     mov edi, esi
     xor edi, 7FFF_FFFFh
@@ -835,8 +834,20 @@ alpha_beta:
 
     movzx r12d, di
 
-    cmp dword [rbp + 8], 7
-    jnle .not_quiescence_no_see
+    ; DEBUG: check that the move is noisy in qsearch
+%ifdef DEBUG
+    cmp dword [rbp + 8], 0
+    jnle .debug_not_qsearch
+
+    test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
+    jnz .debug_noisy
+    int3
+.debug_noisy:
+.debug_not_qsearch:
+%endif
+
+    test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
+    jz .no_delta_prune_no_see
 
     ; SEE pruning
     push r15 ; beta
@@ -941,9 +952,6 @@ alpha_beta:
     pop r15
     add qword [rbx], -128
 
-    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
-    jnz .no_see_pruning
-
     xor esi, esi
     imul eax, dword [rbp + 8], -96
     cmovs esi, eax
@@ -952,30 +960,20 @@ alpha_beta:
 .no_see_pruning:
 
     cmp dword [rbp + 8], 0
-    jnle .not_quiescence
-
-    ; DEBUG: check that the move is noisy in qsearch
-%ifdef DEBUG
-    test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
-    jnz .debug_noisy
-    int3
-.debug_noisy:
-%endif
+    jnle .no_delta_prune
 
     ; delta pruning
-    ; check that futility pruning is enabled
-    test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
-    jz .no_delta_prune
+    ; fprune is enabled because see was calculated
 
     ; edi - static eval + see
     movsx eax, word [rbp - 128 + ABLocals.static_eval]
-    lea edi, [rdi + rax + DELTA_BASE]
+    lea esi, [rdi + rax + DELTA_BASE]
 
     ; add improving bonus
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .delta_prune_not_improving
 
-    add edi, DELTA_IMPROVING_BONUS
+    add esi, DELTA_IMPROVING_BONUS
 .delta_prune_not_improving:
     mov edx, r12d
     test dh, PROMO_FLAG << 4
@@ -983,13 +981,14 @@ alpha_beta:
 
     shr edx, 12
     and edx, 11b
-    add edi, dword [r11 + 4 * rdx + 4]
+    add esi, dword [r11 + 4 * rdx + 4]
 .delta_prune_no_promo:
-    cmp edi, dword [rbp - 128 + ABLocals.alpha]
+    cmp esi, dword [rbp - 128 + ABLocals.alpha]
     jle .main_search_tail
 .no_delta_prune:
-.not_quiescence:
-.not_quiescence_no_see:
+.no_delta_prune_no_see:
+    mov r11d, edi
+
     ; make the move
     mov edx, r12d
     call game_make_move
@@ -1005,6 +1004,10 @@ alpha_beta:
     jnz .no_fprune_move
     test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
     jz .no_fprune_move
+
+    add r11d, dword [rbp - 128 + ABLocals.f_prune_base]
+    cmp r11d, dword [rbp + 24]
+    jnle .no_fprune_move
 
     ; prune
     add qword [rbx], -Board_size
