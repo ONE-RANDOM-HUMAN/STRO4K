@@ -392,16 +392,15 @@ impl Board {
         // Remove the captured piece
         if let Some(captured_piece) = self.get_piece(mov.dest(), self.side_to_move) {
             eval = evaluate::PIECE_VALUES[captured_piece as usize];
-            self.pieces[self.side_to_move as usize][captured_piece as usize] ^= mov.dest().as_mask();
-            // match asm version
-            self.colors[0] ^= mov.dest().as_mask()
         }
 
         // Remove the attacking piece
-        let attacking_piece = self.get_piece(mov.origin(), self.side_to_move.other()).unwrap();
-        self.pieces[self.side_to_move.other() as usize][attacking_piece as usize] ^= mov.origin().as_mask();
+        let attacking_piece = self
+            .get_piece(mov.origin(), self.side_to_move.other())
+            .unwrap();
+        self.pieces[self.side_to_move.other() as usize][attacking_piece as usize] ^=
+            mov.origin().as_mask();
         self.colors[0] ^= mov.origin().as_mask();
-
 
         let mut beta = eval;
         eval -= evaluate::PIECE_VALUES[attacking_piece as usize];
@@ -411,8 +410,8 @@ impl Board {
             // Get piece opponent captures with
             self.side_to_move = self.side_to_move.other();
             if let Some((piece, attackers)) = self.area_attacked_by(mov.dest().as_mask()) {
-                self.pieces[self.side_to_move.other() as usize][piece as usize]
-                    ^= attackers & attackers.wrapping_neg();
+                self.pieces[self.side_to_move.other() as usize][piece as usize] ^=
+                    attackers & attackers.wrapping_neg();
                 self.colors[0] ^= attackers & attackers.wrapping_neg();
                 eval += evaluate::PIECE_VALUES[piece as usize];
             } else {
@@ -428,8 +427,8 @@ impl Board {
             // Get piece we capture with
             self.side_to_move = self.side_to_move.other();
             if let Some((piece, attackers)) = self.area_attacked_by(mov.dest().as_mask()) {
-                self.pieces[self.side_to_move.other() as usize][piece as usize]
-                    ^= attackers & attackers.wrapping_neg();
+                self.pieces[self.side_to_move.other() as usize][piece as usize] ^=
+                    attackers & attackers.wrapping_neg();
                 self.colors[0] ^= attackers & attackers.wrapping_neg();
                 eval -= evaluate::PIECE_VALUES[piece as usize]
             } else {
@@ -639,4 +638,3 @@ impl From<Move> for MovePlus {
         Self { mov, score: 0 }
     }
 }
-
