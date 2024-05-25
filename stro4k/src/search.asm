@@ -4,10 +4,11 @@ BOUND_LOWER equ 01b
 BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
-F_PRUNE_MARGIN equ 76
-STATIC_NULL_MOVE_MARGIN equ 82
-DELTA_BASE equ 155
-DELTA_IMPROVING_BONUS equ 24
+F_PRUNE_MARGIN equ 88
+STATIC_NULL_MOVE_MARGIN equ 94
+DELTA_BASE equ 228
+DELTA_IMPROVING_BONUS equ 25
+SEE_PRUNE_MARGIN equ -69
 
 section .rodata
 PIECE_VALUES:
@@ -587,7 +588,6 @@ alpha_beta:
     jnge .no_null_move
 
     ; null move pruning
-    ; the value of edx is 0
     xor edx, edx
     call game_make_move
 
@@ -598,12 +598,12 @@ alpha_beta:
 
     ; ecx - reduced depth
     mov ecx, dword [rbp + 8]
-    imul esi, ecx, 56
-    lea esi, [rsi + 2 * r15 + 777 + 256] ; + 256 since formula is depth - r - 1
+    imul esi, ecx, 74
+    lea esi, [rsi + 2 * r15 + 621 + 256] ; + 256 since formula is depth - r - 1
 
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .nmp_not_improving
-    sub esi, 166
+    sub esi, 95
 
 .nmp_not_improving:
     sar esi, 8
@@ -836,6 +836,122 @@ alpha_beta:
 
     movzx r12d, di
 
+    cmp dword [rbp + 8], 7
+    jnle .not_quiescence_no_see
+
+    ; SEE pruning
+    push r15 ; beta
+    push r14 ; alpha
+    push r13 ; eval
+    lea r11, [PIECE_VALUES]
+
+    ; make null move
+    xor edx, edx
+    call game_make_move
+
+    ; r8 - pieces
+    mov edx, r12d
+    call board_get_move_pieces
+
+    shr edx, 6
+    xor edi, edi
+    bts rdi, rdx
+    push rdi
+
+    ; r15d - beta
+    xor r13d, r13d
+    test ecx, ecx
+    js .see_no_captured_piece
+
+    ; no need to remove captured piece
+
+    ; This can't be replaced by cmovns because that always performs the load
+    mov edi, ecx
+    mov r13d, dword [r11 + 4 * rdi]
+.see_no_captured_piece:
+    mov r15d, r13d ; r15d - beta
+
+    ; edx - attacking piece square
+    mov edi, eax
+    xor eax, eax
+    bts rax, r12
+
+    ; remove attacking piece
+    ; since board_area_attacked_by only takes the xor of white and black to
+    ; calculate occ, we can always xor into white occ
+    xor qword [r8 + 8 * rdi], rax
+    xor qword [rsi + Board.colors], rax
+
+    sub r13d, dword [r11 + 4 * rdi]
+    mov r14d, r13d
+
+.see_loop_head:
+    xor byte [rsi + Board.side_to_move], 1
+
+    mov rdi, qword [rsp]
+    call board_area_attacked_by
+    jz .see_fail_high
+
+    blsi rax, rax
+
+    xor qword [r10 + 8 * rdi], rax
+    xor qword [rsi + Board.colors], rax
+
+    add r13d, dword [r11 + 4 * rdi]
+
+    ; check
+    cmp r13d, r14d
+    jle .see_fail_low
+
+    ; update beta
+    cmp r13d, r15d
+    cmovle r15d, r13d
+
+
+
+    xor byte [rsi + Board.side_to_move], 1
+
+    mov rdi, qword [rsp]
+    call board_area_attacked_by
+    jz .see_fail_low
+
+    blsi rax, rax
+
+    xor qword [r10 + 8 * rdi], rax
+    xor qword [rsi + Board.colors], rax
+
+    sub r13d, dword [r11 + 4 * rdi]
+
+    ; check beta
+    cmp r13d, r15d
+    jge .see_fail_high
+
+    ; update alpha
+    cmp r13d, r14d
+    cmovge r14d, r13d
+
+    jmp .see_loop_head
+.see_fail_high:
+    mov r14d, r15d
+.see_fail_low:
+    pop rdi
+    mov edi, r14d
+
+    pop r13
+    pop r14
+    pop r15
+    add qword [rbx], -128
+
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
+    jnz .no_see_pruning
+
+    xor esi, esi
+    imul eax, dword [rbp + 8], SEE_PRUNE_MARGIN
+    cmovs esi, eax
+    cmp edi, esi
+    jl .main_search_tail
+.no_see_pruning:
+
     cmp dword [rbp + 8], 0
     jnle .not_quiescence
 
@@ -846,48 +962,6 @@ alpha_beta:
     int3
 .debug_noisy:
 %endif
-    ; SEE pruning
-    ; rsi - board
-    mov rsi, qword [rbx]
-
-    ; edi - destination
-    mov edx, r12d
-    shr edx, 6
-    xor edi, edi
-    bts rdi, rdx
-
-    call board_area_attacked_by
-    mov r8, r10 ; r8 - enemy pieces
-    mov edx, r12d ; edx - move
-    mov esi, eax ; esi - attacked by piece
-
-    ; rax - capturing piece
-    ; rcx - captured piece
-    xor r8, 48
-    call board_get_move_pieces
-
-    ; edi - captured piece handling
-    xor edi, edi
-    test ecx, ecx
-    cmovns edi, ecx
-
-    lea rcx, [PIECE_VALUES]
-    mov edi, dword [rcx + 4 * rdi]
-    cmp esi, 6
-    je .see_no_defender
-
-    mov esi, dword [rcx + 4 * rsi]
-    sub esi, dword [rcx + 4 * rax]
-    jns .see_should_not_recapture
-
-    add edi, esi
-    jns .no_see_pruning
-
-    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
-    jz .main_search_tail
-.see_should_not_recapture:
-.see_no_defender:
-.no_see_pruning:
 
     ; delta pruning
     ; check that futility pruning is enabled
@@ -904,17 +978,19 @@ alpha_beta:
 
     add edi, DELTA_IMPROVING_BONUS
 .delta_prune_not_improving:
+    mov edx, r12d
     test dh, PROMO_FLAG << 4
     jz .delta_prune_no_promo
 
     shr edx, 12
     and edx, 11b
-    add edi, dword [rcx + 4 * rdx + 4]
+    add edi, dword [r11 + 4 * rdx + 4]
 .delta_prune_no_promo:
     cmp edi, dword [rbp - 128 + ABLocals.alpha]
     jle .main_search_tail
 .no_delta_prune:
 .not_quiescence:
+.not_quiescence_no_see:
     ; make the move
     mov edx, r12d
     call game_make_move
@@ -973,15 +1049,15 @@ alpha_beta:
     jnz .no_lmr_reduction
 
     ; calculate lmr depth
-    ; 86 + depth * 18 + i * 34
-    imul eax, edx, 18
-    imul ecx, r15d, 34
-    lea eax, [rax + rcx + 86]
+    ; 97 + depth * 11 + i * 36
+    imul eax, edx, 11
+    imul ecx, r15d, 36
+    lea eax, [rax + rcx + 97]
 
     ; decrease reduction if improving
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .lmr_not_improving
-    sub eax, 113
+    sub eax, 134
 .lmr_not_improving:
     ; divide by 256
     sar eax, 8
