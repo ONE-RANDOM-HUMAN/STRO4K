@@ -6,8 +6,7 @@ BOUND_EXACT equ 11b
 
 F_PRUNE_MARGIN equ 88
 STATIC_NULL_MOVE_MARGIN equ 94
-DELTA_BASE equ 228
-DELTA_IMPROVING_BONUS equ 25
+DELTA_BASE equ 240
 SEE_PRUNE_MARGIN equ -69
 
 section .rodata
@@ -972,12 +971,6 @@ alpha_beta:
     movsx eax, word [rbp - 128 + ABLocals.static_eval]
     lea edi, [rdi + rax + DELTA_BASE]
 
-    ; add improving bonus
-    test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
-    jz .delta_prune_not_improving
-
-    add edi, DELTA_IMPROVING_BONUS
-.delta_prune_not_improving:
     mov edx, r12d
     test dh, PROMO_FLAG << 4
     jz .delta_prune_no_promo

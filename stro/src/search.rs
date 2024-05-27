@@ -407,16 +407,14 @@ impl<'a> Search<'a> {
 
                 if f_prune {
                     // Delta pruning
-                    const DELTA_BASE: i32 = 228;
-                    const IMPROVING_BONUS: i32 = 25;
+                    const DELTA_BASE: i32 = 240;
 
                     let promo = mov
                         .flags()
                         .promo_piece()
                         .map_or(0, |x| evaluate::PIECE_VALUES[x as usize]);
 
-                    if static_eval + see + promo + DELTA_BASE + (improving as i32 * IMPROVING_BONUS)
-                        <= alpha
+                    if static_eval + see + promo + DELTA_BASE <= alpha
                     {
                         continue;
                     }
