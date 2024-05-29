@@ -1042,8 +1042,8 @@ alpha_beta:
     jnz .no_lmr_reduction
 
     ; calculate lmr depth
-    ; 97 + depth * 11 + i * 36
-    imul eax, edx, 11
+    ; 97 + depth * 20 + i * 36
+    imul eax, edx, 20
     imul ecx, r15d, 36
     lea eax, [rax + rcx + 97]
 

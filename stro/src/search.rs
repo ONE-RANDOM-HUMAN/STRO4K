@@ -446,7 +446,7 @@ impl<'a> Search<'a> {
                     {
                         // Round towards -inf is fine
                         let reduction =
-                            (97 + depth * 11 + i as i32 * 36 - improving as i32 * 134) / 256;
+                            (97 + depth * 20 + i as i32 * 36 - improving as i32 * 134) / 256;
                         let lmr_depth = depth - reduction - 1;
 
                         if lmr_depth < 1 && !pv_node {
