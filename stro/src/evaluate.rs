@@ -9,8 +9,9 @@ struct Eval(i16, i16);
 pub const MAX_EVAL: i32 = 128 * 256 - 1;
 pub const MIN_EVAL: i32 = -MAX_EVAL;
 
-/// Values for use when we don't want seperate MG and EG values
-pub const PIECE_VALUES: [i32; 6] = [114, 425, 425, 648, 1246, MAX_EVAL];
+/// Values for use when we don't want seperate MG and EG values.
+/// Knight and bishop evals are set equal so that N - B = 0 for SEE
+pub const PIECE_VALUES: [i32; 6] = [220, 504, 504, 867, 1309, MAX_EVAL];
 
 #[rustfmt::skip]
 const MATERIAL_EVAL: [Eval; 5] = [

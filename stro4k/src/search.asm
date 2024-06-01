@@ -6,16 +6,16 @@ BOUND_EXACT equ 11b
 
 F_PRUNE_MARGIN equ 88
 STATIC_NULL_MOVE_MARGIN equ 94
-DELTA_BASE equ 240
-SEE_PRUNE_MARGIN equ -69
+DELTA_BASE equ 192
+SEE_PRUNE_MARGIN equ -96
 
 section .rodata
 PIECE_VALUES:
-    dd 114
-    dd 425
-    dd 425
-    dd 648
-    dd 1246
+    dd 220
+    dd 504
+    dd 504
+    dd 867
+    dd 1309
     dd MAX_EVAL
 
 default rel

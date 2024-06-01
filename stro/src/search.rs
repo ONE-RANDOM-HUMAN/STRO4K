@@ -393,7 +393,7 @@ impl<'a> Search<'a> {
 
             let see = if depth <= 7 {
                 let see = self.game.position().see(mov);
-                if see < cmp::min(0, depth * -69) && !pv_node && !is_check {
+                if see < cmp::min(0, depth * -96) && !pv_node && !is_check {
                     continue;
                 }
 
@@ -407,7 +407,7 @@ impl<'a> Search<'a> {
 
                 if f_prune {
                     // Delta pruning
-                    const DELTA_BASE: i32 = 240;
+                    const DELTA_BASE: i32 = 192;
 
                     let promo = mov
                         .flags()
