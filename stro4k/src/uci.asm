@@ -250,13 +250,13 @@ _start:
 
     mov rbx, rsp
 
-    imul rcx, rsi, 84569
-    imul rax, rdx, 554689
+    imul rcx, rsi, 88845
+    imul rax, rdx, 560161
     add rcx, rax
     mov qword [rbx + Search.max_search_time], rcx
 
-    imul rcx, rsi, 26616
-    imul rax, rdx, 11900
+    imul rcx, rsi, 30605
+    imul rax, rdx, 8062
     add rcx, rax
     mov qword [rbx + Search.min_search_time], rcx
 
