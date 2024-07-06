@@ -343,7 +343,7 @@ impl<'a> Search<'a> {
             moveorder::order_noisy_moves(self.game.position(), &mut moves[ordered_moves..]);
 
         // Futility pruning
-        const F_PRUNE_MARGIN: i32 = 100;
+        const F_PRUNE_MARGIN: i32 = 85;
         let f_prune_eval = if depth <= 7 && !is_check && !pv_node {
             static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN
         } else {
