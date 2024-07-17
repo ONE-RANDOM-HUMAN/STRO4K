@@ -197,6 +197,8 @@ struc ABLocals
         resb 1
     .flags:
         resb 1
+    .see:
+        resd 1
 endstruc
 
 IS_CHECK_FLAG equ 0001b
@@ -941,6 +943,8 @@ alpha_beta:
     pop r15
     add qword [rbx], -128
 
+    mov dword [rbp - 128 + ABLocals.see], edi
+
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_see_pruning
 
@@ -1052,8 +1056,12 @@ alpha_beta:
     jz .lmr_not_improving
     sub eax, 152
 .lmr_not_improving:
-    ; divide by 256
-    sar eax, 8
+    ; add see
+    add eax, eax
+    sub eax, dword [rbp - 128 + ABLocals.see]
+
+    ; divide by 2 * 256
+    sar eax, 9
 
     ; edx - lmr_depth + 1
     sub edx, eax

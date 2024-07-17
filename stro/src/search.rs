@@ -444,9 +444,10 @@ impl<'a> Search<'a> {
                 let lmr_depth =
                     if depth >= 2 && i >= 3 && !mov.flags().is_noisy() && !is_check && !gives_check
                     {
+                        assert!(see <= 0);
                         // Round towards -inf is fine
                         let reduction =
-                            (106 + depth * 15 + i as i32 * 36 - improving as i32 * 152) / 256;
+                            (106 + depth * 15 + i as i32 * 36 - improving as i32 * 152 - see / 2) / 256;
                         let lmr_depth = depth - reduction - 1;
 
                         if lmr_depth < 1 && !pv_node {
