@@ -391,7 +391,7 @@ impl<'a> Search<'a> {
                 moves[i].mov
             };
 
-            let see = if depth <= 7 {
+            let see = if depth <= 11 {
                 let see = self.game.position().see(mov);
                 if see < cmp::min(0, depth * -72) && !pv_node && !is_check {
                     continue;

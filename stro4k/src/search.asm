@@ -835,7 +835,7 @@ alpha_beta:
 
     movzx r12d, di
 
-    cmp dword [rbp + 8], 7
+    cmp dword [rbp + 8], 11
     jnle .not_quiescence_no_see
 
     ; SEE pruning
