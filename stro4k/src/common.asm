@@ -17,6 +17,10 @@ extern TT_MASK
 extern RUNNING
 %endif
 
+%ifndef AVX512
+cpu noevex
+%endif
+
 ; TODO align 64 bytes and take advantage in addressing
 struc Board
     alignb 8
@@ -167,20 +171,18 @@ STARTPOS:
     dq 0xFFFF_0000_0000_0000
     dd 000F4000h
 
-section .rodata
-alignb 8
 SHIFTS:
 ROOK_SHIFTS:
-    dq 8
-    dq 1
+    db 8
+    db 1
 BISHOP_SHIFTS:
-    dq 9
-    dq 7
+    db 9
+    db 7
 KNIGHT_SHIFTS:
-    dq 17
-    dq 15
-    dq 10
-    dq 6
+    db 17
+    db 15
+    db 10
+    db 6
 
 section .bss
 %ifndef EXPORT_SYSV

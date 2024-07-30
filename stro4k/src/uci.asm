@@ -26,14 +26,6 @@ read:
     pop rax
     ret
 
-read_until_newline:
-.loop:
-    call read1
-    cmp al, `\n`
-    jne .loop
-
-    ret
-
 write8:
     push rdx
 
@@ -56,7 +48,10 @@ write8:
 
 _start:
     ; wait for uci
-    call read_until_newline
+.uci_read_loop:
+    call read1
+    cmp al, `\n`
+    jne .uci_read_loop
 
     ; write uciok
     mov rdx, `uciok  \n`
@@ -92,8 +87,7 @@ _start:
 
 
     ; switch to the stack of the first thread
-    push rsi
-    pop rsp
+    mov rsp, rsi
 
     ; set up startpos
     lea rdi, [rsi + Search_size]
@@ -113,7 +107,11 @@ _start:
     ; isready
     mov rdx, `readyok\n`
     call write8
-    call read_until_newline
+.isready_read_loop:
+    call read1
+    cmp al, `\n`
+    jne .isready_read_loop
+
     jmp .uci_loop_head
 .not_isready_or_go:
     cmp al, 'q'
@@ -124,7 +122,10 @@ _start:
 
     ; registers set up for read
     ; consume the 'uit' so that it doesn't get sent to bash
-    call read_until_newline
+.quit_read_loop:
+    call read1
+    cmp al, `\n`
+    jne .quit_read_loop
     
     ; exit
 .exit:
@@ -138,7 +139,10 @@ _start:
     xor eax, eax
     rep stosb
 
-    call read_until_newline
+.ucinewgame_read_loop:
+    call read1
+    cmp al, `\n`
+    jne .ucinewgame_read_loop
 
     ; reset threads
     jmp .setup_threads
@@ -158,14 +162,14 @@ _start:
 .go_white_move:
 
 
-    ; find 'w/btime' - loop twice
-    mov bh, 5
+    ; find 'w/btime', 'w/binc'
 .go_find_time_head_1:
     call read1
     cmp al, bl
     jne .go_find_time_head_1
 
-    movzx edx, bh
+    push 5
+    pop rdx
     call read
 
     xor ebp, ebp
@@ -180,13 +184,13 @@ _start:
 .go_read_number_end_1:
     push rbp
 
-    mov bh, 4
 .go_find_time_head_2:
     call read1
     cmp al, bl
     jne .go_find_time_head_2
 
-    movzx edx, bh
+    push 4
+    pop rdx
     call read
 
     xor ebp, ebp
@@ -202,11 +206,12 @@ _start:
     push rbp
 
     ; read until end of line
-.go_read_until_newline_head:
     cmp al, `\n` ; might have been read when parsing inc
     je .go_finish_read
+.go_read_until_newline_head:
     call read1
-    jmp .go_read_until_newline_head
+    cmp al, `\n`
+    jne .go_read_until_newline_head
 
 .go_finish_read:
     mov byte [RUNNING_WORKER_THREADS], 80h | (NUM_THREADS - 1)
@@ -304,8 +309,7 @@ _start:
     call read
 
     ; rbx - game
-    push rsp
-    pop rbx
+    mov rbx, rsp
 
     ; reset game to startpos
     lea rbp, [rsp + Search_size]
@@ -333,8 +337,7 @@ _start:
     pext ebp, eax, ebp
 
     mov rsi, qword [rbx]
-    push rsp
-    pop rdi
+    mov rdi, rsp
     call gen_moves
 
 .position_find_move_head:

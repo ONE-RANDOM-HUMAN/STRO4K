@@ -1,2 +1,2 @@
 #!/bin/bash
-./build4k STRO4K 4 16
+./build4k STRO4K 4 16 --avx512

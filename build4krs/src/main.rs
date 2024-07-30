@@ -12,7 +12,14 @@ const MFS: [&str; 5] = ["hc3", "hc4", "bt2", "bt3", "bt4"];
 
 fn main() -> io::Result<()> {
     let args = std::env::args().collect::<Vec<_>>();
-    assert_eq!(args.len(), 4, "Incorrect number of arguments");
+    if args.len() != 4 && args.len() != 5 {
+        panic!("Incorrect number of arguments");
+    }
+
+    let avx512 = args.get(4).map_or(false, |arg| {
+        assert_eq!(arg, "--avx512");
+        true
+    });
 
     let temp = std::process::Command::new("mktemp").arg("-d").output()?;
 
@@ -23,6 +30,7 @@ fn main() -> io::Result<()> {
         &args[1],
         args[2].parse().unwrap(),
         args[3].parse().unwrap(),
+        avx512,
         temp,
     );
 
@@ -31,13 +39,20 @@ fn main() -> io::Result<()> {
     result
 }
 
-fn build4k(output_path: &str, threads: usize, tt_size_mb: usize, temp: &str) -> io::Result<()> {
+fn build4k(output_path: &str, threads: usize, tt_size_mb: usize, avx512: bool, temp: &str) -> io::Result<()> {
+    let avx512: &[_] = if avx512 {
+        &["-d", "AVX512"]
+    } else {
+        &[]
+    };
+
     // nasm
     let status = std::process::Command::new("nasm")
         .current_dir(std::fs::canonicalize("stro4k/src")?)
         .args(["-f", "elf64"])
         .args(["-d", &format!("NUM_THREADS={threads}")])
         .args(["-d", &format!("TT_SIZE_MB={tt_size_mb}")])
+        .args(avx512)
         .arg("combined.asm")
         .args(["-o", &format!("{temp}/combined.o")])
         .status()?;

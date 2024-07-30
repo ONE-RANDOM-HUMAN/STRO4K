@@ -235,14 +235,14 @@ gen_moves:
 ; r9 - occ (preserved)
 rook_moves:
     vmovdqu xmm7, oword [ALL_MASK]
-    vmovdqu xmm1, oword [ROOK_SHIFTS]
+    vpmovzxbq xmm1, word [ROOK_SHIFTS]
     jmp dumb7fill
 
 ; r8 - gen (preserved)
 ; r9 - occ (preserved)
 bishop_moves:
     vmovdqu xmm7, oword [NOT_A_FILE]
-    vmovdqu xmm1, oword [BISHOP_SHIFTS]
+    vpmovzxbq xmm1, word [BISHOP_SHIFTS]
     
     ; jmp dumb7fill
 
@@ -251,12 +251,32 @@ bishop_moves:
 ; l_mask - xmm7,
 ; shifts - xmm1
 dumb7fill:
+%ifdef AVX512
+    vpbroadcastq xmm2, r8 ; l_gen
+    vpbroadcastq xmm4, r9 ; occ
+
+    vmovdqu xmm3, xmm2 ; r_gen
+
+    mov al, 7
+.loop_head:
+    vpsllvq xmm5, xmm2, xmm1
+    vpand xmm6, xmm3, xmm7
+    vpand xmm5, xmm5, xmm7
+    vpsrlvq xmm6, xmm6, xmm1
+
+    vpternlogq xmm2, xmm4, xmm5, 0F2h
+    vpternlogq xmm3, xmm4, xmm6, 0F2h
+
+    dec al
+    jnz .loop_head
+
+%else
     vmovq xmm2, r8 ; gen
     vmovq xmm4, r9, ; gen
-    vpunpcklqdq xmm2, xmm2, xmm2 ; l_gen
-    vpunpcklqdq xmm4, xmm4, xmm4 ; occ
+    vpbroadcastq xmm2, xmm2 ; l_gen
+    vpbroadcastq xmm4, xmm4 ; occ
 
-    vmovdqa xmm3, xmm2 ; r_gen
+    vmovdqu xmm3, xmm2 ; r_gen
 
     mov al, 7
     jmp .loop_start
@@ -274,12 +294,13 @@ dumb7fill:
 
     dec al
     jnz .loop_head
-
+%endif
 .or:
     vpor xmm7, xmm5, xmm6
     vpunpckhqdq xmm1, xmm7, xmm7
-    vpor xmm7, xmm7, xmm1
-    vmovq rax, xmm7
+
+    vpor xmm1, xmm7, xmm1
+    vmovq rax, xmm1
     ret
 
 move_fns:
@@ -327,10 +348,14 @@ queen_moves:
 ; r9 - preserved
 knight_moves:
     vmovdqu ymm7, yword [NOT_A_FILE]
-    vmovdqu ymm1, yword [KNIGHT_SHIFTS]
+    vpmovzxbq ymm1, dword [KNIGHT_SHIFTS]
 
+%ifdef AVX512
+    vpbroadcastq ymm2, r8
+%else
     vmovq xmm2, r8
     vpbroadcastq ymm2, xmm2
+%endif
     
     vpsllvq ymm3, ymm2, ymm1
     vpand ymm4, ymm2, ymm7

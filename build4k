@@ -1,2 +1,2 @@
 #!/bin/bash
-cargo run --manifest-path build4krs/Cargo.toml -- $1 $2 $3
+cargo run --manifest-path build4krs/Cargo.toml -- $1 $2 $3 $4

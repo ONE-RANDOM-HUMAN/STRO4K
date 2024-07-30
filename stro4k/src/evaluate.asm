@@ -395,8 +395,12 @@ evaluate:
     vpmovsxbw xmm1, qword [rbp + MOBILITY_EVAL - EVAL_WEIGHTS + 2 * rcx - 2]
 
     popcnt rdi, rax
+%ifdef AVX512
+    vpbroadcastw xmm2, edi
+%else
     vmovd xmm2, edi
     vpbroadcastw xmm2, xmm2
+%endif
     vpmullw xmm2, xmm1, xmm2
 
     ; Alternatively with multiplication in GPRs
@@ -418,8 +422,12 @@ evaluate:
     and rdi, rax
     popcnt rdi, rdi
 
+%ifdef AVX512
+    vpbroadcastw xmm2, edi
+%else
     vmovd xmm2, edi
     vpbroadcastw xmm2, xmm2
+%endif
     vpmullw xmm2, xmm1, xmm2
     vpaddw xmm0, xmm0, xmm2
 
