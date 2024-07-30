@@ -15,66 +15,66 @@ pub const PIECE_VALUES: [i32; 6] = [114, 425, 425, 648, 1246, MAX_EVAL];
 #[rustfmt::skip]
 const MATERIAL_EVAL: [Eval; 5] = [
     Eval( 110,  220),
-    Eval( 328,  500),
-    Eval( 372,  504),
-    Eval( 489,  867),
-    Eval(1309, 1303),
+    Eval( 319,  501),
+    Eval( 358,  505),
+    Eval( 490,  868),
+    Eval(1312, 1301),
 ];
 
-const BISHOP_PAIR_EVAL: Eval = Eval(28, 92);
-const TEMPO: Eval = Eval(31, 15);
+const BISHOP_PAIR_EVAL: Eval = Eval(29, 91);
+const TEMPO: Eval = Eval(30, 15);
 
 #[rustfmt::skip]
 const RANK_PST: [[Eval; 8]; 6] = [
     [
         Eval(   0,    0),
-        Eval( -15,  -30),
-        Eval( -26,  -41),
-        Eval(  -4,  -41),
-        Eval(  13,  -29),
-        Eval(  36,   11),
+        Eval( -14,  -31),
+        Eval( -25,  -41),
+        Eval(  -5,  -41),
+        Eval(  12,  -29),
+        Eval(  35,   11),
         Eval(  85,   94),
         Eval(   0,    0),
     ],
     [
-        Eval( -32,  -14),
-        Eval( -17,   -6),
-        Eval( -18,   -1),
-        Eval(  14,   18),
-        Eval(  33,   19),
-        Eval(  61,    7),
-        Eval(  51,    6),
-        Eval( -60,    7),
+        Eval( -44,  -11),
+        Eval( -22,   -5),
+        Eval( -16,   -1),
+        Eval(  16,   18),
+        Eval(  40,   18),
+        Eval(  65,    6),
+        Eval(  56,    7),
+        Eval( -58,    8),
     ],
     [
-        Eval( -15,    1),
-        Eval(   1,   -1),
+        Eval( -22,    2),
+        Eval(  -5,    0),
         Eval(   5,    1),
-        Eval(   6,    3),
-        Eval(   7,   11),
-        Eval(  32,    6),
-        Eval(  -7,   12),
-        Eval( -48,   20),
+        Eval(  11,    2),
+        Eval(  16,   10),
+        Eval(  38,    7),
+        Eval(  -1,   13),
+        Eval( -45,   20),
     ],
     [
         Eval( -13,   -5),
-        Eval( -24,    2),
+        Eval( -25,    2),
         Eval( -20,    8),
         Eval( -13,   21),
-        Eval(  10,   22),
+        Eval(  10,   23),
         Eval(  37,   17),
-        Eval(  33,   22),
-        Eval(  53,   15),
+        Eval(  32,   22),
+        Eval(  53,   16),
     ],
     [
-        Eval(   1,  -11),
+        Eval(   2,  -11),
         Eval(  10,  -16),
-        Eval(  -2,   11),
-        Eval(  -3,   38),
+        Eval(  -1,   11),
+        Eval(  -2,   37),
         Eval(   3,   55),
         Eval(  33,   57),
         Eval(  13,   61),
-        Eval(  42,   27),
+        Eval(  41,   27),
     ],
     [
         Eval(  13,  -56),
@@ -91,37 +91,37 @@ const RANK_PST: [[Eval; 8]; 6] = [
 #[rustfmt::skip]
 const FILE_PST: [[Eval; 8]; 6] = [
     [
-        Eval( -20,    3),
-        Eval(  -4,   21),
-        Eval( -16,    2),
-        Eval(   0,   -9),
-        Eval(   3,   -2),
-        Eval(  22,   -6),
+        Eval( -19,    2),
+        Eval(  -6,   22),
+        Eval( -18,    3),
+        Eval(   3,  -10),
+        Eval(   2,   -2),
+        Eval(  24,   -6),
         Eval(  15,    8),
         Eval(  -5,  -20),
     ],
     [
-        Eval( -12,  -11),
-        Eval(  -2,   -1),
-        Eval(  -8,    6),
-        Eval(   9,   15),
-        Eval(   4,   14),
-        Eval(  -1,    4),
-        Eval(   9,    7),
-        Eval(   6,   -6),
+        Eval(  -9,  -13),
+        Eval(  -5,    0),
+        Eval( -11,    8),
+        Eval(   8,   16),
+        Eval(   1,   15),
+        Eval(   3,    3),
+        Eval(  12,    5),
+        Eval(   9,   -8),
     ],
     [
-        Eval(   4,   -1),
-        Eval(   9,    2),
-        Eval(  -5,    6),
-        Eval(  -4,    9),
-        Eval(  -6,    8),
-        Eval( -11,   11),
-        Eval(  15,    2),
-        Eval(  15,   -6),
+        Eval(   7,   -3),
+        Eval(   5,    4),
+        Eval(  -7,    9),
+        Eval(  -5,   11),
+        Eval( -10,   10),
+        Eval(  -6,   10),
+        Eval(  17,   -1),
+        Eval(  20,   -9),
     ],
     [
-        Eval( -19,   17),
+        Eval( -18,   17),
         Eval( -15,   18),
         Eval(   2,   19),
         Eval(  14,   13),
@@ -132,82 +132,82 @@ const FILE_PST: [[Eval; 8]; 6] = [
     ],
     [
         Eval(  -1,    8),
-        Eval(   2,   13),
-        Eval(   2,   25),
-        Eval(  -2,   37),
-        Eval(   0,   41),
-        Eval(   7,   42),
-        Eval(  25,   33),
-        Eval(  38,   37),
+        Eval(   1,   14),
+        Eval(   2,   26),
+        Eval(  -1,   37),
+        Eval(   1,   40),
+        Eval(   8,   41),
+        Eval(  25,   32),
+        Eval(  37,   37),
     ],
     [
         Eval(  37,  -38),
-        Eval(  36,   -4),
-        Eval(   1,   12),
+        Eval(  37,   -4),
+        Eval(   3,   12),
         Eval( -56,   26),
         Eval( -11,   10),
         Eval( -57,   22),
         Eval(  24,   -7),
-        Eval(  18,  -34),
+        Eval(  17,  -33),
     ],
 ];
 
 #[rustfmt::skip]
 const MOBILITY_EVAL: [Eval; 4] = [
     Eval(  12,    8),
-    Eval(   8,    8),
-    Eval(   4,    7),
-    Eval(   4,   10),
+    Eval(   8,    7),
+    Eval(   5,    7),
+    Eval(   3,   10),
 ];
 
 #[rustfmt::skip]
 const MOBILITY_ATTACK_EVAL: [[Eval; 4]; 4] = [
     [
         Eval(  -4,   25),
-        Eval(   0,   -6),
-        Eval(  47,   30),
-        Eval(  66,   18),
+        Eval(   2,   -9),
+        Eval(  48,   30),
+        Eval(  67,   17),
     ],
     [
-        Eval(   3,   30),
-        Eval(  19,   52),
-        Eval(   4,    2),
+        Eval(   2,   29),
+        Eval(  20,   51),
+        Eval(   4,    1),
         Eval(  44,   43),
     ],
     [
-        Eval(   3,   32),
-        Eval(  21,   33),
-        Eval(  19,   40),
-        Eval(  -3,   18),
+        Eval(   4,   32),
+        Eval(  20,   34),
+        Eval(  18,   40),
+        Eval(  -4,   19),
     ],
     [
-        Eval(   0,   20),
-        Eval(   7,   27),
-        Eval(  -4,   47),
+        Eval(   1,   19),
+        Eval(   6,   27),
+        Eval(  -6,   48),
         Eval( -25,   36),
     ],
 ];
 
 #[rustfmt::skip]
 const DOUBLED_PAWN_EVAL: [Eval; 8] = [
-    Eval( -53,  -85),
+    Eval( -54,  -85),
     Eval( -28,  -57),
-    Eval( -21,  -38),
-    Eval( -32,  -26),
-    Eval( -16,  -33),
-    Eval( -28,  -47),
-    Eval( -13,  -60),
+    Eval( -22,  -38),
+    Eval( -33,  -26),
+    Eval( -14,  -34),
+    Eval( -32,  -46),
+    Eval( -12,  -60),
     Eval( -30,  -82),
 ];
 
 #[rustfmt::skip]
 const ISOLATED_PAWN_EVAL: [Eval; 8] = [
-    Eval(   2,   10),
+    Eval(   3,    9),
     Eval( -15,  -10),
-    Eval( -13,  -13),
-    Eval( -28,  -20),
+    Eval( -13,  -14),
+    Eval( -28,  -19),
     Eval( -23,  -22),
-    Eval( -23,   -8),
+    Eval( -22,   -8),
     Eval( -16,   -9),
     Eval( -24,   10),
 ];
@@ -217,67 +217,80 @@ const UNBLOCKED_PASSED_PAWN_EVAL: [Eval; 6] = [
     Eval(  -8,  -14),
     Eval( -15,    1),
     Eval( -10,   32),
-    Eval(  21,   56),
+    Eval(  20,   56),
     Eval(  52,   76),
     Eval(  90,   96),
 ];
 
 #[rustfmt::skip]
 const BLOCKED_PASSED_PAWN_EVAL: [Eval; 6] = [
-    Eval( -10,   -4),
-    Eval( -19,   -3),
-    Eval( -14,    7),
-    Eval(  17,    4),
-    Eval(  48,   -1),
-    Eval(  10,   12),
+    Eval(  -9,   -4),
+    Eval( -16,   -4),
+    Eval( -12,    7),
+    Eval(  16,    4),
+    Eval(  45,   -1),
+    Eval(   8,   12),
 ];
 
 #[rustfmt::skip]
 const OPEN_FILE_EVAL: [Eval; 5] = [
-    Eval(   0,   -8),
-    Eval(  -6,    4),
-    Eval(  33,   -3),
-    Eval( -12,    9),
+    Eval(   9,   -9),
+    Eval(   8,    2),
+    Eval(  32,   -3),
+    Eval( -12,   10),
     Eval( -55,   -8),
 ];
 
 #[rustfmt::skip]
 const SEMI_OPEN_FILE_EVAL: [Eval; 5] = [
-    Eval(  -1,    9),
-    Eval(  -6,   24),
-    Eval(  20,   -9),
-    Eval(   2,    8),
-    Eval( -16,   11),
+    Eval(   9,    8),
+    Eval(  10,   22),
+    Eval(  18,   -8),
+    Eval(   1,    9),
+    Eval( -17,   11),
 ];
 
 #[rustfmt::skip]
 const PAWN_SHIELD_EVAL: [Eval; 5] = [
     Eval( -27,  -23),
     Eval(  -8,  -22),
-    Eval(   9,    4),
-    Eval(  25,   30),
-    Eval(  19,   35),
+    Eval(   9,    3),
+    Eval(  25,   29),
+    Eval(  19,   34),
 ];
 
 #[rustfmt::skip]
 const PAWN_DEFENDED_EVAL: [Eval; 6] = [
     Eval(  14,    6),
-    Eval(   2,    9),
-    Eval(   2,   13),
-    Eval(  10,   17),
+    Eval(   3,    9),
+    Eval(   5,   12),
+    Eval(  11,   17),
     Eval(  -2,   36),
     Eval( -43,   35),
 ];
 
 #[rustfmt::skip]
 const PAWN_ATTACKED_EVAL: [Eval; 6] = [
-    Eval(   7,   23),
-    Eval( -65,  -47),
-    Eval( -53,  -75),
-    Eval( -50,  -50),
-    Eval( -49,  -19),
+    Eval(   8,   23),
+    Eval( -65,  -46),
+    Eval( -54,  -74),
+    Eval( -51,  -50),
+    Eval( -50,  -19),
     Eval(   0,    0),
 ];
+
+#[rustfmt::skip]
+const SPACE: [Eval; 8] = [
+    Eval(  15,   14),
+    Eval(  28,   -2),
+    Eval(  25,   -9),
+    Eval(  14,   -4),
+    Eval(  24,    0),
+    Eval(  15,    4),
+    Eval(  16,    9),
+    Eval(  14,   10),
+];
+
 
 impl Eval {
     fn accum(&mut self, eval: Eval, count: i16) {
@@ -520,6 +533,25 @@ fn pawn_piece(pieces: &[[Bitboard; 6]; 2]) -> Eval {
     eval
 }
 
+fn white_space(white_pawns: Bitboard, white_space_pieces: Bitboard) -> Eval {
+    let mut mask = white_pawns;
+    mask |= mask >> 8;
+    mask |= mask >> 16;
+    mask |= mask >> 32;
+
+    let mut eval = Eval(0, 0);
+    let mut file = consts::A_FILE;
+
+    #[allow(clippy::needless_range_loop)]
+    for i in 0..8 {
+        let count = popcnt(white_space_pieces & file & mask);
+        eval.accum(SPACE[i], count);
+        file <<= 1
+    }
+
+    eval
+}
+
 pub fn evaluate(board: &Board) -> i32 {
     let mut eval = if board.side_to_move() == Color::White {
         TEMPO
@@ -590,6 +622,10 @@ pub fn evaluate(board: &Board) -> i32 {
         ),
         -1,
     );
+
+    // space
+    eval.accum(white_space(board.pieces()[0][0], board.pieces()[0][1] | board.pieces()[0][2]), 1);
+    eval.accum(white_space(board.pieces()[1][0].swap_bytes(), (board.pieces()[1][1] | board.pieces()[1][2]).swap_bytes()), 1);
 
     let white_phase = popcnt(board.pieces()[0][1])
         + popcnt(board.pieces()[0][2])
