@@ -1059,10 +1059,10 @@ alpha_beta:
     sub edx, eax
 
     cmp edx, 2
-    jge .no_history_leaf_pruning
+    jge .lmr_no_qsearch
 
     test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
-    jnz .no_history_leaf_pruning
+    jnz .lmr_clamp_depth
 
     ; history leaf pruning
     ; lead the history tables
@@ -1080,15 +1080,16 @@ alpha_beta:
     mov ecx, r12d
     and ecx, 0FFFh
 
-
     cmp qword [rax + 8 * rcx], 0
-    mov edx, 2 ; set the minimum lmr depth + 1
     jnl .no_history_leaf_pruning
 
     ; prune
     add qword [rbx], -Board_size
     jmp .main_search_tail
+.lmr_clamp_depth:
+    mov edx, 2 ; set the minimum lmr depth + 1
 .no_history_leaf_pruning:
+.lmr_no_qsearch:
 .no_lmr_reduction:
     ; save lmr depth + 1
     mov r11d, edx

@@ -449,20 +449,24 @@ impl<'a> Search<'a> {
                             (106 + depth * 15 + i as i32 * 36 - improving as i32 * 152) / 256;
                         let lmr_depth = depth - reduction - 1;
 
-                        if lmr_depth < 1 && !pv_node {
-                            // History leaf pruning
-                            let history =
-                                &self.history[self.game.position().side_to_move().other() as usize];
-                            if history.get(mov) < 0 {
-                                unsafe {
-                                    self.game.unmake_move();
+                        if lmr_depth < 1 {
+                            if !pv_node {
+                                // History leaf pruning
+                                let history =
+                                    &self.history[self.game.position().side_to_move().other() as usize];
+                                if history.get(mov) < 0 {
+                                    unsafe {
+                                        self.game.unmake_move();
+                                    }
+
+                                    continue;
                                 }
 
-                                continue;
+                                lmr_depth
+                            } else {
+                                // Don't go directly into qsearch in pv nodes
+                                1
                             }
-
-                            // minimum depth for lmr search
-                            1
                         } else {
                             lmr_depth
                         }
