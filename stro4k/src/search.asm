@@ -1082,7 +1082,6 @@ alpha_beta:
 
 
     cmp qword [rax + 8 * rcx], 0
-    mov edx, 2 ; set the minimum lmr depth + 1
     jnl .no_history_leaf_pruning
 
     ; prune
