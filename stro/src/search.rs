@@ -442,23 +442,25 @@ impl<'a> Search<'a> {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
             } else {
                 let lmr_depth =
-                    if depth >= 2 && i >= 3 && !mov.flags().is_noisy() && !is_check && !gives_check
+                    if depth >= 2 && i >= 2 && !mov.flags().is_noisy() && !is_check && !gives_check
                     {
                         // Round towards -inf is fine
                         let reduction =
                             (106 + depth * 15 + i as i32 * 36 - improving as i32 * 152) / 256;
                         let lmr_depth = depth - reduction - 1;
 
-                        if lmr_depth < 1 && !pv_node {
+                        if lmr_depth < 1 {
                             // History leaf pruning
-                            let history =
-                                &self.history[self.game.position().side_to_move().other() as usize];
-                            if history.get(mov) < 0 {
-                                unsafe {
-                                    self.game.unmake_move();
-                                }
+                            if !pv_node {
+                                let history =
+                                    &self.history[self.game.position().side_to_move().other() as usize];
+                                if history.get(mov) < 0 {
+                                    unsafe {
+                                        self.game.unmake_move();
+                                    }
 
-                                continue;
+                                    continue;
+                                }
                             }
 
                             // minimum depth for lmr search
