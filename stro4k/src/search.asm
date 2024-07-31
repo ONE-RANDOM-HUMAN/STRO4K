@@ -1061,6 +1061,7 @@ alpha_beta:
     cmp edx, 2
     jge .no_history_leaf_pruning
 
+    mov edx, 2 ; set the minimum lmr depth + 1
     test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
     jnz .no_history_leaf_pruning
 
@@ -1082,7 +1083,6 @@ alpha_beta:
 
 
     cmp qword [rax + 8 * rcx], 0
-    mov edx, 2 ; set the minimum lmr depth + 1
     jnl .no_history_leaf_pruning
 
     ; prune
