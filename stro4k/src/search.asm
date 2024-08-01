@@ -946,7 +946,11 @@ alpha_beta:
 
     xor esi, esi
     imul eax, dword [rbp + 8], SEE_PRUNE_MARGIN
-    cmovs esi, eax
+
+    ; We can't just use SF since imul leaves it unspecified
+    cmp esi, eax
+    cmovnl esi, eax
+
     cmp edi, esi
     jl .main_search_tail
 .no_see_pruning:
