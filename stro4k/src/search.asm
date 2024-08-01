@@ -996,6 +996,8 @@ alpha_beta:
     ; rsi is a pointer to the current board
     call board_is_check
 
+    movzx r8d, al
+
     ; futility pruning
     ; is check
     jnz .no_fprune_move
@@ -1033,18 +1035,6 @@ alpha_beta:
     cmp r15d, 3
     jnge .no_lmr_reduction
 
-    ; non-pv node and is check
-    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG
-    jnz .no_lmr_reduction
-
-    ; quiet move
-    test r12d, (CAPTURE_FLAG | PROMO_FLAG) << 12
-    jne .no_lmr_reduction
-
-    ; gives check
-    test al, al
-    jnz .no_lmr_reduction
-
     ; calculate lmr depth
     ; 106 + depth * 15 + i * 36
     imul eax, edx, 15
@@ -1065,8 +1055,23 @@ alpha_beta:
     cmp edx, 2
     jge .no_history_leaf_pruning
 
+    mov edx, 2 ; set the minimum lmr depth + 1
+
+    ; non-pv node and is check
     test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
     jnz .no_history_leaf_pruning
+
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG
+    jnz .no_history_leaf_pruning
+
+    ; quiet move
+    test r12d, (CAPTURE_FLAG | PROMO_FLAG) << 12
+    jnz .no_history_leaf_pruning
+
+    ; gives check
+    test r8d, r8d
+    jnz .no_history_leaf_pruning
+
 
     ; history leaf pruning
     ; lead the history tables
@@ -1086,7 +1091,6 @@ alpha_beta:
 
 
     cmp qword [rax + 8 * rcx], 0
-    mov edx, 2 ; set the minimum lmr depth + 1
     jnl .no_history_leaf_pruning
 
     ; prune
