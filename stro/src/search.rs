@@ -442,7 +442,7 @@ impl<'a> Search<'a> {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
             } else {
                 let lmr_depth =
-                    if depth >= 2 && i >= 3 {
+                    if depth >= 2 && i >= 3 && (!mov.flags().is_noisy() || see < 0) {
                         // Round towards -inf is fine
                         let reduction =
                             (106 + depth * 15 + i as i32 * 36 - improving as i32 * 152) / 256;
