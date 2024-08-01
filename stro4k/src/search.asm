@@ -197,6 +197,8 @@ struc ABLocals
         resb 1
     .flags:
         resb 1
+    .see:
+        resd 1
 endstruc
 
 IS_CHECK_FLAG equ 0001b
@@ -941,6 +943,7 @@ alpha_beta:
     pop r15
     add qword [rbx], -128
 
+    mov dword [rbp - 128 + ABLocals.see], edi
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_see_pruning
 
@@ -1061,11 +1064,16 @@ alpha_beta:
     cmp edx, 2
     jge .no_history_leaf_pruning
 
+    mov edx, 2 ; set the minimum lmr depth + 1
     test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
     jnz .no_history_leaf_pruning
 
+    ; pruning with negative see
+    cmp dword [rbp - 128 + ABLocals.see], 0
+    jl .lmr_prune_negative_see
+
     ; history leaf pruning
-    ; lead the history tables
+    ; load the history tables
     lea rax, [rbx + Search.white_history]
     mov rsi, qword [rbx]
 
@@ -1082,10 +1090,10 @@ alpha_beta:
 
 
     cmp qword [rax + 8 * rcx], 0
-    mov edx, 2 ; set the minimum lmr depth + 1
     jnl .no_history_leaf_pruning
 
     ; prune
+.lmr_prune_negative_see:
     add qword [rbx], -Board_size
     jmp .main_search_tail
 .no_history_leaf_pruning:
