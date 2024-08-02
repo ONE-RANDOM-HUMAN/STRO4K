@@ -1058,10 +1058,7 @@ alpha_beta:
     mov edx, 2 ; set the minimum lmr depth + 1
 
     ; non-pv node and is check
-    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
-    jnz .no_history_leaf_pruning
-
-    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG
+    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG | IS_CHECK_FLAG
     jnz .no_history_leaf_pruning
 
     ; quiet move
