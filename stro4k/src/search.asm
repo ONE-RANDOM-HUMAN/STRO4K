@@ -197,6 +197,8 @@ struc ABLocals
         resb 1
     .flags:
         resb 1
+    .see:
+        resd 1
 endstruc
 
 IS_CHECK_FLAG equ 0001b
@@ -835,6 +837,9 @@ alpha_beta:
 
     movzx r12d, di
 
+    ; Since depth is constant, see is either set each time or remains zero
+    ; mov dword [rbp - 128 + ABLocals.see], 0
+
     cmp dword [rbp + 8], 7
     jnle .not_quiescence_no_see
 
@@ -941,6 +946,7 @@ alpha_beta:
     pop r15
     add qword [rbx], -128
 
+    mov dword [rbp - 128 + ABLocals.see], edi
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_see_pruning
 
@@ -1034,6 +1040,13 @@ alpha_beta:
     ; move num
     cmp r15d, 3
     jnge .no_lmr_reduction
+
+    test r12d, (CAPTURE_FLAG | PROMO_FLAG) << 12
+    jz .lmr
+
+    cmp dword [rbp - 128 + ABLocals.see], 0
+    jnl .no_lmr_reduction
+.lmr:
 
     ; calculate lmr depth
     ; 106 + depth * 15 + i * 36
