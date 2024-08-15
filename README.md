@@ -20,10 +20,10 @@ STRO4K 3.0 is available in the `version_3.0` branch. It has the same features an
 STRO4K has only been tested to build on Linux systems. Building STRO4K requires `nasm`, `xz` and [`sstrip`](https://github.com/aunali1/super-strip). A script is provided which attempts to download `sstrip` and build STRO4K.
 
 ```
-./build4k <file_name> <thread_count> <hash_size_mb>
+./build4k <file_name> <thread_count> <hash_size_mb> [--avx512]
 ```
 
-For a default build with 4 threads, 16MB hash, and output file `STRO4K`:
+For a default build with 4 threads, 16MB hash, AVX-512 enabled, and output file `STRO4K`:
 ```
 ./build4kdefault
 ```
