@@ -7,12 +7,14 @@ STRO4K currently targets 2900 elo (CCRL) on a single thread. This target is very
 
 STRO is a non-4k version of STRO4K with more interface features, which is much easier to develop.
 
-## Version 1.0 and 2.0
+## Versions
 STRO4K 1.0 is available in the `version_1.0` branch. It has the extra feature of displaying the evaluation and principal variation during search.
 
 STRO4K 2.0 is available in the `version_2.0` branch. It does not have the extra features of STRO4K 1.0 due to size limitations.
 
 STRO4K 2.1 is available in the `version_2.1` branch. It displays the evaluation, but does not support resetting the engine state due to size limitations.
+
+STRO4K 3.0 is available in the `version_3.0` branch. It has the same features and limitations as version 2.1.
 
 ## Building
 STRO4K has only been tested to build on Linux systems. Building STRO4K requires `nasm`, `xz` and [`sstrip`](https://github.com/aunali1/super-strip). A script is provided which attempts to download `sstrip` and build STRO4K.
@@ -56,6 +58,7 @@ cargo build --release --no-default-features
     * Futility Pruning
     * Lazy SMP
     * Internal Iterative Reductions
+    * Static Exchange Evaluation
 * Evaluation
     * Material
     * Mobility
