@@ -1038,7 +1038,7 @@ alpha_beta:
     jnge .no_lmr_reduction
 
     ; move num
-    cmp r15d, 3
+    cmp r15d, 2
     jnge .no_lmr_reduction
 
     test r12d, (CAPTURE_FLAG | PROMO_FLAG) << 12
