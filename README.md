@@ -38,7 +38,7 @@ cargo build --release --no-default-features
 
 ## Current size
 ```
-4046 bytes
+4067 bytes
 ```
 ## Features
 * PV output in STRO
@@ -58,6 +58,7 @@ cargo build --release --no-default-features
     * Internal Iterative Reductions
 * Evaluation
     * Material
+        * Insufficient Material
     * Mobility
     * Bishop Pair
     * Doubled Pawns

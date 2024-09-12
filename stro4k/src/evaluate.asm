@@ -575,6 +575,24 @@ evaluate:
     shr rcx, 63
     add eax, ecx
 
+    neg eax
+    js .no_enemy_insufficient_material
+    cmp qword [r10], 0
+    jne .no_enemy_insufficient_material
+    cmp eax, 700
+    jg .no_enemy_insufficient_material
+    sar eax, 2
+.no_enemy_insufficient_material:
+
+    neg eax
+    js .no_side_insufficient_material
+    cmp qword [r11], 0
+    jne .no_side_insufficient_material
+    cmp eax, 700
+    jg .no_side_insufficient_material
+    sar eax, 2
+.no_side_insufficient_material:
+
     pop r15
     pop r14
     pop r13
