@@ -308,7 +308,9 @@ impl Board {
             Some(en_passant.parse::<Square>().ok()?)
         };
 
-        position.fifty_moves = parts.next()?.parse::<u8>().ok()?;
+        // Treat empty 50mr counter as 0
+        position.fifty_moves = parts.next()
+            .map_or(Some(0), |x| x.parse::<u8>().ok())?;
 
         // Ignore full moves
 
