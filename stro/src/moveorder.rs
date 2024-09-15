@@ -35,11 +35,13 @@ impl HistoryTable {
     }
 
     pub fn beta_cutoff(&mut self, mov: Move, depth: i32) {
-        self.0[(mov.0.get() & 0x0FFF) as usize] += i64::from(depth) * i64::from(depth);
+        let bonus = i64::from(depth.pow(2).min(2048));
+        self.0[(mov.0.get() & 0x0FFF) as usize] += bonus - ((bonus * self.0[(mov.0.get() & 0x0FFF) as usize]) >> 11);
     }
 
     pub fn failed_cutoff(&mut self, mov: Move, depth: i32) {
-        self.0[(mov.0.get() & 0x0FFF) as usize] -= i64::from(depth) * i64::from(depth);
+        let bonus = i64::from(depth.pow(2).min(2048));
+        self.0[(mov.0.get() & 0x0FFF) as usize] -= bonus + ((bonus * self.0[(mov.0.get() & 0x0FFF) as usize]) >> 11);
     }
 }
 
@@ -81,14 +83,7 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
 
 pub fn order_quiet_moves(moves: &mut [MovePlus], kt: KillerTable, history: &HistoryTable) -> usize {
     for mov in &mut *moves {
-        let mut score = (history.get(mov.mov) as f32).to_bits() as i32;
-
-        // Invert for negatives
-        if score.is_negative() {
-            score ^= 0x7FFF_FFFF;
-        }
-
-        mov.score = (score >> 16) as i16;
+        mov.score = history.get(mov.mov) as i16;
 
         // killers
         if let Some(index) = kt.index(mov.mov) {
