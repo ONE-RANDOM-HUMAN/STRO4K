@@ -108,31 +108,39 @@ fn uci_loop() {
             }
         } else if line.starts_with("go") {
             let start = stro::search::time_now();
-            let (time, inc) = if search.game().position().side_to_move() == Color::White {
+            let (time_str, inc_str) = if search.game().position().side_to_move() == Color::White {
                 ("wtime", "winc")
             } else {
                 ("btime", "binc")
             };
 
             let mut parts = line.split_ascii_whitespace();
-
-            #[allow(clippy::while_let_on_iterator)]
-            while let Some(value) = parts.next() {
-                if value == time {
-                    break;
+            let mut time = 0;
+            let mut inc = 0;
+            while let Some(command) = parts.next() {
+                match command {
+                    "wtime" | "btime" => {
+                        let value = parts.next().unwrap().parse().unwrap();
+                        if command == time_str {
+                            time = value;
+                        }
+                    }
+                    "winc" | "binc" => {
+                        let value = parts.next().unwrap().parse().unwrap();
+                        if command == inc_str {
+                            inc = value;
+                        }
+                    }
+                    "infinite" => {
+                        // These will not overflow because time calculations are
+                        // performed using u64
+                        time = u32::MAX;
+                        inc = u32::MAX;
+                    }
+                    _ => () // Ignore all other commands
                 }
             }
 
-            let time = parts.next().unwrap().parse().unwrap();
-
-            #[allow(clippy::while_let_on_iterator)]
-            while let Some(value) = parts.next() {
-                if value == inc {
-                    break;
-                }
-            }
-
-            let inc = parts.next().unwrap().parse().unwrap();
             search.search(start, time, inc);
         } else if line.starts_with("setoption") {
             let name = line[line.find("name").unwrap() + 4..line.find("value").unwrap()]
