@@ -14,6 +14,7 @@ pub struct Board {
     ep: Option<Square>,
     castling: u8,
     fifty_moves: u8,
+    last_move_piece_square: u32, // Used for CMH
     padding: u64,
 }
 
@@ -49,6 +50,7 @@ impl Board {
         ep: None,
         castling: 0b1111,
         fifty_moves: 0,
+        last_move_piece_square: 0,
         padding: 0,
     };
 
@@ -146,6 +148,11 @@ impl Board {
             self.castling &= 0b0111;
         }
 
+        // Set last move piece-square
+        self.last_move_piece_square = self.side_to_move() as u32 * 6 * 64
+            + dest_piece as u32 * 64
+            + mov.dest() as u32;
+
         // ep target halfway between origin and dest
         self.ep = (mov.flags() == MoveFlags::DOUBLE_PAWN_PUSH)
             .then(|| Square::from_index((mov.origin() as u8 + mov.dest() as u8) / 2).unwrap());
@@ -166,6 +173,7 @@ impl Board {
     /// # Safety
     /// The position must not be check
     pub unsafe fn make_null_move(&mut self) {
+        self.last_move_piece_square = 1; // Special value for null move
         self.ep = None;
         self.fifty_moves += 1;
         self.side_to_move = self.side_to_move.other();
@@ -216,6 +224,7 @@ impl Board {
             fifty_moves: 0,
             ep: None,
             castling: 0,
+            last_move_piece_square: 0,
             padding: 0,
         };
 
@@ -443,6 +452,10 @@ impl Board {
 
             alpha = std::cmp::max(alpha, eval);
         }
+    }
+
+    pub fn last_move_piece_square(&self) -> u32 {
+        self.last_move_piece_square
     }
 }
 

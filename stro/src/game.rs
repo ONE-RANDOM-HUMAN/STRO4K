@@ -25,13 +25,18 @@ pub struct Game<'a> {
 unsafe impl Send for Game<'_> {}
 
 impl<'a> Game<'a> {
+    /// Creates a `Game` from a buffer preceded by an all-zero `empty` board
     pub fn startpos(buf: &'a mut GameBuf) -> (Self, GameStart<'a>) {
         let ptr: *mut Board = buf.as_mut_ptr().cast();
 
-        // SAFETY: `ptr` is valid because it points to the buffer
-        unsafe {
-            ptr.write(Board::STARTPOS);
-        }
+        // SAFETY: `ptr` is valid because it points to the buffer.
+        // All zeroes is valid for all fields of `Board`, which is repr(C)
+        // and has no padding.
+        let ptr = unsafe {
+            ptr.write(std::mem::MaybeUninit::zeroed().assume_init());
+            ptr.add(1).write(Board::STARTPOS);
+            ptr.add(1)
+        };
 
         (
             Self {
@@ -57,7 +62,7 @@ impl<'a> Game<'a> {
     }
 
     /// # Safety
-    /// The total number of position stored must not exceed 6144
+    /// The total number of position stored must not exceed 12287
     pub unsafe fn add_position(&mut self, position: Board) {
         unsafe {
             self.ptr = self.ptr.add(1);
@@ -96,7 +101,7 @@ impl<'a> Game<'a> {
     }
 
     /// # Safety
-    /// `depth` additional positions should not exceed 6144 stored positions
+    /// `depth` additional positions should not exceed 12287 stored positions
     pub unsafe fn perft(&mut self, depth: usize) -> u64 {
         if depth == 0 {
             return 1;
@@ -152,7 +157,7 @@ impl<'a> Game<'a> {
     }
 
     /// # Safety
-    /// The total number of position stored must not exceed 6144
+    /// The total number of position stored must not exceed 12287
     #[must_use]
     pub unsafe fn make_move(&mut self, mov: Move) -> bool {
         let mut board = unsafe { self.ptr.read() };
@@ -170,7 +175,7 @@ impl<'a> Game<'a> {
     }
 
     /// # Safety
-    /// The total number of position stored must not exceed 6144
+    /// The total number of position stored must not exceed 12287
     /// If the current position is in check, no further moves may be made.
     pub unsafe fn make_null_move(&mut self) -> bool {
         let mut board = unsafe { self.ptr.read() };
