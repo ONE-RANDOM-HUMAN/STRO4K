@@ -777,16 +777,7 @@ alpha_beta:
     mov edi, edx
     and edi, 0FFFh
 
-    ; Using VEX-encoded variants makes this 1 byte larger
-    cvtsi2ss xmm0, qword [r8 + 8 * rdi]
-    movd esi, xmm0
-
-    mov edi, esi
-    xor edi, 7FFF_FFFFh
-
-    test esi, esi
-    cmovs esi, edi
-    shr esi, 16
+    movsx esi, word [r8 + 8 * rdi]
 
     ; killers
     mov edi, 07FFFh
@@ -1086,8 +1077,9 @@ alpha_beta:
     mov ecx, r12d
     and ecx, 0FFFh
 
-
-    cmp qword [rax + 8 * rcx], 0
+    ; this redudant REX prefix reduces compressed size by 2 bytes somehow
+    db 40h
+    cmp dword [rax + 8 * rcx], 0
     jnl .no_history_leaf_pruning
 
     ; prune
@@ -1186,6 +1178,10 @@ alpha_beta:
     mov eax, dword [rbp + 8]
     imul eax, eax
 
+    mov ecx, 2048
+    cmp eax, ecx
+    cmovg eax, ecx
+
     ; decrease history of searched quiet moves
     mov edi, dword [rbp - 128 + ABLocals.first_quiet]
 .decrease_history_head:
@@ -1196,14 +1192,27 @@ alpha_beta:
     mov esi, dword [rsp + 4 * rdi]
     and esi, 0FFFh
 
+    mov ecx, eax
+    imul ecx, dword [r8 + 8 * rsi]
+    sar ecx, 11
+    add ecx, eax
+
     ; subtract depth
-    sub qword [r8 + 8 * rsi], rax
+    sub dword [r8 + 8 * rsi], ecx
     inc edi
     jmp .decrease_history_head
 .decrease_history_end:
     ; increase history of move causing cutoff
-    and edx, 0FFFh
-    add qword [r8 + 8 * rdx], rax
+
+    mov esi, edx
+    and esi, 0FFFh
+
+    mov ecx, eax
+    imul ecx, dword [r8 + 8 * rsi]
+    sar ecx, 11
+    sub ecx, eax ; using negative increase improves compression
+
+    sub dword [r8 + 8 * rsi], ecx
 
 .beta_cutoff_noisy:
     jmp .main_search_end
