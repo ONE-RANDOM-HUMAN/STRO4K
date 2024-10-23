@@ -1111,11 +1111,8 @@ alpha_beta:
 
     ; check beta
     cmp eax, dword [rbp + 32]
-    jl .pvs_search_full
+    jnl .pvs_no_research
 
-    ; check depth
-    cmp r11d, dword [rbp + 8]
-    je .pvs_no_research ; search with full depth already completed
 .pvs_search_full:
     ; -beta
     mov esi, dword [rbp + 32]

@@ -475,7 +475,7 @@ impl<'a> Search<'a> {
                     -search! { self, self.alpha_beta(-alpha - 1, -alpha, lmr_depth, ply + 1) };
 
                 // Re-search
-                if eval > alpha && (eval < beta || lmr_depth != depth - 1) {
+                if eval > alpha && eval < beta {
                     -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
                 } else {
                     eval
