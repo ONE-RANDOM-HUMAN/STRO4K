@@ -1044,48 +1044,26 @@ alpha_beta:
     sub edx, eax
 
     cmp edx, 2
-    jge .no_history_leaf_pruning
+    jge .no_lmr_pruning
 
     mov edx, 2 ; set the minimum lmr depth + 1
 
     ; non-pv node and is check
     test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG | IS_CHECK_FLAG
-    jnz .no_history_leaf_pruning
+    jnz .no_lmr_pruning
 
     ; quiet move
     test r12d, (CAPTURE_FLAG | PROMO_FLAG) << 12
-    jnz .no_history_leaf_pruning
+    jnz .no_lmr_pruning
 
     ; gives check
     test r8d, r8d
-    jnz .no_history_leaf_pruning
-
-
-    ; history leaf pruning
-    ; lead the history tables
-    lea rax, [rbx + Search.white_history]
-    mov rsi, qword [rbx]
-
-    ; This check occurs after the move has alreay been made,
-    ; so we are actually testing if it is currently black's move.
-    cmp byte [rsi + Board.side_to_move], 0
-    jne .history_leaf_white
-
-    add rax, Search.black_history - Search.white_history
-.history_leaf_white:
-    ; get the history of the move
-    mov ecx, r12d
-    and ecx, 0FFFh
-
-    ; this redudant REX prefix reduces compressed size by 2 bytes somehow
-    db 40h
-    cmp dword [rax + 8 * rcx], 0
-    jnl .no_history_leaf_pruning
+    jnz .no_lmr_pruning
 
     ; prune
     add qword [rbx], -Board_size
     jmp .main_search_tail
-.no_history_leaf_pruning:
+.no_lmr_pruning:
 .no_lmr_reduction:
     ; save lmr depth + 1
     mov r11d, edx
