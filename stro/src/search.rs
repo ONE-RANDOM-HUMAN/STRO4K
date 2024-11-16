@@ -459,7 +459,7 @@ impl<'a> Search<'a> {
                             }
 
                             // minimum depth for lmr search
-                            1
+                            0
                         } else {
                             lmr_depth
                         }
