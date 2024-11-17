@@ -449,17 +449,12 @@ impl<'a> Search<'a> {
                         let lmr_depth = depth - reduction - 1;
 
                         if lmr_depth < 1 {
-                            // History leaf pruning
-                            if !pv_node && !mov.flags().is_noisy() && !is_check && !gives_check {
-                                unsafe {
-                                    self.game.unmake_move();
-                                }
-
-                                continue;
-                            }
-
                             // minimum depth for lmr search
-                            1
+                            if !pv_node && !mov.flags().is_noisy() && !is_check && !gives_check {
+                                0
+                            } else {
+                                1
+                            }
                         } else {
                             lmr_depth
                         }
