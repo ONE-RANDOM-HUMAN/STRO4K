@@ -451,15 +451,11 @@ impl<'a> Search<'a> {
                         if lmr_depth < 1 {
                             // History leaf pruning
                             if !pv_node && !mov.flags().is_noisy() && !is_check && !gives_check {
-                                let history =
-                                    &self.history[self.game.position().side_to_move().other() as usize];
-                                if history.get(mov) < 0 {
-                                    unsafe {
-                                        self.game.unmake_move();
-                                    }
-
-                                    continue;
+                                unsafe {
+                                    self.game.unmake_move();
                                 }
+
+                                continue;
                             }
 
                             // minimum depth for lmr search
