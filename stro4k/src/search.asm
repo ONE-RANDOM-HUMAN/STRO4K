@@ -578,8 +578,11 @@ alpha_beta:
     ; set margin for static nmp
     imul edx, ecx, STATIC_NULL_MOVE_MARGIN
 
+    cmp ecx, 1
+    je .static_nmp_not_improving
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .static_nmp_not_improving
+
     sub edx, STATIC_NULL_MOVE_MARGIN
 
 .static_nmp_not_improving:
