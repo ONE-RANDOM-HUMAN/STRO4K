@@ -554,7 +554,7 @@ alpha_beta:
     ; Null move pruning
     ; check depth
     mov ecx, dword [rbp + 8]
-    cmp ecx, 0
+    cmp ecx, 1
     jng .no_null_move
 
     ; check if we are in check or in a pv node

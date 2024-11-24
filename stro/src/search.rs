@@ -304,7 +304,7 @@ impl<'a> Search<'a> {
         }
 
         // Null Move Pruning
-        if depth > 0 && !pv_node && !is_check && static_eval >= beta {
+        if depth > 1 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 7 {
                 const STATIC_NULL_MOVE_MARGIN: i32 = 80;
