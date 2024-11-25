@@ -250,6 +250,7 @@ impl<'a> Search<'a> {
         // Probe tt
         let hash = self.game.position().hash();
         let mut tt_success = false;
+        let mut tt_eval = false;
 
         'tt: {
             let Some(tt_data) = tt::load(hash) else {
@@ -272,11 +273,15 @@ impl<'a> Search<'a> {
             }
 
             let eval = tt_data.eval();
-            match tt_data.bound() {
-                Bound::None => (),
-                Bound::Lower => static_eval = cmp::max(static_eval, eval),
-                Bound::Upper => static_eval = cmp::min(static_eval, eval),
-                Bound::Exact => static_eval = eval,
+            tt_eval = match tt_data.bound() {
+                Bound::None => false,
+                Bound::Lower => eval > static_eval,
+                Bound::Upper => eval < static_eval,
+                Bound::Exact => true,
+            };
+
+            if tt_eval {
+                static_eval = eval;
             }
 
             if !pv_node && tt_data.depth() >= depth {
@@ -308,7 +313,7 @@ impl<'a> Search<'a> {
             // Static null move pruning
             if depth <= 7 {
                 const STATIC_NULL_MOVE_MARGIN: i32 = 80;
-                let margin = depth * STATIC_NULL_MOVE_MARGIN;
+                let margin = (depth - tt_eval as i32) * STATIC_NULL_MOVE_MARGIN;
 
                 if static_eval >= beta + margin {
                     return Some(beta);

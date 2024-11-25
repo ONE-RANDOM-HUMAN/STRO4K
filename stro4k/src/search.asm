@@ -203,8 +203,10 @@ IS_CHECK_FLAG equ 0001b
 IMPROVING_FLAG equ 0010b
 PV_NODE_FLAG equ 0100b
 F_PRUNE_FLAG equ 1000b
+TT_EVAL_FLAG equ 10000b
 
 IMPROVING_FLAG_INDEX equ 1
+TT_EVAL_FLAG_INDEX equ 4
 
 %if ABLocals_size > 128
 %error "Alpha-Beta locals too large"
@@ -490,19 +492,21 @@ alpha_beta:
 
     ; get the depth of the tt entry
     mov rdx, r12
-    mov eax, edx
+    mov edi, edx
     shr rdx, 34
     and edx, (1 << 14) - 1
 
+    xor eax, eax
+
     ; tt cutoffs and static eval
-    sar eax, 16 ; eval
+    sar edi, 16 ; eval
     shr r12, 32 ; bound
     test r12b, 11b
     jz .tt_end ; No bound
 
     ; cx - static eval
     movsx ecx, word [r13 + PlyData.static_eval]
-    cmovpe ecx, eax
+    setpe al
     jpe .possible_tt_cutoff ; Exact bound
 
     ; upper or lower bound
@@ -510,18 +514,19 @@ alpha_beta:
     jz .tt_upper_bound
 
     ; lower bound - check against beta
-    cmp eax, ecx
-    cmovg ecx, eax
+    cmp edi, ecx
+    setg al
 
-    cmp eax, dword [rbp + 32]
+    cmp edi, dword [rbp + 32]
     jge .possible_tt_cutoff
+
     jmp .no_tt_cutoff
 .tt_upper_bound:
     ; upper bound - check against alpha
-    cmp eax, ecx
-    cmovl ecx, eax
+    cmp edi, ecx
+    setl al
 
-    cmp eax, dword [rbp + 24]
+    cmp edi, dword [rbp + 24]
     jnle .no_tt_cutoff
 
     ; would reduce the number of non-short jumps required,
@@ -533,21 +538,28 @@ alpha_beta:
 
     test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
     jnz .no_tt_cutoff
+
+    mov eax, edi
     jmp .end 
 .no_tt_cutoff:
+    shl eax, TT_EVAL_FLAG_INDEX
+    cmovnz ecx, edi
+    or byte [rbp - 128 + ABLocals.flags], al
+
     mov word [rbp - 128 + ABLocals.static_eval], cx
+
     jmp .tt_end
 .tt_miss:
     ; iir
     ; This gives slightly different results if depth is negative but
     ; it does not matter
-    cmp dword [rbp + 8], 4
-    adc dword [rbp + 8], -1
+    ; cmp dword [rbp + 8], 4
+    ; adc dword [rbp + 8], -1
 
-;     cmp dword [rbp + 8], 3
-;     jng .no_iir
-;     dec dword [rbp + 8]
-; .no_iir:
+    cmp dword [rbp + 8], 3
+    jng .no_iir
+    dec dword [rbp + 8]
+.no_iir:
 .tt_end:
 .no_tt_probe:
 
@@ -577,6 +589,12 @@ alpha_beta:
 
     ; set margin for static nmp
     imul edx, ecx, STATIC_NULL_MOVE_MARGIN
+
+    test byte [rbp - 128 + ABLocals.flags], TT_EVAL_FLAG
+    jz .static_nmp_tt_eval
+
+    sub edx, STATIC_NULL_MOVE_MARGIN
+.static_nmp_tt_eval:
 
     cmp eax, edx
     mov eax, dword [rbp + 32] ; beta
