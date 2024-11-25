@@ -117,7 +117,7 @@ impl Board {
         for c in 0..2 {
             let mut color = 0;
             for p in 0..6 {
-                color |= self.pieces[c][p]
+                color |= self.pieces[c][p];
             }
 
             self.colors[c] = color;
@@ -309,8 +309,7 @@ impl Board {
         };
 
         // Treat empty 50mr counter as 0
-        position.fifty_moves = parts.next()
-            .map_or(Some(0), |x| x.parse::<u8>().ok())?;
+        position.fifty_moves = parts.next().map_or(Some(0), |x| x.parse::<u8>().ok())?;
 
         // Ignore full moves
 
@@ -328,7 +327,7 @@ impl Board {
                     | (self.castling as i32) << 16,
             );
 
-            let ptr = self.pieces.as_ptr().cast::<i64>();
+            let ptr = self as *const _ as *const i64;
 
             // pieces and color
             for i in (0..=12).rev() {
@@ -432,7 +431,7 @@ impl Board {
                 self.pieces[self.side_to_move.other() as usize][piece as usize] ^=
                     attackers & attackers.wrapping_neg();
                 self.colors[0] ^= attackers & attackers.wrapping_neg();
-                eval -= evaluate::PIECE_VALUES[piece as usize]
+                eval -= evaluate::PIECE_VALUES[piece as usize];
             } else {
                 return alpha;
             }

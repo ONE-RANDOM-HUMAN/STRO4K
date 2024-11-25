@@ -3,13 +3,10 @@ fn main() {
         let out_dir = std::env::var("OUT_DIR").unwrap();
 
         // We assume that we are not running on KNL/KNM, so we always have AVX-512 VL/DQ/BW
-        let avx512 = std::env::var("CARGO_CFG_TARGET_FEATURE").unwrap().contains("avx512");
-        let avx512: &[_] = if avx512 {
-            &["-d", "AVX512"]
-        } else {
-            &[]
-        };
-
+        let avx512 = std::env::var("CARGO_CFG_TARGET_FEATURE")
+            .unwrap()
+            .contains("avx512");
+        let avx512: &[_] = if avx512 { &["-d", "AVX512"] } else { &[] };
 
         let status = std::process::Command::new("nasm")
             .args(["-f", "elf64"])

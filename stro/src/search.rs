@@ -137,7 +137,7 @@ impl<'a> Search<'a> {
             best_move = self.ply[0].best_move;
 
             if main_thread {
-                self.print_uci_info(depth, last_score)
+                self.print_uci_info(depth, last_score);
             }
 
             if self.time_up(self.min_search_time) {
@@ -414,8 +414,7 @@ impl<'a> Search<'a> {
                         .promo_piece()
                         .map_or(0, |x| evaluate::PIECE_VALUES[x as usize]);
 
-                    if static_eval + see + promo + DELTA_BASE <= alpha
-                    {
+                    if static_eval + see + promo + DELTA_BASE <= alpha {
                         continue;
                     }
                 }
@@ -441,31 +440,29 @@ impl<'a> Search<'a> {
             let eval = if best_move.is_none() || depth <= 0 {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
             } else {
-                let lmr_depth =
-                    if depth >= 2 && i >= 3 {
-                        // Round towards -inf is fine
-                        let reduction =
-                            (106 + depth * 15 + i as i32 * 36 - improving as i32 * 152) / 256;
-                        let lmr_depth = depth - reduction - 1;
+                let lmr_depth = if depth >= 2 && i >= 3 {
+                    // Round towards -inf is fine
+                    let reduction =
+                        (106 + depth * 15 + i as i32 * 36 - improving as i32 * 152) / 256;
+                    let lmr_depth = depth - reduction - 1;
 
-                        if lmr_depth < 1 {
-                            // History leaf pruning
-                            if !pv_node && !mov.flags().is_noisy() && !is_check && !gives_check {
-                                unsafe {
-                                    self.game.unmake_move();
-                                }
-
-                                continue;
+                    if lmr_depth < 1 {
+                        if !pv_node && !mov.flags().is_noisy() && !is_check && !gives_check {
+                            unsafe {
+                                self.game.unmake_move();
                             }
 
-                            // minimum depth for lmr search
-                            1
-                        } else {
-                            lmr_depth
+                            continue;
                         }
+
+                        // minimum depth for lmr search
+                        1
                     } else {
-                        depth - 1
-                    };
+                        lmr_depth
+                    }
+                } else {
+                    depth - 1
+                };
 
                 let eval =
                     -search! { self, self.alpha_beta(-alpha - 1, -alpha, lmr_depth, ply + 1) };
@@ -574,7 +571,7 @@ impl<'a> Search<'a> {
                 search.search_asm(false, depth);
 
                 nodes += search.nodes;
-                duration += start.elapsed()
+                duration += start.elapsed();
             }
 
             assert_eq!(rust_node_count, nodes - rust_node_count);
@@ -700,6 +697,6 @@ impl PlyData {
 }
 
 #[no_mangle]
-fn search_print_info_sysv(search: &mut Search, depth: i32, score: i32) {
+extern "C" fn search_print_info_sysv(search: &mut Search, depth: i32, score: i32) {
     search.print_uci_info(depth, score);
 }

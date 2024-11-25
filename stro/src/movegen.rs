@@ -254,7 +254,7 @@ pub(super) unsafe fn serialise(
             ptr = ptr.add(1);
         }
 
-        dests &= dests - 1
+        dests &= dests - 1;
     }
 
     ptr

@@ -1,7 +1,6 @@
 #![allow(internal_features)]
 #![warn(unsafe_op_in_unsafe_fn)]
 #![feature(core_intrinsics)]
-#![feature(new_uninit)]
 
 #[cfg(feature = "asm")]
 pub mod asm;

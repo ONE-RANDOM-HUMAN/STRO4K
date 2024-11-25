@@ -1,4 +1,4 @@
-use std::{cell::UnsafeCell, num::NonZeroU64};
+use std::num::NonZeroU64;
 
 use crate::position::Move;
 
@@ -57,11 +57,11 @@ impl TTData {
     }
 }
 
-static mut DEFAULT_TT: UnsafeCell<u64> = UnsafeCell::new(0);
+static mut DEFAULT_TT: u64 = 0;
 
 // Const pointer required for compiler
 #[no_mangle]
-static mut TT_PTR: *const u64 = unsafe { DEFAULT_TT.get() };
+static mut TT_PTR: *const u64 = std::ptr::addr_of_mut!(DEFAULT_TT);
 
 static mut TT_LEN: NonZeroU64 = unsafe { NonZeroU64::new_unchecked(1) };
 
@@ -87,11 +87,11 @@ pub unsafe fn alloc(size_in_bytes: NonZeroU64) {
 /// The tt must not be accessed during deallocation. The current tt must have been created by alloc.
 pub unsafe fn dealloc() {
     unsafe {
-        if TT_PTR != DEFAULT_TT.get() {
+        if TT_PTR != std::ptr::addr_of!(DEFAULT_TT) {
             let slice =
                 std::ptr::slice_from_raw_parts_mut(TT_PTR.cast_mut(), TT_LEN.get() as usize);
             drop(Box::from_raw(slice));
-            TT_PTR = DEFAULT_TT.get();
+            TT_PTR = std::ptr::addr_of!(DEFAULT_TT);
             TT_LEN = NonZeroU64::new(1).unwrap();
             TT_MASK = 0;
         }

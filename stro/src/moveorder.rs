@@ -36,12 +36,14 @@ impl HistoryTable {
 
     pub fn beta_cutoff(&mut self, mov: Move, depth: i32) {
         let bonus = i64::from(depth.pow(2).min(2048));
-        self.0[(mov.0.get() & 0x0FFF) as usize] += bonus - ((bonus * self.0[(mov.0.get() & 0x0FFF) as usize]) >> 11);
+        self.0[(mov.0.get() & 0x0FFF) as usize] +=
+            bonus - ((bonus * self.0[(mov.0.get() & 0x0FFF) as usize]) >> 11);
     }
 
     pub fn failed_cutoff(&mut self, mov: Move, depth: i32) {
         let bonus = i64::from(depth.pow(2).min(2048));
-        self.0[(mov.0.get() & 0x0FFF) as usize] -= bonus + ((bonus * self.0[(mov.0.get() & 0x0FFF) as usize]) >> 11);
+        self.0[(mov.0.get() & 0x0FFF) as usize] -=
+            bonus + ((bonus * self.0[(mov.0.get() & 0x0FFF) as usize]) >> 11);
     }
 }
 
@@ -62,7 +64,7 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
         *score = i16::from(mov.flags().0) << 8;
 
         if mov.flags().is_noisy() {
-            noisy_count += 1
+            noisy_count += 1;
         }
 
         if mov.flags().is_capture() {
@@ -87,7 +89,7 @@ pub fn order_quiet_moves(moves: &mut [MovePlus], kt: KillerTable, history: &Hist
 
         // killers
         if let Some(index) = kt.index(mov.mov) {
-            mov.score = i16::MAX - index as i16
+            mov.score = i16::MAX - index as i16;
         }
     }
 

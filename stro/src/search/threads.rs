@@ -117,9 +117,9 @@ impl SearchThreads {
 
     /// # Safety
     /// The tt must not be accessed during resize
-    pub unsafe fn resize_tt_mb(&mut self, _size: u64) {
+    pub unsafe fn resize_tt_mb(&mut self, size: u64) {
         unsafe {
-            tt::alloc((_size * 1024 * 1024).max(1).try_into().unwrap());
+            tt::alloc((size * 1024 * 1024).max(1).try_into().unwrap());
         }
     }
 
@@ -199,6 +199,6 @@ impl SearchThreads {
             );
         }
 
-        println!("bestmove {mov}")
+        println!("bestmove {mov}");
     }
 }

@@ -137,7 +137,7 @@ fn uci_loop() {
                         time = u32::MAX;
                         inc = u32::MAX;
                     }
-                    _ => () // Ignore all other commands
+                    _ => (), // Ignore all other commands
                 }
             }
 
