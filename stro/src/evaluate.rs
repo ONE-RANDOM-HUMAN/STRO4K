@@ -313,8 +313,8 @@ fn resolve(board: &Board, eval: Eval) -> i32 {
     let mut score = (i32::from(eval.0) * phase + i32::from(eval.1) * (24 - phase)) / 24;
 
     // Insufficient material
-    if (0..=700).contains(&score) && board.pieces()[0][0] == 0
-        || (-700..=0).contains(&score) && board.pieces()[1][0] == 0
+    if (0..=620).contains(&score) && board.pieces()[0][0] == 0
+        || (-620..=0).contains(&score) && board.pieces()[1][0] == 0
     {
         score /= 4;
     }

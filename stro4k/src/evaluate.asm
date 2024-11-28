@@ -579,7 +579,7 @@ evaluate:
     js .no_enemy_insufficient_material
     cmp qword [r10], 0
     jne .no_enemy_insufficient_material
-    cmp eax, 700
+    cmp eax, 620
     jg .no_enemy_insufficient_material
     sar eax, 2
 .no_enemy_insufficient_material:
@@ -588,7 +588,7 @@ evaluate:
     js .no_side_insufficient_material
     cmp qword [r11], 0
     jne .no_side_insufficient_material
-    cmp eax, 700
+    cmp eax, 620
     jg .no_side_insufficient_material
     sar eax, 2
 .no_side_insufficient_material:
