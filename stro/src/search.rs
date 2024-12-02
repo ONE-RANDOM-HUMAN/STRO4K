@@ -59,7 +59,13 @@ pub struct Search<'a> {
     min_search_time: u64, // min search time in nanoseconds
     max_search_time: u64, // max search time in nanoseconds
     ply: [PlyData; 12288],
-    history: [HistoryTable; 2],
+
+    // The 1st rank for white pawns is repurposed for special moves
+    // 0: no move/unknown move
+    // 1: null move
+    // 2: regular white history
+    // 3: regular black history
+    history: [HistoryTable; 12 * 64],
 }
 
 /// Automatically unmakes move and returns when `None` is received
@@ -79,23 +85,26 @@ macro_rules! search {
 }
 
 impl<'a> Search<'a> {
-    fn new(game: Game<'a>) -> Self {
-        Self {
-            game,
-            nodes: 0,
-            start: time_now(),
-            min_search_time: u64::MAX,
-            max_search_time: u64::MAX,
-            ply: [PlyData::new(); 12288],
-            history: [HistoryTable::new(), HistoryTable::new()],
+    /// Creates a `Search` without overflowing the stack
+    fn boxed(game: Game<'a>) -> Box<Self> {
+        let mut value = Box::new_zeroed();
+        let ptr: *mut Self = value.as_mut_ptr();
+
+        unsafe {
+            std::ptr::addr_of_mut!((*ptr).game).write(game);
+            std::ptr::addr_of_mut!((*ptr).start).write(time_now());
+            std::ptr::addr_of_mut!((*ptr).min_search_time).write(u64::MAX);
+            std::ptr::addr_of_mut!((*ptr).max_search_time).write(u64::MAX);
+            value.assume_init()
         }
     }
 
     pub fn new_game(&mut self) {
         // tt must be cleared seperately
         self.ply.fill(PlyData::new());
-        self.history[0].reset();
-        self.history[1].reset();
+        for history in &mut self.history {
+            history.reset();
+        }
     }
 
     pub fn set_time(&mut self, time_ms: u32, inc_ms: u32) {
@@ -372,7 +381,8 @@ impl<'a> Search<'a> {
                     ordered_moves += moveorder::order_quiet_moves(
                         &mut moves[ordered_moves..],
                         self.ply[ply].kt,
-                        &self.history[self.game.position().side_to_move() as usize],
+                        &self.history[self.game.position().side_to_move() as usize + 2],
+                        &self.history[self.game.position().last_move_piece_square() as usize]
                     );
                 } else {
                     break;
@@ -488,13 +498,17 @@ impl<'a> Search<'a> {
                 bound = Bound::Lower;
                 if !mov.flags().is_noisy() {
                     self.ply[ply].kt.beta_cutoff(mov);
-                    self.history[self.game.position().side_to_move() as usize]
+                    self.history[self.game.position().side_to_move() as usize + 2]
+                        .beta_cutoff(mov, depth);
+                    self.history[self.game.position().last_move_piece_square() as usize]
                         .beta_cutoff(mov, depth);
 
                     // Decrease history of searched moves
                     #[allow(clippy::needless_range_loop)]
                     for i in first_quiet..i {
-                        self.history[self.game.position().side_to_move() as usize]
+                        self.history[self.game.position().side_to_move() as usize + 2]
+                            .failed_cutoff(moves[i].mov, depth);
+                        self.history[self.game.position().last_move_piece_square() as usize]
                             .failed_cutoff(moves[i].mov, depth);
                     }
                 }
@@ -524,7 +538,7 @@ impl<'a> Search<'a> {
     pub fn bench(depth: i32) {
         let mut buffer = GameBuf::uninit();
         let (game, start) = Game::startpos(&mut buffer);
-        let mut search = Search::new(game);
+        let mut search = Search::boxed(game);
 
         unsafe {
             tt::alloc((16 * 1024 * 1024).try_into().unwrap());
@@ -590,7 +604,7 @@ impl<'a> Search<'a> {
     pub fn bench2(depth: i32) {
         let mut buffer = GameBuf::uninit();
         let (game, start) = Game::startpos(&mut buffer);
-        let mut search = Search::new(game);
+        let mut search = Search::boxed(game);
 
         unsafe {
             tt::alloc((16 * 1024 * 1024).try_into().unwrap());
