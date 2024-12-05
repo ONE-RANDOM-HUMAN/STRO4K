@@ -982,7 +982,11 @@ alpha_beta:
     ; make the move
     mov edx, r12d
     call game_make_move
-    jc .main_search_tail
+    jnc .legal_move
+
+    mov word [rsp + 4 * r15], 0
+    jmp .main_search_tail
+.legal_move:
 
     ; rsi is a pointer to the current board
     call board_is_check

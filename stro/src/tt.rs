@@ -29,7 +29,7 @@ impl TTData {
 
         TTData(
             NonZeroU64::new(
-                u64::from(mov.0.get())
+                u64::from(mov.0)
                     | (eval as u16 as u64) << 16
                     | (bound as u64) << 32
                     | (depth as u64) << 34
@@ -40,7 +40,7 @@ impl TTData {
     }
 
     pub fn best_move(self) -> Move {
-        Move((self.0.get() as u16).try_into().unwrap())
+        Move(self.0.get() as u16)
     }
 
     pub fn bound(self) -> Bound {

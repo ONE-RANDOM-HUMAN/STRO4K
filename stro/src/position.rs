@@ -1,5 +1,4 @@
 use std::fmt;
-use std::num::NonZeroU16;
 
 use crate::{consts, evaluate, movegen};
 
@@ -555,23 +554,23 @@ impl Piece {
 /// Bits 5-0: origin square
 /// Bits 11-6: destination square
 /// Bits 15-12: flags
-pub struct Move(pub NonZeroU16);
+pub struct Move(pub u16);
 
 impl Move {
     pub fn new(origin: Square, dest: Square, flags: MoveFlags) -> Move {
-        Move(NonZeroU16::new(origin as u16 | (dest as u16) << 6 | (flags.0 as u16) << 12).unwrap())
+        Move(origin as u16 | (dest as u16) << 6 | (flags.0 as u16) << 12)
     }
 
     pub fn origin(self) -> Square {
-        Square::from_index((self.0.get() & 0x3F) as u8).unwrap()
+        Square::from_index((self.0 & 0x3F) as u8).unwrap()
     }
 
     pub fn dest(self) -> Square {
-        Square::from_index(((self.0.get() >> 6) & 0x3F) as u8).unwrap()
+        Square::from_index(((self.0 >> 6) & 0x3F) as u8).unwrap()
     }
 
     pub fn flags(self) -> MoveFlags {
-        MoveFlags((self.0.get() >> 12) as u8)
+        MoveFlags((self.0 >> 12) as u8)
     }
 }
 

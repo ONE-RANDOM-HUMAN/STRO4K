@@ -134,7 +134,7 @@ impl<'a> Search<'a> {
                 }
             };
 
-            best_move = self.ply[0].best_move;
+            best_move = Some(self.ply[0].best_move);
 
             if main_thread {
                 self.print_uci_info(depth, last_score);
@@ -149,7 +149,8 @@ impl<'a> Search<'a> {
     }
 
     pub fn print_uci_info(&mut self, depth: i32, score: i32) {
-        let mut pv = vec![self.ply[0].best_move.unwrap()];
+        let mut pv = vec![self.ply[0].best_move];
+        assert_ne!(self.ply[0].best_move, Move(0));
 
         unsafe {
             assert!(self.game().make_move(pv[0]));
@@ -213,7 +214,7 @@ impl<'a> Search<'a> {
         // Checkmate and stalemate
         let is_check = self.game.position().is_check();
         if let Some(mov) = moves.iter().find(|&mov| self.game.is_legal(mov.mov)) {
-            self.ply[ply].best_move = Some(mov.mov);
+            self.ply[ply].best_move = mov.mov;
         } else {
             return Some(if is_check { MIN_EVAL } else { 0 });
         }
@@ -422,6 +423,7 @@ impl<'a> Search<'a> {
 
             unsafe {
                 if !self.game.make_move(mov) {
+                    moves[i].mov = Move(0);
                     continue; // the move was illegal
                 }
             }
@@ -510,7 +512,7 @@ impl<'a> Search<'a> {
 
         // Store tt if not in qsearch
         if let Some(mov) = best_move {
-            self.ply[ply].best_move = best_move;
+            self.ply[ply].best_move = mov;
             tt::store(hash, TTData::new(mov, bound, best_eval, depth, hash));
         }
 
@@ -683,7 +685,7 @@ impl<'a> Search<'a> {
 struct PlyData {
     kt: KillerTable,
     static_eval: i16,
-    best_move: Option<Move>,
+    best_move: Move,
 }
 
 impl PlyData {
@@ -691,7 +693,7 @@ impl PlyData {
         Self {
             kt: KillerTable::new(),
             static_eval: 0,
-            best_move: None,
+            best_move: Move(0),
         }
     }
 }

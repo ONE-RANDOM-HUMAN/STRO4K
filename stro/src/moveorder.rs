@@ -1,20 +1,26 @@
 use crate::position::{Board, Move, MovePlus};
 
 #[repr(transparent)]
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Default, Debug)]
-pub struct KillerTable([Option<Move>; 2]);
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+pub struct KillerTable([Move; 2]);
 impl KillerTable {
     pub fn new() -> Self {
-        Self([None; 2])
+        Self([Move(0); 2])
     }
 
     pub fn beta_cutoff(&mut self, mov: Move) {
         self.0[1] = self.0[0];
-        self.0[0] = Some(mov);
+        self.0[0] = mov;
     }
 
     pub fn index(&self, mov: Move) -> Option<usize> {
-        self.0.iter().position(|&x| x == Some(mov))
+        self.0.iter().position(|&x| x == mov)
+    }
+}
+
+impl Default for KillerTable {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -31,19 +37,19 @@ impl HistoryTable {
     }
 
     pub fn get(&self, mov: Move) -> i16 {
-        self.0[(mov.0.get() & 0x0FFF) as usize]
+        self.0[(mov.0 & 0x0FFF) as usize]
     }
 
     pub fn beta_cutoff(&mut self, mov: Move, depth: i32) {
         let bonus = depth.pow(2).min(2048);
-        let bonus = bonus - ((bonus * i32::from(self.0[(mov.0.get() & 0x0FFF) as usize])) >> 11);
-        self.0[(mov.0.get() & 0x0FFF) as usize] += bonus as i16;
+        let bonus = bonus - ((bonus * i32::from(self.0[(mov.0 & 0x0FFF) as usize])) >> 11);
+        self.0[(mov.0 & 0x0FFF) as usize] += bonus as i16;
     }
 
     pub fn failed_cutoff(&mut self, mov: Move, depth: i32) {
         let bonus = depth.pow(2).min(2048);
-        let bonus = bonus + ((bonus * i32::from(self.0[(mov.0.get() & 0x0FFF) as usize])) >> 11);
-        self.0[(mov.0.get() & 0x0FFF) as usize] -= bonus as i16;
+        let bonus = bonus + ((bonus * i32::from(self.0[(mov.0 & 0x0FFF) as usize])) >> 11);
+        self.0[(mov.0 & 0x0FFF) as usize] -= bonus as i16;
     }
 }
 
