@@ -101,7 +101,7 @@ pub unsafe fn dealloc() {
 pub fn load(hash: u64) -> Option<TTData> {
     let data = unsafe {
         let index = (hash % TT_LEN) as usize;
-        std::intrinsics::atomic_load_unordered(TT_PTR.add(index))
+        std::intrinsics::atomic_load_relaxed(TT_PTR.add(index))
     };
 
     NonZeroU64::new(data)
@@ -112,14 +112,14 @@ pub fn load(hash: u64) -> Option<TTData> {
 pub fn store(hash: u64, data: TTData) {
     unsafe {
         let index = (hash % TT_LEN) as usize;
-        std::intrinsics::atomic_store_unordered(TT_PTR.cast_mut().add(index), data.0.get());
+        std::intrinsics::atomic_store_relaxed(TT_PTR.cast_mut().add(index), data.0.get());
     }
 }
 
 pub fn clear() {
     unsafe {
         for i in 0..TT_LEN.get() {
-            std::intrinsics::atomic_store_unordered(TT_PTR.cast_mut().add(i as usize), 0);
+            std::intrinsics::atomic_store_relaxed(TT_PTR.cast_mut().add(i as usize), 0);
         }
     }
 }

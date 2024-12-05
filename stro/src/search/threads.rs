@@ -11,7 +11,7 @@ use super::{elapsed_nanos, Search, Time};
 
 struct SearchThread {
     start: GameStart<'static>,
-    search: Search<'static>,
+    search: Box<Search<'static>>,
     buffer: *mut GameBuf,
 }
 
@@ -24,7 +24,7 @@ impl SearchThread {
         // called. `Game` and `Search` do not require the buffer in drop.
         let (game, start) = unsafe { Game::startpos(&mut *buffer) };
 
-        let search = Search::new(game);
+        let search = Search::boxed(game);
 
         Self {
             start,
