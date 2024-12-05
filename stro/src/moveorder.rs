@@ -20,7 +20,7 @@ impl KillerTable {
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct HistoryTable([i64; 64 * 64]);
+pub struct HistoryTable([i16; 64 * 64]);
 impl HistoryTable {
     pub fn new() -> Self {
         HistoryTable([0; 64 * 64])
@@ -30,20 +30,20 @@ impl HistoryTable {
         self.0.fill(0);
     }
 
-    pub fn get(&self, mov: Move) -> i64 {
+    pub fn get(&self, mov: Move) -> i16 {
         self.0[(mov.0.get() & 0x0FFF) as usize]
     }
 
     pub fn beta_cutoff(&mut self, mov: Move, depth: i32) {
-        let bonus = i64::from(depth.pow(2).min(2048));
-        self.0[(mov.0.get() & 0x0FFF) as usize] +=
-            bonus - ((bonus * self.0[(mov.0.get() & 0x0FFF) as usize]) >> 11);
+        let bonus = depth.pow(2).min(2048);
+        let bonus = bonus - ((bonus * i32::from(self.0[(mov.0.get() & 0x0FFF) as usize])) >> 11);
+        self.0[(mov.0.get() & 0x0FFF) as usize] += bonus as i16;
     }
 
     pub fn failed_cutoff(&mut self, mov: Move, depth: i32) {
-        let bonus = i64::from(depth.pow(2).min(2048));
-        self.0[(mov.0.get() & 0x0FFF) as usize] -=
-            bonus + ((bonus * self.0[(mov.0.get() & 0x0FFF) as usize]) >> 11);
+        let bonus = depth.pow(2).min(2048);
+        let bonus = bonus + ((bonus * i32::from(self.0[(mov.0.get() & 0x0FFF) as usize])) >> 11);
+        self.0[(mov.0.get() & 0x0FFF) as usize] -= bonus as i16;
     }
 }
 
@@ -85,7 +85,7 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
 
 pub fn order_quiet_moves(moves: &mut [MovePlus], kt: KillerTable, history: &HistoryTable) -> usize {
     for mov in &mut *moves {
-        mov.score = history.get(mov.mov) as i16;
+        mov.score = history.get(mov.mov);
 
         // killers
         if let Some(index) = kt.index(mov.mov) {

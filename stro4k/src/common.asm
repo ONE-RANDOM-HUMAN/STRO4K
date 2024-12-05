@@ -91,9 +91,9 @@ struc Search
     .ply_data:
         resb PlyData_size * MAX_BOARDS
     .white_history:
-        resq 64 * 64
+        resw 64 * 64
     .black_history:
-        resq 64 * 64
+        resw 64 * 64
 endstruc
 
 %if Search_size % 16 != 0

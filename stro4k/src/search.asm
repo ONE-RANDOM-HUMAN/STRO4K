@@ -777,7 +777,7 @@ alpha_beta:
     mov edi, edx
     and edi, 0FFFh
 
-    movsx esi, word [r8 + 8 * rdi]
+    movsx esi, word [r8 + 2 * rdi]
 
     ; killers
     mov edi, 07FFFh
@@ -1135,10 +1135,12 @@ alpha_beta:
     jnz .beta_cutoff_noisy
 
     ; update killer table
+    shl dword [r13 + PlyData.kt], 16
+    or word [r13 + PlyData.kt], r12w
     ; edx - copy of move
-    mov edx, r12d
-    shl r12d, 16 ; temp
-    shld dword [r13 + PlyData.kt], r12d, 16
+    ; mov edx, r12d
+    ; shl r12d, 16 ; temp
+    ; shld dword [r13 + PlyData.kt], r12d, 16
 
 
     ; load history table
@@ -1170,27 +1172,26 @@ alpha_beta:
     mov esi, dword [rsp + 4 * rdi]
     and esi, 0FFFh
 
-    mov ecx, eax
-    imul ecx, dword [r8 + 8 * rsi]
+    movsx ecx, word [r8 + 2 * rsi]
+    imul ecx, eax
     sar ecx, 11
     add ecx, eax
 
-    ; subtract depth
-    sub dword [r8 + 8 * rsi], ecx
+    sub word [r8 + 2 * rsi], cx
     inc edi
     jmp .decrease_history_head
 .decrease_history_end:
     ; increase history of move causing cutoff
 
-    mov esi, edx
+    mov esi, r12d
     and esi, 0FFFh
 
-    mov ecx, eax
-    imul ecx, dword [r8 + 8 * rsi]
+    movsx ecx, word [r8 + 2 * rsi]
+    imul ecx, eax
     sar ecx, 11
     sub ecx, eax ; using negative increase improves compression
 
-    sub dword [r8 + 8 * rsi], ecx
+    sub word [r8 + 2 * rsi], cx
 
 .beta_cutoff_noisy:
     jmp .main_search_end
