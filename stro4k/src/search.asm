@@ -982,7 +982,28 @@ alpha_beta:
     ; make the move
     mov edx, r12d
     call game_make_move
-    jc .main_search_tail
+    jnc .legal_move
+
+    ; Copy last move
+    dec r14d
+    mov eax, dword [rsp + 4 * r14]
+    mov dword [rsp + 4 * r15], eax
+
+    ; Possibly decrease first quiet
+    cmp r15d, dword [rbp - 128 + ABLocals.first_quiet]
+    sbb dword [rbp - 128 + ABLocals.first_quiet], 0
+;     cmp r15d, dword [rbp - 128 + ABLocals.first_quiet]
+;     jge .illegal_noisy
+;
+;     dec dword [rbp - 128 + ABLocals.first_quiet]
+; .illegal_noisy:
+
+    ; Decrease ordered moves
+    dec dword [rbp - 128 + ABLocals.ordered_moves]
+
+    jmp .main_search_illegal_move
+
+.legal_move:
 
     ; rsi is a pointer to the current board
     call board_is_check
@@ -1207,6 +1228,7 @@ alpha_beta:
 .no_alpha_improvement:
 .main_search_tail:
     inc r15d
+.main_search_illegal_move:
     cmp r15d, r14d
     jne .main_search_loop_head
 .main_search_end:

@@ -208,7 +208,7 @@ impl<'a> Search<'a> {
         self.nodes += 1;
 
         let mut buffer = MoveBuf::uninit();
-        let moves = gen_moves(self.game.position(), &mut buffer);
+        let mut moves = gen_moves(self.game.position(), &mut buffer);
 
         // Checkmate and stalemate
         let is_check = self.game.position().is_check();
@@ -364,9 +364,11 @@ impl<'a> Search<'a> {
         }
 
         // first quiet, non-tt move
-        let first_quiet = ordered_moves;
+        let mut first_quiet = ordered_moves;
+        let mut i = 0;
 
-        for i in 0..moves.len() {
+        // for i in 0..moves.len() {
+        while i < moves.len() {
             if i == ordered_moves {
                 if depth > 0 {
                     ordered_moves += moveorder::order_quiet_moves(
@@ -394,6 +396,7 @@ impl<'a> Search<'a> {
             let see = if depth <= 7 {
                 let see = self.game.position().see(mov);
                 if see < cmp::min(0, depth * -72) && !pv_node && !is_check {
+                    i += 1;
                     continue;
                 }
 
@@ -415,6 +418,7 @@ impl<'a> Search<'a> {
                         .map_or(0, |x| evaluate::PIECE_VALUES[x as usize]);
 
                     if static_eval + see + promo + DELTA_BASE <= alpha {
+                        i += 1;
                         continue;
                     }
                 }
@@ -422,6 +426,16 @@ impl<'a> Search<'a> {
 
             unsafe {
                 if !self.game.make_move(mov) {
+                    moves[i] = *moves.last().unwrap();
+
+                    let new_len = moves.len() - 1;
+                    moves = &mut moves[0..new_len];
+
+                    ordered_moves -= 1;
+                    if i < first_quiet {
+                        first_quiet -= 1;
+                    }
+
                     continue; // the move was illegal
                 }
             }
@@ -433,6 +447,7 @@ impl<'a> Search<'a> {
                     self.game.unmake_move();
                 }
 
+                i += 1;
                 continue;
             }
 
@@ -452,6 +467,7 @@ impl<'a> Search<'a> {
                                 self.game.unmake_move();
                             }
 
+                            i += 1;
                             continue;
                         }
 
@@ -506,6 +522,8 @@ impl<'a> Search<'a> {
                 bound = Bound::Exact;
                 alpha = eval;
             }
+
+            i += 1;
         }
 
         // Store tt if not in qsearch
