@@ -448,15 +448,10 @@ impl<'a> Search<'a> {
 
                     if lmr_depth < 1 {
                         if !pv_node && !mov.flags().is_noisy() && !is_check && !gives_check {
-                            unsafe {
-                                self.game.unmake_move();
-                            }
-
-                            continue;
+                            0
+                        } else {
+                            1
                         }
-
-                        // minimum depth for lmr search
-                        1
                     } else {
                         lmr_depth
                     }

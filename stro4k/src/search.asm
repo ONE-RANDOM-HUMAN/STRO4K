@@ -1044,26 +1044,26 @@ alpha_beta:
     sub edx, eax
 
     cmp edx, 2
-    jge .no_lmr_pruning
+    jge .lmr_no_depth_clamp
 
     mov edx, 2 ; set the minimum lmr depth + 1
 
     ; non-pv node and is check
     test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG | IS_CHECK_FLAG
-    jnz .no_lmr_pruning
+    jnz .lmr_depth_1
 
     ; quiet move
     test r12d, (CAPTURE_FLAG | PROMO_FLAG) << 12
-    jnz .no_lmr_pruning
+    jnz .lmr_depth_1
 
     ; gives check
     test r8d, r8d
-    jnz .no_lmr_pruning
+    jnz .lmr_depth_1
 
     ; prune
-    add qword [rbx], -Board_size
-    jmp .main_search_tail
-.no_lmr_pruning:
+    dec edx
+.lmr_depth_1:
+.lmr_no_depth_clamp
 .no_lmr_reduction:
     ; save lmr depth + 1
     mov r11d, edx
