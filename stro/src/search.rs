@@ -387,6 +387,13 @@ impl<'a> Search<'a> {
                         } else {
                             &self.history[4]
                         },
+                        if ply > 1 {
+                            unsafe {
+                                &self.history[(self.cont_hist[ply - 2].offset_from(self.history.as_ptr())) as usize]
+                            }
+                        } else {
+                            &self.history[4]
+                        },
                     );
                 } else {
                     break;
