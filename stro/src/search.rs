@@ -407,7 +407,7 @@ impl<'a> Search<'a> {
 
                 if f_prune {
                     // Delta pruning
-                    const DELTA_BASE: i32 = 287;
+                    const DELTA_BASE: i32 = 264;
 
                     let promo = mov
                         .flags()
