@@ -528,6 +528,13 @@ impl<'a> Search<'a> {
                         }
                     }
 
+                    if ply > 1 {
+                        unsafe {
+                            self.history[self.cont_hist[ply - 2].offset_from(self.history.as_ptr()) as usize]
+                                .beta_cutoff(mov, depth);
+                        }
+                    }
+
                     // Decrease history of searched moves
                     #[allow(clippy::needless_range_loop)]
                     for i in first_quiet..i {
@@ -538,6 +545,13 @@ impl<'a> Search<'a> {
                             unsafe {
                                 self.history[self.cont_hist[ply - 1].offset_from(self.history.as_ptr()) as usize]
                                     .failed_cutoff(mov, depth);
+                            }
+                        }
+
+                        if ply > 1 {
+                            unsafe {
+                                self.history[self.cont_hist[ply - 2].offset_from(self.history.as_ptr()) as usize]
+                                    .beta_cutoff(mov, depth);
                             }
                         }
                     }
