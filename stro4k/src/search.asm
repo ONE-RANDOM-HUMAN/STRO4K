@@ -1043,10 +1043,9 @@ alpha_beta:
     ; edx - lmr_depth + 1
     sub edx, eax
 
-    cmp edx, 2
-    jge .no_lmr_pruning
-
-    mov edx, 2 ; set the minimum lmr depth + 1
+    ; correct flags already set
+    ; cmp edx, 0
+    jg .no_lmr_pruning
 
     ; non-pv node and is check
     test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG | IS_CHECK_FLAG
