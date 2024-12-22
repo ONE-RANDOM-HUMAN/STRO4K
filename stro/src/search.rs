@@ -10,6 +10,22 @@ use crate::moveorder::{self, HistoryTable, KillerTable};
 use crate::position::{Board, Move};
 use crate::tt::{self, Bound, TTData};
 
+pub static mut MIN_ASPIRATION_WINDOW_SIZE: i32 = 32;
+pub static mut STATIC_NULL_MOVE_MARGIN: i32 = 80;
+pub static mut F_PRUNE_MARGIN: i32 = 128;
+pub static mut SEE_PRUNE_MARGIN: i32 = -96;
+pub static mut DELTA_BASE: i32 = 96;
+pub static mut LMR_BASE: f32 = 0.25;
+pub static mut LMR_LOG_LOG: f32 = 0.5;
+pub static mut LMR_IMPROVING: f32 = -1.0;
+pub static mut NMP_BASE: f64 = 3.0;
+pub static mut NMP_DEPTH: f64 = 0.25;
+pub static mut NMP_IMPROVING: f64 = -0.5;
+pub static mut MIN_TIME_FRACTION: f64 = 0.025;
+pub static mut MIN_INC_FRACTION: f64 = 0.0;
+pub static mut MAX_TIME_FRACTION: f64 = 0.05;
+pub static mut MAX_INC_FRACTION: f64 = 0.5;
+
 #[no_mangle]
 pub static RUNNING: AtomicBool = AtomicBool::new(false);
 
@@ -99,8 +115,12 @@ impl<'a> Search<'a> {
     }
 
     pub fn set_time(&mut self, time_ms: u32, inc_ms: u32) {
-        self.min_search_time = (time_ms as u64) * 29005 + (inc_ms as u64) * 9457;
-        self.max_search_time = (time_ms as u64) * 86903 + (inc_ms as u64) * 560488;
+        unsafe {
+            let min = time_ms as f64 * MIN_TIME_FRACTION + inc_ms as f64 * MIN_INC_FRACTION;
+            let max = time_ms as f64 * MAX_TIME_FRACTION + inc_ms as f64 * MAX_INC_FRACTION;
+            self.min_search_time = (min * 1_000_000.0) as u64;
+            self.max_search_time = (max * 1_000_000.0) as u64
+        }
     }
 
     #[cfg(feature = "asm")]
@@ -114,7 +134,7 @@ impl<'a> Search<'a> {
         let mut last_score = 0;
 
         'a: for depth in 1..=max_depth {
-            let mut window = 18;
+            let mut window = unsafe { MIN_ASPIRATION_WINDOW_SIZE };
             let mut alpha = cmp::max(MIN_EVAL, last_score - window);
             let mut beta = cmp::min(MAX_EVAL, last_score + window);
 
@@ -307,8 +327,7 @@ impl<'a> Search<'a> {
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 7 {
-                const STATIC_NULL_MOVE_MARGIN: i32 = 80;
-                let margin = depth * STATIC_NULL_MOVE_MARGIN;
+                let margin = unsafe { depth * STATIC_NULL_MOVE_MARGIN };
 
                 if static_eval >= beta + margin {
                     return Some(beta);
@@ -317,14 +336,18 @@ impl<'a> Search<'a> {
 
             // Null move pruning
             if depth >= 3 {
-                // Round towards -inf is fine
-                let r = (618 + depth * 61 + 2 * (static_eval - beta) - 49 * improving as i32) >> 8;
+                let r = unsafe {
+                    NMP_BASE
+                        + f64::from(depth) * NMP_DEPTH
+                        + (1.0 / 128.0) * f64::from(static_eval - beta)
+                        + f64::from(improving) * NMP_IMPROVING
+                };
 
                 unsafe {
                     self.game.make_null_move();
                 }
 
-                let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
+                let eval = self.alpha_beta(-beta, -beta + 1, depth - r as i32 - 1, ply + 1);
 
                 unsafe {
                     self.game.unmake_move();
@@ -345,9 +368,9 @@ impl<'a> Search<'a> {
         // Futility pruning
         let f_prune = depth <= 7 && !is_check && !pv_node;
 
-        const F_PRUNE_MARGIN: i32 = 100;
-        let f_prune = f_prune
-            && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
+        let f_prune = unsafe {
+            f_prune && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha
+        };
 
         // Stand pat in qsearch
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
@@ -393,8 +416,10 @@ impl<'a> Search<'a> {
 
             let see = if depth <= 7 {
                 let see = self.game.position().see(mov);
-                if see < cmp::min(0, depth * -72) && !pv_node && !is_check {
-                    continue;
+                unsafe {
+                    if see < cmp::min(0, depth * SEE_PRUNE_MARGIN) && !pv_node && !is_check {
+                        continue;
+                    }
                 }
 
                 see
@@ -407,15 +432,20 @@ impl<'a> Search<'a> {
 
                 if f_prune {
                     // Delta pruning
-                    const DELTA_BASE: i32 = 287;
-
                     let promo = mov
                         .flags()
                         .promo_piece()
                         .map_or(0, |x| evaluate::PIECE_VALUES[x as usize]);
 
-                    if static_eval + see + promo + DELTA_BASE <= alpha {
-                        continue;
+                    unsafe {
+                        if static_eval
+                            + see
+                            + promo
+                            + DELTA_BASE
+                            <= alpha
+                        {
+                            continue;
+                        }
                     }
                 }
             }
@@ -442,17 +472,17 @@ impl<'a> Search<'a> {
             } else {
                 let lmr_depth = if depth >= 2 && i >= 3 {
                     // Round towards -inf is fine
-                    let reduction = {
-                        let mut reduction = 0.41;
+                    let reduction = unsafe {
+                        let mut reduction = LMR_BASE;
 
                         // log-log reduction
-                        reduction += 0.5 * approx_ln(depth as f32) * approx_ln(i as f32);
+                        reduction += LMR_LOG_LOG * approx_ln(depth as f32) * approx_ln(i as f32);
 
                         if improving {
-                            reduction -= 0.6;
+                            reduction += LMR_IMPROVING;
                         }
 
-                        reduction as i32
+                        cmp::max(reduction as i32, 0)
                     };
 
                     let lmr_depth = depth - reduction - 1;
