@@ -442,8 +442,19 @@ impl<'a> Search<'a> {
             } else {
                 let lmr_depth = if depth >= 2 && i >= 3 {
                     // Round towards -inf is fine
-                    let reduction =
-                        (106 + depth * 15 + i as i32 * 36 - improving as i32 * 152) / 256;
+                    let reduction = {
+                        let mut reduction = 0.41;
+
+                        // log-log reduction
+                        reduction += 0.5 * approx_ln(depth as f32) * approx_ln(i as f32);
+
+                        if improving {
+                            reduction -= 0.6;
+                        }
+
+                        reduction as i32
+                    };
+
                     let lmr_depth = depth - reduction - 1;
 
                     if lmr_depth < 1 {
@@ -694,6 +705,14 @@ impl PlyData {
             best_move: None,
         }
     }
+}
+
+fn approx_ln(mut v: f32) -> f32 {
+    for _ in 0..6 {
+        v = v.sqrt();
+    }
+
+    f32::mul_add(v, 64.0, -64.0)
 }
 
 #[no_mangle]
