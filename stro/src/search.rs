@@ -99,8 +99,8 @@ impl<'a> Search<'a> {
     }
 
     pub fn set_time(&mut self, time_ms: u32, inc_ms: u32) {
-        self.min_search_time = (time_ms as u64) * 29005 + (inc_ms as u64) * 9457;
-        self.max_search_time = (time_ms as u64) * 86903 + (inc_ms as u64) * 560488;
+        self.min_search_time = (time_ms as u64) * 25670 + (inc_ms as u64) * 12509;
+        self.max_search_time = (time_ms as u64) * 94277 + (inc_ms as u64) * 572875;
     }
 
     #[cfg(feature = "asm")]
@@ -114,7 +114,7 @@ impl<'a> Search<'a> {
         let mut last_score = 0;
 
         'a: for depth in 1..=max_depth {
-            let mut window = 18;
+            let mut window = 15;
             let mut alpha = cmp::max(MIN_EVAL, last_score - window);
             let mut beta = cmp::min(MAX_EVAL, last_score + window);
 
@@ -307,7 +307,7 @@ impl<'a> Search<'a> {
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 7 {
-                const STATIC_NULL_MOVE_MARGIN: i32 = 80;
+                const STATIC_NULL_MOVE_MARGIN: i32 = 79;
                 let margin = depth * STATIC_NULL_MOVE_MARGIN;
 
                 if static_eval >= beta + margin {
@@ -318,7 +318,7 @@ impl<'a> Search<'a> {
             // Null move pruning
             if depth >= 3 {
                 // Round towards -inf is fine
-                let r = (618 + depth * 61 + 2 * (static_eval - beta) - 49 * improving as i32) >> 8;
+                let r = (643 + depth * 68 + 2 * (static_eval - beta) - 46 * improving as i32) >> 8;
 
                 unsafe {
                     self.game.make_null_move();
@@ -345,7 +345,7 @@ impl<'a> Search<'a> {
         // Futility pruning
         let f_prune = depth <= 7 && !is_check && !pv_node;
 
-        const F_PRUNE_MARGIN: i32 = 100;
+        const F_PRUNE_MARGIN: i32 = 104;
         let f_prune = f_prune
             && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
 
@@ -393,7 +393,7 @@ impl<'a> Search<'a> {
 
             let see = if depth <= 7 {
                 let see = self.game.position().see(mov);
-                if see < cmp::min(0, depth * -72) && !pv_node && !is_check {
+                if see < cmp::min(0, depth * -79) && !pv_node && !is_check {
                     continue;
                 }
 
@@ -407,7 +407,7 @@ impl<'a> Search<'a> {
 
                 if f_prune {
                     // Delta pruning
-                    const DELTA_BASE: i32 = 287;
+                    const DELTA_BASE: i32 = 356;
 
                     let promo = mov
                         .flags()
@@ -441,15 +441,14 @@ impl<'a> Search<'a> {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
             } else {
                 let lmr_depth = if depth >= 2 && i >= 3 {
-                    // Round towards -inf is fine
                     let reduction = {
-                        let mut reduction = 0.41;
+                        let mut reduction = 0.24226642;
 
                         // log-log reduction
-                        reduction += 0.5 * approx_ln(depth as f32) * approx_ln(i as f32);
+                        reduction += 0.5487653 * approx_ln(depth as f32) * approx_ln(i as f32);
 
                         if improving {
-                            reduction -= 0.6;
+                            reduction -= 0.5398779;
                         }
 
                         reduction as i32
