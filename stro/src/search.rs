@@ -1,6 +1,7 @@
 pub mod threads;
 
 use std::cmp;
+use std::num::NonZeroU16;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
@@ -108,11 +109,12 @@ impl<'a> Search<'a> {
         unsafe { crate::asm::root_search_sysv(self, main_thread, max_depth) }
     }
 
-    pub fn search(&mut self, main_thread: bool, max_depth: i32) -> (Move, i32) {
+    pub fn search(&mut self, main_thread: bool, max_depth: i32) -> SearchResult {
         self.nodes = 0;
         let mut best_move = None;
         let mut last_score = 0;
 
+        let mut reached_depth = max_depth;
         'a: for depth in 1..=max_depth {
             let mut window = 18;
             let mut alpha = cmp::max(MIN_EVAL, last_score - window);
@@ -120,6 +122,7 @@ impl<'a> Search<'a> {
 
             last_score = loop {
                 let Some(score) = self.alpha_beta(alpha, beta, depth, 0) else {
+                    reached_depth = depth - 1;
                     break 'a;
                 };
 
@@ -141,11 +144,16 @@ impl<'a> Search<'a> {
             }
 
             if self.time_up(self.min_search_time) {
+                reached_depth = depth;
                 break 'a;
             }
         }
 
-        (best_move.unwrap(), last_score)
+        SearchResult {
+            best_move: best_move.unwrap(),
+            score: last_score.try_into().unwrap(),
+            depth: reached_depth,
+        }
     }
 
     pub fn print_uci_info(&mut self, depth: i32, score: i32) {
@@ -675,6 +683,29 @@ impl<'a> Search<'a> {
 
     fn time_up(&self, search_time: u64) -> bool {
         elapsed_nanos(&self.start) > search_time
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct SearchResult {
+    pub depth: i32,
+    pub best_move: Move,
+    pub score: i16,
+}
+
+impl SearchResult {
+    fn to_u64(self) -> u64 {
+        self.depth as u64
+            | ((self.best_move.0.get() as u64) << 32)
+            | ((self.score as u64) << 48)
+    }
+
+    fn from_u64(v: u64) -> Option<Self> {
+        Some(Self {
+            depth: v as i32,
+            best_move: Move(NonZeroU16::new((v >> 32) as u16)?),
+            score: (v >> 48) as i16,
+        })
     }
 }
 
