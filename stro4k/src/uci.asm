@@ -275,7 +275,7 @@ _start:
     mov rdx, "bestmove"
     call write8
 
-    mov ecx, dword [rbx + 4]
+    movzx ecx, word [rbx]
     mov eax, 07070707h
     pdep eax, ecx, eax
     add eax, "a1a1"

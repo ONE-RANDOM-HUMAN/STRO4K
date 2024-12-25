@@ -187,21 +187,12 @@ impl SearchThreads {
 
         // not really centipawns, but no scaling to remain consistent
         // with a possible binary version.
-        if !self.asm {
-            println!(
-                "info depth {depth} nodes {} nps {} score cp {score}",
-                self.main_thread.search.nodes,
-                (self.main_thread.search.nodes as f64
-                    / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
-            );
-        } else {
-            println!(
-                "info depth {depth} nodes {} nps {}",
-                self.main_thread.search.nodes,
-                (self.main_thread.search.nodes as f64
-                    / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
-            );
-        }
+        println!(
+            "info depth {depth} nodes {} nps {} score cp {score}",
+            self.main_thread.search.nodes,
+            (self.main_thread.search.nodes as f64
+             / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
+        );
 
         println!("bestmove {best_move}");
     }
@@ -211,7 +202,7 @@ fn thread_search(search: &mut Search, main_thread: bool, max_depth: i32) {
     let result = search.search(main_thread, max_depth).to_u64();
 
     let mut loaded = SEARCH_RESULT.load(Ordering::Relaxed);
-    while (loaded as u32) < result as u32 {
+    while loaded < result {
         if let Err(v) = SEARCH_RESULT
             .compare_exchange_weak(loaded, result, Ordering::Relaxed, Ordering::Relaxed)
         {

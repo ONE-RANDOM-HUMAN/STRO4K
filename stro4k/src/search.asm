@@ -68,7 +68,7 @@ thread_search:
 %endif
 ; search - rbx
 ; time should be calculated before calling root_search
-; returns best move in [rbx + 4]
+; returns best move in [rbx]
 root_search:
 %ifdef EXPORT_SYSV
     ; Save in last plydata - should never be used
@@ -174,12 +174,21 @@ root_search:
     jna .iterative_deepening_head
 .end_search: 
 
-    shl r15, 32
+    ; r13 - depth
+    ; r14 - score
+    ; r15 - move
+    shl r13, 32
+    shl r14d, 16
+    btc r14d, 31
+
+    or r15, r14
     or r15, r13
+
+
     lea rbx, [SEARCH_RESULT]
     mov rax, qword [rbx]
 .search_result_head:
-    cmp eax, r15d
+    cmp rax, r15
     jae .search_result_end
 
     lock cmpxchg qword [rbx], r15

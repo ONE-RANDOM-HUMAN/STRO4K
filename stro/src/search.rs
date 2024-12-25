@@ -688,23 +688,23 @@ impl<'a> Search<'a> {
 
 #[derive(Clone, Copy, Debug)]
 pub struct SearchResult {
-    pub depth: i32,
     pub best_move: Move,
     pub score: i16,
+    pub depth: i32,
 }
 
 impl SearchResult {
     fn to_u64(self) -> u64 {
-        self.depth as u64
-            | ((self.best_move.0.get() as u64) << 32)
-            | ((self.score as u64) << 48)
+        (self.best_move.0.get() as u64)
+            | ((self.score as u64 ^ 0x8000) << 16) // complement sign bit for sorting
+            | ((self.depth as u64) << 32)
     }
 
     fn from_u64(v: u64) -> Option<Self> {
         Some(Self {
-            depth: v as i32,
-            best_move: Move(NonZeroU16::new((v >> 32) as u16)?),
-            score: (v >> 48) as i16,
+            best_move: Move(NonZeroU16::new(v as u16)?),
+            score: ((v >> 16) ^ 0x8000) as i16,
+            depth: (v >> 32) as i32,
         })
     }
 }
