@@ -105,7 +105,7 @@ impl<'a> Search<'a> {
     }
 
     #[cfg(feature = "asm")]
-    pub fn search_asm(&mut self, main_thread: bool, max_depth: i32) -> Move {
+    pub fn search_asm(&mut self, main_thread: bool, max_depth: i32) {
         unsafe { crate::asm::root_search_sysv(self, main_thread, max_depth) }
     }
 

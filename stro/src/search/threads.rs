@@ -9,6 +9,7 @@ use crate::tt;
 
 use super::{elapsed_nanos, Search, SearchResult, Time};
 
+#[no_mangle]
 static SEARCH_RESULT: AtomicU64 = AtomicU64::new(0);
 
 struct SearchThread {
@@ -195,7 +196,7 @@ impl SearchThreads {
             );
         } else {
             println!(
-                "info nodes {} nps {}",
+                "info depth {depth} nodes {} nps {}",
                 self.main_thread.search.nodes,
                 (self.main_thread.search.nodes as f64
                     / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
