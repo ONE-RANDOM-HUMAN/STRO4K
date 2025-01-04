@@ -420,6 +420,7 @@ alpha_beta:
     mov eax, dword [rsi + Board.side_to_move]
     and eax, 00FFFFFFh
     vmovd xmm0, eax
+    vaesenc xmm0, xmm0, xmm0
 
     mov eax, 12
 .hash_loop_head:

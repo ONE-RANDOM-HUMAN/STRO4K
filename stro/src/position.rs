@@ -327,6 +327,8 @@ impl Board {
                     | (self.castling as i32) << 16,
             );
 
+            value = _mm_aesenc_si128(value, value);
+
             let ptr = self as *const _ as *const i64;
 
             // pieces and color
