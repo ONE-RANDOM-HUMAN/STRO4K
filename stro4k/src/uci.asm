@@ -215,6 +215,7 @@ _start:
 
 .go_finish_read:
     mov byte [RUNNING_WORKER_THREADS], 80h | (NUM_THREADS - 1)
+    and qword [SEARCH_RESULT], 0
 
 %if NUM_THREADS > 1
     ; create threads
@@ -271,11 +272,10 @@ _start:
     lock and byte [RUNNING_WORKER_THREADS], 7Fh
     jnz .go_wait_for_threads
 
-    ; mov in bx
     mov rdx, "bestmove"
     call write8
 
-    mov ecx, ebx
+    mov ecx, dword [rbx + 4]
     mov eax, 07070707h
     pdep eax, ecx, eax
     add eax, "a1a1"

@@ -186,9 +186,13 @@ KNIGHT_SHIFTS:
 
 section .bss
 %ifndef EXPORT_SYSV
+SEARCH_RESULT:
+    resq 1
 RUNNING_WORKER_THREADS:
     ; the top bit will indicate whether the threads should continue running
     resb 1
+%else
+    extern SEARCH_RESULT
 %endif
 
 alignb 4096

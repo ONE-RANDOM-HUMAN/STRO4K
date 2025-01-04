@@ -1,5 +1,5 @@
 use std::ops::Add;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
 
 use crate::game::{Game, GameBuf, GameStart};
@@ -7,7 +7,10 @@ use crate::position::{Board, Move};
 use crate::search::RUNNING;
 use crate::tt;
 
-use super::{elapsed_nanos, Search, Time};
+use super::{elapsed_nanos, Search, SearchResult, Time};
+
+#[no_mangle]
+static SEARCH_RESULT: AtomicU64 = AtomicU64::new(0);
 
 struct SearchThread {
     start: GameStart<'static>,
@@ -136,7 +139,8 @@ impl SearchThreads {
                 .unwrap()
         };
 
-        let (mov, score) = thread::scope(|s| {
+        thread::scope(|s| {
+            SEARCH_RESULT.store(0, Ordering::Relaxed);
             RUNNING.store(true, Ordering::Relaxed);
 
             for thread in &mut self.threads {
@@ -155,11 +159,11 @@ impl SearchThreads {
                     if self.asm {
                         thread.search.search_asm(false, i32::MAX);
                     } else {
-                        thread.search.search(false, i32::MAX);
+                        thread_search(&mut thread.search, false, i32::MAX);
                     }
 
                     #[cfg(not(feature = "asm"))]
-                    thread.search.search(false, i32::MAX);
+                    thread_search(&mut thread.search, false, i32::MAX);
                 });
             }
 
@@ -167,38 +171,54 @@ impl SearchThreads {
             self.main_thread.search.set_time(time, inc);
 
             #[cfg(feature = "asm")]
-            let result = if self.asm {
-                let mov = self.main_thread.search.search_asm(true, i32::MAX);
-                (mov, 0)
+            if self.asm {
+                self.main_thread.search.search_asm(true, i32::MAX);
             } else {
-                self.main_thread.search.search(true, i32::MAX)
+                thread_search(&mut self.main_thread.search, true, i32::MAX);
             };
 
             #[cfg(not(feature = "asm"))]
-            let result = self.main_thread.search.search(true, i32::MAX);
+            thread_search(&mut self.main_thread.search, true, i32::MAX);
 
             RUNNING.store(false, Ordering::Relaxed);
-            result
         });
+
+        let SearchResult { depth, best_move, score } = SearchResult::from_u64(SEARCH_RESULT.load(Ordering::Relaxed)).unwrap();
 
         // not really centipawns, but no scaling to remain consistent
         // with a possible binary version.
         if !self.asm {
             println!(
-                "info nodes {} nps {} score cp {score}",
+                "info depth {depth} nodes {} nps {} score cp {score}",
                 self.main_thread.search.nodes,
                 (self.main_thread.search.nodes as f64
                     / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
             );
         } else {
             println!(
-                "info nodes {} nps {}",
+                "info depth {depth} nodes {} nps {}",
                 self.main_thread.search.nodes,
                 (self.main_thread.search.nodes as f64
                     / (elapsed_nanos(&start) as f64 / 1_000_000_000.0)) as u64,
             );
         }
 
-        println!("bestmove {mov}");
+        println!("bestmove {best_move}");
     }
+}
+
+fn thread_search(search: &mut Search, main_thread: bool, max_depth: i32) {
+    let result = search.search(main_thread, max_depth).to_u64();
+
+    let mut loaded = SEARCH_RESULT.load(Ordering::Relaxed);
+    while (loaded as u32) < result as u32 {
+        if let Err(v) = SEARCH_RESULT
+            .compare_exchange_weak(loaded, result, Ordering::Relaxed, Ordering::Relaxed)
+        {
+            loaded = v;
+        } else {
+            break;
+        }
+    }
+
 }

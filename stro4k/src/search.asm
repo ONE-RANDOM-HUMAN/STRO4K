@@ -23,7 +23,6 @@ section .text
 
 %ifdef EXPORT_SYSV
     extern search_print_info_sysv
-    global alpha_beta
     global root_search_sysv
 
 root_search_sysv:
@@ -41,7 +40,6 @@ root_search_sysv:
     mov r12d, esi
     mov r11d, edx
     call root_search
-    mov eax, ebx
 
     pop rbx
     pop qword [rbx]
@@ -70,13 +68,13 @@ thread_search:
 %endif
 ; search - rbx
 ; time should be calculated before calling root_search
-; returns best move in ebx
+; returns best move in [rbx + 4]
 root_search:
 %ifdef EXPORT_SYSV
     ; Save in last plydata - should never be used
     mov qword [rbx + Search.ply_data + (MAX_BOARDS - 1) * PlyData_size], rsp
 %endif
-    mov qword [rbx + Search.nodes], 0
+    and qword [rbx + Search.nodes], 0
 
     ; r13d - depth
     ; r14d - last score
@@ -175,7 +173,18 @@ root_search:
 %endif
     jna .iterative_deepening_head
 .end_search: 
-    mov ebx, r15d
+
+    shl r15, 32
+    or r15, r13
+    lea rbx, [SEARCH_RESULT]
+    mov rax, qword [rbx]
+.search_result_head:
+    cmp eax, r15d
+    jae .search_result_end
+
+    lock cmpxchg qword [rbx], r15
+    jnz .search_result_head
+.search_result_end:
     ret
 
 struc ABLocals
@@ -372,12 +381,19 @@ alpha_beta:
     ; TODO
 %ifdef EXPORT_SYSV
     mov rsp, qword [rbx + Search.ply_data + (MAX_BOARDS - 1) * PlyData_size]
+    sub rsp, 32
 %else
-    lea rsp, [rbx - 8]
+    ; lea rsp, [rbx - 8]
+    lea rsp, [rbx - 40]
 %endif
-    ; restore r15 - it is the first register to be pushed by alpha_beta
+    ; restore r13-r15 - these are the first registers to be pushed by alpha_beta
     ; after it is called by root_search.
-    mov r15d, dword [rsp - 16]
+    pop r13
+    pop r14
+    pop r15
+    pop rax
+
+    dec r13d
     jmp root_search.end_search
 .no_stop_search:
 
