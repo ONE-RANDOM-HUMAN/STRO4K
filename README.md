@@ -38,7 +38,7 @@ cargo build --release --no-default-features
 
 ## Current size
 ```
-4073 bytes
+4079 bytes
 ```
 ## Features
 * PV output in STRO
