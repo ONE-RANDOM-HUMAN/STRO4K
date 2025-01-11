@@ -1012,6 +1012,8 @@ alpha_beta:
     jnz .no_fprune_move
     test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
     jz .no_fprune_move
+    cmp dword [rbp - 128 + ABLocals.best_eval], MIN_EVAL
+    jle .no_fprune_move
 
     ; prune
     add qword [rbx], -Board_size

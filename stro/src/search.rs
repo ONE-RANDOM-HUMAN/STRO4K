@@ -436,7 +436,7 @@ impl<'a> Search<'a> {
 
             let gives_check = self.game.position().is_check();
 
-            if f_prune && !mov.flags().is_noisy() && !gives_check {
+            if f_prune && !mov.flags().is_noisy() && !gives_check && best_eval > MIN_EVAL {
                 unsafe {
                     self.game.unmake_move();
                 }
