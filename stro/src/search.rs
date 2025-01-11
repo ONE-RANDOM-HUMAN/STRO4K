@@ -452,22 +452,8 @@ impl<'a> Search<'a> {
                     // Round towards -inf is fine
                     let reduction =
                         (106 + depth * 15 + i as i32 * 36 - improving as i32 * 152) / 256;
-                    let lmr_depth = depth - reduction - 1;
 
-                    if lmr_depth < 1 {
-                        if !pv_node && !mov.flags().is_noisy() && !is_check && !gives_check {
-                            unsafe {
-                                self.game.unmake_move();
-                            }
-
-                            continue;
-                        }
-
-                        // minimum depth for lmr search
-                        1
-                    } else {
-                        lmr_depth
-                    }
+                    depth - reduction - 1
                 } else {
                     depth - 1
                 };
