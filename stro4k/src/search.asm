@@ -198,6 +198,8 @@ struc ABLocals
         resd 1
     .best_move:
         resd 1 ; lower bits are ignored
+    .quiets_to_go:
+        resd 1
     .alpha:
         resd 1
     .static_eval:
@@ -694,10 +696,19 @@ alpha_beta:
     ; ecx - static eval
     movsx ecx, word [rbp - 128 + ABLocals.static_eval]
 
-    ; futility pruning
     ; edx - depth
     mov edx, dword [rbp + 8]
+    mov eax, edx
 
+    ; late move pruning
+    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
+    jnz .no_fprune_no_lmp
+
+    imul eax, eax
+    add eax, 2
+    mov dword [rbp - 128 + ABLocals.quiets_to_go], eax
+
+    ; futility pruning
     cmp edx, 7
     jnle .no_fprune
 
@@ -725,6 +736,7 @@ alpha_beta:
     jnle .no_fprune
 
     or byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
+.no_fprune_no_lmp:
 .no_fprune:
     ; eax - best eval
     mov eax, MIN_EVAL
@@ -1202,6 +1214,13 @@ alpha_beta:
     mov byte [rbp - 128 + ABLocals.bound], BOUND_EXACT
     mov dword [rbp - 128 + ABLocals.alpha], eax
 .no_alpha_improvement:
+    ; late move pruning
+    test r12d, (CAPTURE_FLAG | PROMO_FLAG) << 12
+    jnz .non_quiet_move
+
+    dec dword [rbp - 128 + ABLocals.quiets_to_go]
+    jz .main_search_end
+.non_quiet_move:
 .main_search_tail:
     inc r15d
     cmp r15d, r14d

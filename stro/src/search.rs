@@ -374,6 +374,13 @@ impl<'a> Search<'a> {
         // first quiet, non-tt move
         let first_quiet = ordered_moves;
 
+        // If depth <= 0, there are no quiets anyway
+        let mut quiets_to_go = if beta - alpha == 1 {
+            2 + depth * depth
+        } else {
+            0 // This will become negative on decrement
+        };
+
         for i in 0..moves.len() {
             if i == ordered_moves {
                 if depth > 0 {
@@ -499,6 +506,14 @@ impl<'a> Search<'a> {
             if eval > alpha {
                 bound = Bound::Exact;
                 alpha = eval;
+            }
+
+            // Late moves pruning
+            if !mov.flags().is_noisy() {
+                quiets_to_go -= 1;
+                if quiets_to_go == 0 {
+                    break;
+                }
             }
         }
 
