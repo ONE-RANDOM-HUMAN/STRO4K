@@ -187,6 +187,33 @@ root_search:
 .search_result_end:
     ret
 
+
+; rbx - search
+; rdx - time to search
+; set by using ja
+time_up:
+    mov eax, CLOCK_GETTIME_SYSCALL
+
+    push CLOCK_MONOTONIC
+    pop rdi
+
+    ; use red zone
+    lea rsi, [rsp - 16]
+    syscall
+
+    ; calculate time used
+    lodsq
+    sub rax, qword [rbx + Search.start_tvsec]
+    imul rcx, rax, 1_000_000_000
+
+    lodsq
+    sub rax, qword [rbx + Search.start_tvnsec]
+    add rcx, rax
+
+    ; compare
+    cmp rcx, rdx
+    ret
+
 struc ABLocals
     .hash:
         resq 1
@@ -714,25 +741,24 @@ alpha_beta:
 
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_fprune
-    
+
     ; depth + improving
     xor esi, esi
 
     ; bt on memory is not that slow with imm
     bt dword [rbp - 128 + ABLocals.flags], IMPROVING_FLAG_INDEX
     adc esi, edx
-.fprune_not_improving:
 
     ; set a minimum of 1
     mov eax, 1
     cmp esi, eax
-    cmovl esi, eax
+    cmovnl eax, esi
 
-    imul esi, esi, F_PRUNE_MARGIN
+    imul eax, eax, F_PRUNE_MARGIN
 
     ; check if margin + static_eval is less than alpha
-    add esi, ecx
-    cmp esi, dword [rbp + 24]
+    add eax, ecx
+    cmp eax, dword [rbp + 24]
     jnle .no_fprune
 
     or byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
@@ -779,7 +805,7 @@ alpha_beta:
 
     ; order the quiet moves
 
-    ; all moves are now ordered
+    ; all will be ordered after this
     mov dword [rbp - 128 + ABLocals.ordered_moves], r14d
 
     ; check depth for qsearch
@@ -840,8 +866,8 @@ alpha_beta:
     cmp edi, r14d
     je .find_highest_score_end
 
-    movzx ecx, word [rsp + 4 * rdi + MovePlus.score]
-    cmp cx, word [rsp + 4 * rsi + MovePlus.score]
+    mov eax, dword [rsp + 4 * rdi + MovePlus.score]
+    cmp ax, word [rsp + 4 * rsi + MovePlus.score]
     cmovg esi, edi
 
     jmp .find_highest_score_head
@@ -884,8 +910,7 @@ alpha_beta:
     ; no need to remove captured piece
 
     ; This can't be replaced by cmovns because that always performs the load
-    mov edi, ecx
-    mov r13d, dword [r11 + 4 * rdi]
+    mov r13d, dword [r11 + 4 * rcx]
 .see_no_captured_piece:
     mov r15d, r13d ; r15d - beta
 
@@ -1077,11 +1102,11 @@ alpha_beta:
     ; save lmr depth + 1
     mov r11d, edx
 
-    ; ecx - lmr depth
-    lea ecx, [rdx - 1]
-
     ; esi - -alpha - 1
     lea esi, [rdi - 1]
+
+    ; ecx - lmr depth
+    lea ecx, [rdx - 1]
 
     ; ply + 1
     mov edx, dword [rbp + 16]
@@ -1104,13 +1129,15 @@ alpha_beta:
     cmp r11d, dword [rbp + 8]
     je .pvs_no_research ; search with full depth already completed
 .pvs_search_full:
+    ; edx - depth
+    mov edx, dword [rbp + 8]
+
     ; -beta
     mov esi, dword [rbp + 32]
     neg esi
 
     ; depth - 1
-    mov ecx, -1
-    add ecx, dword [rbp + 8]
+    lea ecx, [rdx - 1]
 
     ; ply + 1
     mov edx, dword [rbp + 16]
@@ -1137,7 +1164,7 @@ alpha_beta:
     jnge .no_beta_cutoff
 
     ; beta cutoff
-    mov byte[rbp - 128 + ABLocals.bound], BOUND_LOWER
+    mov byte [rbp - 128 + ABLocals.bound], BOUND_LOWER
 
     ; move ordering for quiet moves
     test r12d, (CAPTURE_FLAG | PROMO_FLAG) << 12
@@ -1292,28 +1319,3 @@ alpha_beta:
     pop r15
     ret
 
-; rbx - search
-; rdx - time to search
-; set by using ja
-time_up:
-    mov eax, CLOCK_GETTIME_SYSCALL
-
-    push CLOCK_MONOTONIC
-    pop rdi
-
-    ; use red zone
-    lea rsi, [rsp - 16]
-    syscall
-
-    ; calculate time used
-    lodsq
-    sub rax, qword [rbx + Search.start_tvsec]
-    imul rcx, rax, 1_000_000_000
-
-    lodsq
-    sub rax, qword [rbx + Search.start_tvnsec]
-    add rcx, rax
-
-    ; compare
-    cmp rcx, rdx
-    ret
