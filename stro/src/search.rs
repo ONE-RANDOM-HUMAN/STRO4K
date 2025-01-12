@@ -374,6 +374,13 @@ impl<'a> Search<'a> {
         // first quiet, non-tt move
         let first_quiet = ordered_moves;
 
+        // If depth <= 0, there are no quiets anyway
+        let mut quiets_to_go = if beta - alpha == 1 {
+            2 + depth * depth
+        } else {
+            0 // This will become negative on decrement
+        };
+
         for i in 0..moves.len() {
             if i == ordered_moves {
                 if depth > 0 {
@@ -452,22 +459,8 @@ impl<'a> Search<'a> {
                     // Round towards -inf is fine
                     let reduction =
                         (106 + depth * 15 + i as i32 * 36 - improving as i32 * 152) / 256;
-                    let lmr_depth = depth - reduction - 1;
 
-                    if lmr_depth < 1 {
-                        if !pv_node && !mov.flags().is_noisy() && !is_check && !gives_check {
-                            unsafe {
-                                self.game.unmake_move();
-                            }
-
-                            continue;
-                        }
-
-                        // minimum depth for lmr search
-                        1
-                    } else {
-                        lmr_depth
-                    }
+                    depth - reduction - 1
                 } else {
                     depth - 1
                 };
@@ -513,6 +506,14 @@ impl<'a> Search<'a> {
             if eval > alpha {
                 bound = Bound::Exact;
                 alpha = eval;
+            }
+
+            // Late moves pruning
+            if !mov.flags().is_noisy() {
+                quiets_to_go -= 1;
+                if quiets_to_go == 0 {
+                    break;
+                }
             }
         }
 
