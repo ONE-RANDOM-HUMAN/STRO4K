@@ -1005,38 +1005,19 @@ alpha_beta:
     jl .main_search_tail
 .no_see_pruning:
 
-    cmp dword [rbp + 8], 0
-    jnle .not_quiescence
 
     ; DEBUG: check that the move is noisy in qsearch
 %ifdef DEBUG
+    cmp dword [rbp + 8], 0
+    jnle .not_quiescence
+
     test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
     jnz .debug_noisy
     int3
 .debug_noisy:
+.not_quiescence:
 %endif
 
-    ; delta pruning
-    ; check that futility pruning is enabled
-    test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG
-    jz .no_delta_prune
-
-    ; edi - static eval + see
-    movsx eax, word [rbp - 128 + ABLocals.static_eval]
-    lea edi, [rdi + rax + DELTA_BASE]
-
-    mov edx, r12d
-    test dh, PROMO_FLAG << 4
-    jz .delta_prune_no_promo
-
-    shr edx, 12
-    and edx, 11b
-    add edi, dword [r11 + 4 * rdx + 4]
-.delta_prune_no_promo:
-    cmp edi, dword [rbp - 128 + ABLocals.alpha]
-    jle .main_search_tail
-.no_delta_prune:
-.not_quiescence:
 .not_quiescence_no_see:
     ; make the move
     mov edx, r12d

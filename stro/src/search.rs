@@ -406,7 +406,7 @@ impl<'a> Search<'a> {
                 moves[i].mov
             };
 
-            let see = if depth <= 7 {
+            if depth <= 7 {
                 let see = self.game.position().see(mov);
                 if see < cmp::min(0, depth * -72) && !pv_node && !is_check {
                     continue;
@@ -419,20 +419,6 @@ impl<'a> Search<'a> {
 
             if depth <= 0 {
                 assert!(mov.flags().is_noisy(), "{mov:?}");
-
-                if f_prune {
-                    // Delta pruning
-                    const DELTA_BASE: i32 = 287;
-
-                    let promo = mov
-                        .flags()
-                        .promo_piece()
-                        .map_or(0, |x| evaluate::PIECE_VALUES[x as usize]);
-
-                    if static_eval + see + promo + DELTA_BASE <= alpha {
-                        continue;
-                    }
-                }
             }
 
             unsafe {
