@@ -1101,6 +1101,12 @@ alpha_beta:
     ; divide by 256
     sar eax, 8
 
+    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
+    jz .lmr_not_pv
+
+    sar eax, 1
+.lmr_not_pv:
+
     ; edx - lmr_depth + 1
     sub edx, eax
 

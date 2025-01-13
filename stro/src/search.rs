@@ -457,8 +457,12 @@ impl<'a> Search<'a> {
             } else {
                 let lmr_depth = if depth >= 2 && i >= 3 {
                     // Round towards -inf is fine
-                    let reduction =
+                    let mut reduction =
                         (106 + depth * 15 + i as i32 * 36 - improving as i32 * 152) / 256;
+
+                    if pv_node {
+                        reduction >>= 1;
+                    }
 
                     depth - reduction - 1
                 } else {
