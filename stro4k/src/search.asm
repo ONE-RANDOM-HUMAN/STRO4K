@@ -732,7 +732,13 @@ alpha_beta:
     jnz .no_fprune_no_lmp
 
     imul eax, eax
-    add eax, 2
+    add eax, 3
+
+    test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
+    jnz .lmp_improving
+
+    shr eax, 1
+.lmp_improving:
     mov dword [rbp - 128 + ABLocals.quiets_to_go], eax
 
     ; futility pruning

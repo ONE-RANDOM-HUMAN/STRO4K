@@ -376,7 +376,7 @@ impl<'a> Search<'a> {
 
         // If depth <= 0, there are no quiets anyway
         let mut quiets_to_go = if beta - alpha == 1 {
-            2 + depth * depth
+            (3 + depth * depth) >> (!improving as u32)
         } else {
             0 // This will become negative on decrement
         };
