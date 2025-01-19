@@ -596,6 +596,9 @@ alpha_beta:
 .tt_end:
 .no_tt_probe:
 
+    ; reset future killers
+    mov dword [r13 + PlyData_size + PlyData.kt], 0
+
     ; Null move pruning
     ; check depth
     mov ecx, dword [rbp + 8]
