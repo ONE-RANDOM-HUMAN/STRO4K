@@ -60,7 +60,8 @@ pub struct Search<'a> {
     min_search_time: u64, // min search time in nanoseconds
     max_search_time: u64, // max search time in nanoseconds
     ply: [PlyData; 12288],
-    history: [HistoryTable; 2],
+    cont_hist: [*mut HistoryTable; 12288],
+    history: [HistoryTable; 2 * 6 * 64],
 }
 
 /// Automatically unmakes move and returns when `None` is received
@@ -80,23 +81,27 @@ macro_rules! search {
 }
 
 impl<'a> Search<'a> {
-    fn new(game: Game<'a>) -> Self {
-        Self {
-            game,
-            nodes: 0,
-            start: time_now(),
-            min_search_time: u64::MAX,
-            max_search_time: u64::MAX,
-            ply: [PlyData::new(); 12288],
-            history: [HistoryTable::new(), HistoryTable::new()],
+    fn boxed(game: Game<'a>) -> Box<Self> {
+        let mut result = Box::new_zeroed();
+        let ptr: *mut Self = result.as_mut_ptr();
+
+        unsafe {
+            std::ptr::addr_of_mut!((*ptr).game).write(game);
+            std::ptr::addr_of_mut!((*ptr).start).write(time_now());
+            std::ptr::addr_of_mut!((*ptr).min_search_time).write(u64::MAX);
+            std::ptr::addr_of_mut!((*ptr).max_search_time).write(u64::MAX);
+
+            result.assume_init()
         }
     }
 
     pub fn new_game(&mut self) {
         // tt must be cleared seperately
         self.ply.fill(PlyData::new());
-        self.history[0].reset();
-        self.history[1].reset();
+
+        for history in &mut self.history {
+            history.reset();
+        }
     }
 
     pub fn set_time(&mut self, time_ms: u32, inc_ms: u32) {
@@ -332,6 +337,8 @@ impl<'a> Search<'a> {
                     self.game.make_null_move();
                 }
 
+                self.cont_hist[ply] = &mut self.history[2 + self.game.position().side_to_move().other() as usize];
+
                 let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
 
                 unsafe {
@@ -388,6 +395,13 @@ impl<'a> Search<'a> {
                         &mut moves[ordered_moves..],
                         self.ply[ply].kt,
                         &self.history[self.game.position().side_to_move() as usize],
+                        if ply > 0 {
+                            unsafe {
+                                &self.history[(self.cont_hist[ply - 1].offset_from(self.history.as_ptr())) as usize]
+                            }
+                        } else {
+                            &self.history[4]
+                        },
                     );
                 } else {
                     break;
@@ -426,6 +440,15 @@ impl<'a> Search<'a> {
                     continue; // the move was illegal
                 }
             }
+
+            let index = self.game.position().side_to_move().other() as usize * 6 * 64
+                + self.game.position()
+                    .get_piece(mov.dest(), self.game.position().side_to_move().other()).unwrap() as usize * 64
+                + mov.dest() as usize;
+
+            assert!(index > 4);
+            self.cont_hist[ply] = &mut self.history[index];
+
 
             let gives_check = self.game.position().is_check();
 
@@ -478,11 +501,25 @@ impl<'a> Search<'a> {
                     self.history[self.game.position().side_to_move() as usize]
                         .beta_cutoff(mov, depth);
 
+                    if ply > 0 {
+                        unsafe {
+                            self.history[self.cont_hist[ply - 1].offset_from(self.history.as_ptr()) as usize]
+                                .beta_cutoff(mov, depth);
+                        }
+                    }
+
                     // Decrease history of searched moves
                     #[allow(clippy::needless_range_loop)]
                     for i in first_quiet..i {
                         self.history[self.game.position().side_to_move() as usize]
                             .failed_cutoff(moves[i].mov, depth);
+
+                        if ply > 0 {
+                            unsafe {
+                                self.history[self.cont_hist[ply - 1].offset_from(self.history.as_ptr()) as usize]
+                                    .failed_cutoff(mov, depth);
+                            }
+                        }
                     }
                 }
 
@@ -519,7 +556,7 @@ impl<'a> Search<'a> {
     pub fn bench(depth: i32) {
         let mut buffer = GameBuf::uninit();
         let (game, start) = Game::startpos(&mut buffer);
-        let mut search = Search::new(game);
+        let mut search = Search::boxed(game);
 
         unsafe {
             tt::alloc((16 * 1024 * 1024).try_into().unwrap());
@@ -585,7 +622,7 @@ impl<'a> Search<'a> {
     pub fn bench2(depth: i32) {
         let mut buffer = GameBuf::uninit();
         let (game, start) = Game::startpos(&mut buffer);
-        let mut search = Search::new(game);
+        let mut search = Search::boxed(game);
 
         unsafe {
             tt::alloc((16 * 1024 * 1024).try_into().unwrap());
@@ -695,6 +732,8 @@ impl SearchResult {
         })
     }
 }
+
+unsafe impl Send for Search<'_> {}
 
 #[repr(C, align(8))]
 #[derive(Clone, Copy, Debug)]
