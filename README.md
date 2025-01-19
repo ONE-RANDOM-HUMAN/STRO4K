@@ -40,7 +40,7 @@ cargo build --release --no-default-features
 
 ## Current size
 ```
-4076 bytes
+4044 bytes
 ```
 ## Features
 * PV output in STRO
@@ -55,7 +55,6 @@ cargo build --release --no-default-features
         * Late Move Pruning
     * Null Move Pruning
     * Static Null Move Pruning
-    * Delta Pruning
     * Futility Pruning
     * Lazy SMP
         * Thread Voting
