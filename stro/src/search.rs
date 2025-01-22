@@ -311,6 +311,8 @@ impl<'a> Search<'a> {
             depth -= 1;
         }
 
+        self.ply[ply + 1].kt = KillerTable::new();
+
         // Null Move Pruning
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
