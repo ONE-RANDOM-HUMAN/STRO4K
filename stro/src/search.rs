@@ -408,9 +408,9 @@ impl<'a> Search<'a> {
             // (3 + depth * depth) >> (!improving as u32)
             let value = unsafe {
                 if improving {
-                    LMP_BASE + LMP_DEPTH_SQUARED + (depth as f64).powi(2)
-                } else {
                     LMP_IMPROVING_BASE + LMP_IMPROVING_DEPTH_SQUARED + (depth as f64).powi(2)
+                } else {
+                    LMP_BASE + LMP_DEPTH_SQUARED + (depth as f64).powi(2)
                 }
             };
 
