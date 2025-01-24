@@ -734,12 +734,12 @@ alpha_beta:
     jnz .no_fprune_no_lmp
 
     imul eax, eax
-    add eax, 5
+    add eax, 9
 
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jnz .lmp_improving
 
-    sub eax, 4
+    sub eax, 8
     shr eax, 1
 .lmp_improving:
     mov dword [rbp - 128 + ABLocals.quiets_to_go], eax
