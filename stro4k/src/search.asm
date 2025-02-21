@@ -4,10 +4,9 @@ BOUND_LOWER equ 01b
 BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
-F_PRUNE_MARGIN equ 100
-STATIC_NULL_MOVE_MARGIN equ 80
-DELTA_BASE equ 287
-SEE_PRUNE_MARGIN equ -72
+F_PRUNE_MARGIN equ 89
+STATIC_NULL_MOVE_MARGIN equ 79
+SEE_PRUNE_MARGIN equ -63
 
 section .rodata
 PIECE_VALUES:
@@ -87,7 +86,7 @@ root_search:
     ; ebp - window
     ; esi - alpha
     ; edi - beta
-    mov ebp, 18
+    mov ebp, 23
 
     mov esi, r14d
     lea edi, [rsi + rbp]
@@ -645,12 +644,12 @@ alpha_beta:
 
     ; ecx - reduced depth
     mov ecx, dword [rbp + 8]
-    imul esi, ecx, 61
-    lea esi, [rsi + 2 * r15 + 618 + 256] ; + 256 since formula is depth - r - 1
+    imul esi, ecx, 44
+    lea esi, [rsi + 2 * r15 + 566 + 256] ; + 256 since formula is depth - r - 1
 
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .nmp_not_improving
-    sub esi, 49
+    sub esi, 75
 
 .nmp_not_improving:
     sar esi, 8
@@ -735,11 +734,12 @@ alpha_beta:
     jnz .no_fprune_no_lmp
 
     imul eax, eax
-    add eax, 3
+    add eax, 9
 
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jnz .lmp_improving
 
+    sub eax, 8
     shr eax, 1
 .lmp_improving:
     mov dword [rbp - 128 + ABLocals.quiets_to_go], eax
@@ -1072,15 +1072,15 @@ alpha_beta:
     jnge .no_lmr_reduction
 
     ; calculate lmr depth
-    ; 106 + depth * 15 + i * 36
-    imul eax, edx, 15
-    imul ecx, r15d, 36
-    lea eax, [rax + rcx + 106]
+    ; 141 + depth * 9 + i * 34
+    imul eax, edx, 9
+    imul ecx, r15d, 34
+    lea eax, [rax + rcx + 141]
 
     ; decrease reduction if improving
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .lmr_not_improving
-    sub eax, 152
+    sub eax, 162
 .lmr_not_improving:
     ; divide by 256
     sar eax, 8
