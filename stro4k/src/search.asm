@@ -50,20 +50,6 @@ root_search_sysv:
     pop r14
     pop r15
     ret
-
-%else
-thread_search:
-    push rsp
-    pop rbx
-
-%ifdef EXPORT_SYSV
-    xor r12d, r12d ; temp
-    mov r11d, -1
-%endif
-    call root_search
-
-    lock dec byte [RUNNING_WORKER_THREADS]
-    jmp _start.exit
 %endif
 ; search - rbx
 ; time should be calculated before calling root_search
@@ -395,8 +381,8 @@ alpha_beta:
     test byte [RUNNING], 1
     jz .stop_search
 %elif NUM_THREADS > 1
-    test byte [RUNNING_WORKER_THREADS], 80h
-    jz .stop_search
+    cmp dword [RUNNING_WORKER_THREADS], 0
+    jge .stop_search
 %endif
     ; nodes % 4096
     test dword [rbx + Search.nodes], 0FFFh

@@ -59,22 +59,16 @@ _start:
 
     ; set up threads
 .setup_threads:
-    lea rbx, [THREAD_STACKS]
-    mov edx, THREAD_STACK_SIZE * NUM_THREADS
+    ; rsi - search
+    mov rsi, THREAD_STACKS - (MAX_BOARDS * Board_size) - Search_size
+    mov edx, NUM_THREADS
     xor eax, eax
 .setup_threads_head:
-    ; rdi - boards
-    lea rdi, [rbx + rdx - (MAX_BOARDS * Board_size)]
+    add rsi, THREAD_STACK_SIZE
 
-    ; rsi - search
-    lea rsi, [rdi - Search_size]
-
-    ; set up pointer to positions
-    mov qword [rsi], rdi
-
-    ; clear Boards
-    sub rdi, Search_size - 8
-    mov ecx, MAX_BOARDS * Board_size + Search_size - 8
+    ; clear Boards and search
+    mov rdi, rsi
+    mov ecx, MAX_BOARDS * Board_size + Search_size
     rep stosb
 
     ; set search time - time elapsed cannot be greater
@@ -82,17 +76,16 @@ _start:
     or qword [rsi + Search.min_search_time], -1
     or qword [rsi + Search.max_search_time], -1
 
-    sub edx, THREAD_STACK_SIZE
+    dec edx
     jnz .setup_threads_head
 
-
-    ; switch to the stack of the first thread
+    ; switch to the stack of the last thread
     mov rsp, rsi
 
-    ; set up startpos
+    ; set up startpos and pointer to positions
     lea rdi, [rsi + Search_size]
+    mov qword [rsi], rdi
     lea rsi, [STARTPOS]
-    ; rdi already contains pointer to boards
 
     push 116
     pop rcx
@@ -214,23 +207,23 @@ _start:
     jne .go_read_until_newline_head
 
 .go_finish_read:
-    mov byte [RUNNING_WORKER_THREADS], 80h | (NUM_THREADS - 1)
+    mov dword [RUNNING_WORKER_THREADS], 8000_0000h | (NUM_THREADS - 1)
     and qword [SEARCH_RESULT], 0
 
 %if NUM_THREADS > 1
     ; create threads
-    lea r8, [THREAD_STACKS + THREAD_STACK_SIZE - MAX_BOARDS * Board_size - Search_size]
-    mov ebx, THREAD_STACK_SIZE * (NUM_THREADS - 1)
+    ; rbx - search
+    mov rbx, THREAD_STACKS + THREAD_STACK_SIZE - MAX_BOARDS * Board_size - Search_size
 .create_thread_head:
     ; copy the boards
     lea rsi, [rsp + Search_size + 16]
     mov rcx, qword [rsp + 16]
     sub rcx, rsi
 
-    lea rdi, [r8 + rbx + Search_size]
+    lea rdi, [rbx + Search_size]
     rep movsb
 
-    mov qword [r8 + rbx], rdi
+    mov qword [rbx], rdi
     mov cl, 128
     rep movsb ; copy the current position
 
@@ -241,14 +234,21 @@ _start:
     mov edi, CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD
 
     ; new stack
-    lea rsi, [r8 + rbx]
+    mov rsi, rbx
     syscall
 
     test eax, eax
-    jz thread_search
+    jnz .no_thread_search
+
+    call root_search
+
+    lock dec dword [RUNNING_WORKER_THREADS]
+    jmp _start.exit
+.no_thread_search:
     
-    sub ebx, THREAD_STACK_SIZE
-    jnz .create_thread_head
+    add rbx, THREAD_STACK_SIZE
+    cmp rbx, rsp
+    jb .create_thread_head
 %endif
     ; Calculate time
     pop rdx
@@ -269,7 +269,7 @@ _start:
     call root_search
 
 .go_wait_for_threads:
-    lock and byte [RUNNING_WORKER_THREADS], 7Fh
+    lock and dword [RUNNING_WORKER_THREADS], 7FFF_FFFFh
     jnz .go_wait_for_threads
 
     mov rdx, "bestmove"

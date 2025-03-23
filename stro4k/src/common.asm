@@ -190,17 +190,16 @@ SEARCH_RESULT:
     resq 1
 RUNNING_WORKER_THREADS:
     ; the top bit will indicate whether the threads should continue running
-    resb 1
+    resd 1
 %else
     extern SEARCH_RESULT
 %endif
 
 alignb 4096
-THREAD_STACKS:
-    times NUM_THREADS resb THREAD_STACK_SIZE
-
 %ifndef EXPORT_SYSV
 TT_MEM:
     resb TT_SIZE_BYTES
 %endif
 
+THREAD_STACKS:
+    times NUM_THREADS resb THREAD_STACK_SIZE
