@@ -43,8 +43,8 @@ fn main() {
     println!("id author ONE_RANDOM_HUMAN");
 
     // Openbench compat
-    println!("option name Hash type spin default 16 min 1 max 131072");
-    println!("option name Threads type spin default 1 min 1 max 128");
+    println!("option name Hash type spin default 32 min 1 max 1048576");
+    println!("option name Threads type spin default 1 min 1 max 1024");
     println!("option name asm type check default false");
 
     println!("uciok");

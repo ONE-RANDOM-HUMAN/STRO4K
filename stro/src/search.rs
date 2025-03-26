@@ -524,7 +524,7 @@ impl<'a> Search<'a> {
         let mut search = Search::new(game);
 
         unsafe {
-            tt::alloc((16 * 1024 * 1024).try_into().unwrap());
+            tt::alloc((32 * 1024 * 1024).try_into().unwrap());
         }
 
         RUNNING.store(true, Ordering::Relaxed);
@@ -590,7 +590,7 @@ impl<'a> Search<'a> {
         let mut search = Search::new(game);
 
         unsafe {
-            tt::alloc((16 * 1024 * 1024).try_into().unwrap());
+            tt::alloc((32 * 1024 * 1024).try_into().unwrap());
         }
 
         RUNNING.store(true, Ordering::Relaxed);

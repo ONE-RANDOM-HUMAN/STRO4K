@@ -57,7 +57,7 @@ impl SearchThreads {
     /// The tt must not be accessed during the fuction call
     pub fn new(count: usize) -> Self {
         unsafe {
-            tt::alloc((16 * 1024 * 1024).try_into().unwrap());
+            tt::alloc((32 * 1024 * 1024).try_into().unwrap());
 
             Self {
                 threads: std::iter::repeat_with(|| SearchThread::new())
