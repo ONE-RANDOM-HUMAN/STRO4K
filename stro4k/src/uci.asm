@@ -1,3 +1,15 @@
+section .data
+uciok:
+    db `uciok\n`
+readyok:
+    db `readyok\n`
+print_info:
+    db `info score cp - depth -\nbestmove `
+.bestmove:
+    db `     \n`
+.end:
+
+
 default rel
 section .text
 
@@ -26,22 +38,65 @@ read:
     pop rax
     ret
 
-write8:
-    push rdx
-
+; rsi - format string - 1, where '-' indicates an integer
+; rbp - format arguments
+format_line:
     push 1
     pop rax ; syscall 1
-    mov edi, eax ; stdout fd
 
+    mov edi, eax ; stdout fd
+    mov edx, eax ; size
+
+.loop_head:
+    inc rsi
+    cmp byte[rsi], '-'
+    jne .no_integer
+
+    mov ebx, dword [rbp]
+    add rbp, 8
+
+    test ebx, ebx
+    jns .positive
+
+    syscall ; output '-'
+    neg ebx
+.positive:
+    push rsi
+
+    xor eax, eax
+    xchg eax, ebx
+    add edi, 9
+.integer_head:
+    cdq
+    div edi
+
+    add edx, '0'
+    push rdx
+
+    inc ebx
+    test eax, eax
+    jnz .integer_head
+
+    inc eax ; syscall 1
+    mov edi, eax ; stdout fd
+    mov edx, eax ; size
+.integer_write_head:
     push rsp
     pop rsi
-
-    push 8
-    pop rdx
-
     syscall
 
-    pop rdx
+    pop rsi ; only 'free' register
+    dec ebx
+    jnz .integer_write_head
+
+    pop rsi
+    jmp .loop_head
+
+.no_integer:
+    syscall
+    cmp byte[rsi], `\n`
+    jne .loop_head
+
     ret
 
 
@@ -54,37 +109,16 @@ _start:
     jne .uci_read_loop
 
     ; write uciok
-    mov rdx, `uciok  \n`
-    call write8
-
-    ; set up threads
-.setup_threads:
-    ; rsi - search
-    mov rsi, THREAD_STACKS - (MAX_BOARDS * Board_size) - Search_size
-    mov edx, NUM_THREADS
-    xor eax, eax
-.setup_threads_head:
-    add rsi, THREAD_STACK_SIZE
-
-    ; clear Boards and search
-    mov rdi, rsi
-    mov ecx, MAX_BOARDS * Board_size + Search_size
-    rep stosb
-
-    ; set search time - time elapsed cannot be greater
-    ; without overflowing
-    or qword [rsi + Search.min_search_time], -1
-    or qword [rsi + Search.max_search_time], -1
-
-    dec edx
-    jnz .setup_threads_head
+    lea rsi, [uciok - 1]
+    call format_line
 
     ; switch to the stack of the last thread
-    mov rsp, rsi
+    mov rsp, THREAD_STACKS + NUM_THREADS * THREAD_STACK_SIZE - (MAX_BOARDS * Board_size) - Search_size
 
     ; set up startpos and pointer to positions
-    lea rdi, [rsi + Search_size]
-    mov qword [rsi], rdi
+    lea rdi, [rsp + Search_size]
+    mov qword [rsp], rdi
+
     lea rsi, [STARTPOS]
 
     push 116
@@ -98,8 +132,8 @@ _start:
     jb .go
 
     ; isready
-    mov rdx, `readyok\n`
-    call write8
+    lea rsi, [readyok - 1]
+    call format_line
 .isready_read_loop:
     call read1
     cmp al, `\n`
@@ -126,19 +160,14 @@ _start:
     pop rax
     xor edi, edi
     syscall
-.ucinewgame:
-    lea rdi, [TT_MEM]
-    mov rcx, TT_SIZE_BYTES
-    xor eax, eax
-    rep stosb
 
+.ucinewgame:
 .ucinewgame_read_loop:
     call read1
     cmp al, `\n`
     jne .ucinewgame_read_loop
 
-    ; reset threads
-    jmp .setup_threads
+    jmp .uci_loop_head
 .go:
     mov eax, CLOCK_GETTIME_SYSCALL
     push CLOCK_MONOTONIC
@@ -240,6 +269,10 @@ _start:
     test eax, eax
     jnz .no_thread_search
 
+    ; set infinite time
+    or qword [rbx + Search.min_search_time], -1
+    or qword [rbx + Search.max_search_time], -1
+
     call root_search
 
     lock dec dword [RUNNING_WORKER_THREADS]
@@ -272,19 +305,18 @@ _start:
     lock and dword [RUNNING_WORKER_THREADS], 7FFF_FFFFh
     jnz .go_wait_for_threads
 
-    mov rdx, "bestmove"
-    call write8
-
+    mov rdi, qword [rbx]
     mov ecx, dword [rbx + 4]
-    mov eax, 07070707h
-    pdep eax, ecx, eax
+    lea rsi, [print_info - 1]
+
+    mov ebx, 07070707h
+    pdep eax, ecx, ebx
     add eax, "a1a1"
 
-    push ' '
-    mov dword [rsp + 1], eax ; add move
-    test ch, PROMO_FLAG << 4
+    mov dword [rsi + 1 + print_info.bestmove - print_info], eax
 
     mov dl, ' '
+    test ch, PROMO_FLAG << 4
     jz .print_move_no_promo
     mov edx, "nbrq"
     shr ecx, 9
@@ -292,10 +324,21 @@ _start:
     and cl, 11000b
     shr edx, cl
 .print_move_no_promo:
-    mov byte [rsp + 5], dl
-    mov word [rsp + 6], ` \n`
-    pop rdx
-    call write8
+    mov byte [rsi + 1 + print_info.bestmove - print_info + 4], dl
+
+    push rdi ; depth - only lower 32 bits matters
+    sar rdi, 48
+    push rdi ; score
+
+    push rsp
+    pop rbp
+
+    ; interleaving pops is slightly smaller
+    call format_line
+    pop rax
+
+    call format_line
+    pop rax
 
     jmp .uci_loop_head
 

@@ -160,6 +160,8 @@ root_search:
 .end_search: 
 
     shl r15, 32
+    shl r14, 48
+    or r15, r14
     or r15, r13
     lea rbx, [SEARCH_RESULT]
     mov rax, qword [rbx]
