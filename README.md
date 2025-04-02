@@ -16,6 +16,8 @@ STRO4K 2.1 is available in the `version_2.1` branch. It displays the evaluation,
 
 STRO4K 3.0 is available in the `version_3.0` branch. It has the same features and limitations as version 2.1.
 
+STRO4K 4.0 is available in the `version_4.0` branch. It has does not support resetting the engine state, but displays full evaluation and depth.
+
 ## Building
 STRO4K has only been tested to build on Linux systems. Building STRO4K requires `nasm`, `xz` and [`sstrip`](https://github.com/aunali1/super-strip). A script is provided which attempts to download `sstrip` and build STRO4K.
 
