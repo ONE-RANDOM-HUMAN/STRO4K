@@ -39,7 +39,7 @@ fn main() {
     let mut uci = String::new();
     io::stdin().read_line(&mut uci).unwrap();
 
-    println!("id name STRO");
+    println!("id name STRO4K 4.0");
     println!("id author ONE_RANDOM_HUMAN");
 
     // Openbench compat
