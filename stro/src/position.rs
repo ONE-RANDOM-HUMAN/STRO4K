@@ -334,7 +334,7 @@ impl Board {
                 value = _mm_aesenc_si128(value, _mm_loadu_si128(ptr.add(i).cast()));
             }
 
-            _mm_cvtsi128_si64x(value) as u64
+            _mm_cvtsi128_si64x(_mm_aesenc_si128(value, value)) as u64
         }
     }
 

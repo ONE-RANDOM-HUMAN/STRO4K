@@ -441,6 +441,7 @@ alpha_beta:
     dec eax
     jns .hash_loop_head
 
+    vaesenc xmm0, xmm0, xmm0
     vmovq rdx, xmm0
     mov qword [rbp - 128 + ABLocals.hash], rdx
 
