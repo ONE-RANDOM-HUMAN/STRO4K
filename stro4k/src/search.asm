@@ -343,6 +343,10 @@ alpha_beta:
     ; rdi - position to search
     mov rdi, rsi
 
+    ; check depth
+    cmp dword [rbp + 8], 0
+    jnge .no_repetition
+
     ; repeating positions remaining before draw
     mov eax, 2
 .reptition_loop_head:
@@ -366,6 +370,7 @@ alpha_beta:
     jnz .reptition_loop_head
     jmp .end
 .repetition_loop_end:
+.no_repetition:
 
     ; determine if this is a pv node
     mov edx, dword [rbp + 32]

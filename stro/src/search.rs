@@ -231,8 +231,11 @@ impl<'a> Search<'a> {
             return Some(0);
         }
 
+        // Check extension
+        let mut depth = if is_check { depth + 1 } else { depth };
+
         // Check for repetition
-        if self.game.is_repetition() {
+        if depth >= 0 && self.game.is_repetition() {
             return Some(0);
         }
 
@@ -242,9 +245,6 @@ impl<'a> Search<'a> {
         {
             return None;
         }
-
-        // Check extension
-        let mut depth = if is_check { depth + 1 } else { depth };
 
         let mut ordered_moves = 0;
         let pv_node = beta - alpha != 1;
