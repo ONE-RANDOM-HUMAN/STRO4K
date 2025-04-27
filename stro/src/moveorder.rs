@@ -83,9 +83,15 @@ pub fn order_noisy_moves(position: &Board, moves: &mut [MovePlus]) -> usize {
     noisy_count
 }
 
-pub fn order_quiet_moves(moves: &mut [MovePlus], kt: KillerTable, history: &HistoryTable) -> usize {
+pub fn order_quiet_moves(
+    moves: &mut [MovePlus],
+    kt: KillerTable,
+    history: &HistoryTable,
+    conthist: Option<&HistoryTable>,
+) -> usize {
     for mov in &mut *moves {
-        mov.score = history.get(mov.mov);
+        mov.score = history.get(mov.mov)
+            + conthist.map_or(0, |x| x.get(mov.mov));
 
         // killers
         if let Some(index) = kt.index(mov.mov) {

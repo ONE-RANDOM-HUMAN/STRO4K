@@ -60,8 +60,12 @@ pub struct Search<'a> {
     min_search_time: u64, // min search time in nanoseconds
     max_search_time: u64, // max search time in nanoseconds
     ply: [PlyData; 12288],
+    conthist_stack: [*mut HistoryTable; 12288],
     history: [HistoryTable; 2],
+    conthist: [[[HistoryTable; 64]; 6]; 2],
 }
+
+unsafe impl Send for Search<'_> {}
 
 /// Automatically unmakes move and returns when `None` is received
 macro_rules! search {
@@ -80,23 +84,28 @@ macro_rules! search {
 }
 
 impl<'a> Search<'a> {
-    fn new(game: Game<'a>) -> Self {
-        Self {
-            game,
-            nodes: 0,
-            start: time_now(),
-            min_search_time: u64::MAX,
-            max_search_time: u64::MAX,
-            ply: [PlyData::new(); 12288],
-            history: [HistoryTable::new(), HistoryTable::new()],
+    fn new(game: Game<'a>) -> Box<Self> {
+        let mut result = Box::new_zeroed();
+        let ptr: *mut Self = result.as_mut_ptr();
+        unsafe {
+            (&raw mut (*ptr).game).write(game);
+            (&raw mut (*ptr).start).write(time_now());
+            (&raw mut (*ptr).min_search_time).write(u64::MAX);
+            (&raw mut (*ptr).max_search_time).write(u64::MAX);
+            result.assume_init()
         }
     }
 
     pub fn new_game(&mut self) {
         // tt must be cleared seperately
         self.ply.fill(PlyData::new());
+        self.conthist_stack.fill(std::ptr::null_mut());
         self.history[0].reset();
         self.history[1].reset();
+
+        for history in self.conthist.iter_mut().flatten().flatten() {
+            history.reset();
+        }
     }
 
     pub fn set_time(&mut self, time_ms: u32, inc_ms: u32) {
@@ -312,6 +321,7 @@ impl<'a> Search<'a> {
         }
 
         self.ply[ply + 1].kt = KillerTable::new();
+        self.conthist_stack[ply + 1] = std::ptr::null_mut();
 
         // Null Move Pruning
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
@@ -386,10 +396,19 @@ impl<'a> Search<'a> {
         for i in 0..moves.len() {
             if i == ordered_moves {
                 if depth > 0 {
+                    let conthist = (!self.conthist_stack[ply].is_null())
+                        .then(|| {
+                            let ptr: *const HistoryTable = self.conthist_stack.as_ptr().cast();
+                            unsafe {
+                                &*ptr.offset(self.conthist_stack[ply].offset_from(ptr))
+                            }
+                        });
+
                     ordered_moves += moveorder::order_quiet_moves(
                         &mut moves[ordered_moves..],
                         self.ply[ply].kt,
                         &self.history[self.game.position().side_to_move() as usize],
+                        conthist,
                     );
                 } else {
                     break;
@@ -439,6 +458,13 @@ impl<'a> Search<'a> {
                 continue;
             }
 
+            // Set conthist
+            self.conthist_stack[ply + 1] = {
+                let color = self.game.position().side_to_move().other();
+                let piece = self.game.position().get_piece(mov.dest(), color).unwrap();
+                &mut self.conthist[color as usize][piece as usize][mov.dest() as usize]
+            };
+
             // PVS
             let eval = if best_move.is_none() || depth <= 0 {
                 -search! { self, self.alpha_beta(-beta, -alpha, depth - 1, ply + 1) }
@@ -475,16 +501,28 @@ impl<'a> Search<'a> {
 
             if eval >= beta {
                 bound = Bound::Lower;
+                #[allow(clippy::needless_range_loop)]
                 if !mov.flags().is_noisy() {
                     self.ply[ply].kt.beta_cutoff(mov);
                     self.history[self.game.position().side_to_move() as usize]
                         .beta_cutoff(mov, depth);
 
                     // Decrease history of searched moves
-                    #[allow(clippy::needless_range_loop)]
                     for i in first_quiet..i {
                         self.history[self.game.position().side_to_move() as usize]
                             .failed_cutoff(moves[i].mov, depth);
+                    }
+
+                    if !self.conthist_stack[ply].is_null() {
+                        let ptr: *mut HistoryTable = self.conthist_stack.as_mut_ptr().cast();
+                        let conthist = unsafe {
+                            &mut *ptr.offset(self.conthist_stack[ply].offset_from(ptr))
+                        };
+
+                        conthist.beta_cutoff(mov, depth);
+                        for i in first_quiet..i {
+                            conthist.failed_cutoff(moves[i].mov, depth);
+                        }
                     }
                 }
 
