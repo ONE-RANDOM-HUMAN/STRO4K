@@ -183,7 +183,11 @@ impl SearchThreads {
             RUNNING.store(false, Ordering::Relaxed);
         });
 
-        let SearchResult { depth, best_move, score } = SearchResult::from_u64(SEARCH_RESULT.load(Ordering::Relaxed)).unwrap();
+        let SearchResult {
+            depth,
+            best_move,
+            score,
+        } = SearchResult::from_u64(SEARCH_RESULT.load(Ordering::Relaxed)).unwrap();
 
         // not really centipawns, but no scaling to remain consistent
         // with a possible binary version.
@@ -212,13 +216,15 @@ fn thread_search(search: &mut Search, main_thread: bool, max_depth: i32) {
 
     let mut loaded = SEARCH_RESULT.load(Ordering::Relaxed);
     while (loaded as u32) < result as u32 {
-        if let Err(v) = SEARCH_RESULT
-            .compare_exchange_weak(loaded, result, Ordering::Relaxed, Ordering::Relaxed)
-        {
+        if let Err(v) = SEARCH_RESULT.compare_exchange_weak(
+            loaded,
+            result,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
             loaded = v;
         } else {
             break;
         }
     }
-
 }

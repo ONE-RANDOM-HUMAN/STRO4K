@@ -684,9 +684,7 @@ pub struct SearchResult {
 
 impl SearchResult {
     fn to_u64(self) -> u64 {
-        self.depth as u64
-            | ((self.best_move.0.get() as u64) << 32)
-            | ((self.score as u64) << 48)
+        self.depth as u64 | ((self.best_move.0.get() as u64) << 32) | ((self.score as u64) << 48)
     }
 
     fn from_u64(v: u64) -> Option<Self> {

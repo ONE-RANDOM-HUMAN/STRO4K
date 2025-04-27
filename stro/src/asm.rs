@@ -10,4 +10,3 @@ extern "C" {
 pub(crate) unsafe fn init() {
     // Currently does nothing
 }
-
