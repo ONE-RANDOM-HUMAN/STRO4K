@@ -1,4 +1,5 @@
 use std::num::NonZeroU64;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::position::Move;
 
@@ -57,10 +58,10 @@ impl TTData {
     }
 }
 
-static mut DEFAULT_TT: u64 = 0;
+static DEFAULT_TT: AtomicU64 = AtomicU64::new(0);
 
 #[no_mangle]
-static mut TT_PTR: *mut u64 = &raw mut DEFAULT_TT;
+static mut TT_PTR: *const AtomicU64 = &raw const DEFAULT_TT;
 
 static mut TT_LEN: NonZeroU64 = NonZeroU64::new(1).unwrap();
 
@@ -76,7 +77,7 @@ pub unsafe fn alloc(size_in_bytes: NonZeroU64) {
 
         let size = size_in_bytes.get() as usize / std::mem::size_of::<u64>();
 
-        TT_PTR = Box::leak(vec![0; size].into_boxed_slice()).as_mut_ptr();
+        TT_PTR = Box::leak(Box::new_zeroed_slice(size).assume_init()).as_mut_ptr();
         TT_LEN = (size as u64).try_into().unwrap();
         TT_MASK = ((size + 1).next_power_of_two() >> 1) as u64 - 1;
     }
@@ -86,20 +87,21 @@ pub unsafe fn alloc(size_in_bytes: NonZeroU64) {
 /// The tt must not be accessed during deallocation. The current tt must have been created by alloc.
 pub unsafe fn dealloc() {
     unsafe {
-        if !std::ptr::eq(TT_PTR, &raw mut DEFAULT_TT) {
-            let slice = std::ptr::slice_from_raw_parts_mut(TT_PTR, TT_LEN.get() as usize);
+        if !std::ptr::eq(TT_PTR, &raw const DEFAULT_TT) {
+            let slice = std::ptr::slice_from_raw_parts_mut(TT_PTR.cast_mut(), TT_LEN.get() as usize);
             drop(Box::from_raw(slice));
-            TT_PTR = &raw mut DEFAULT_TT;
-            TT_LEN = NonZeroU64::new(1).unwrap();
-            TT_MASK = 0;
+            TT_PTR = &raw const DEFAULT_TT;
         }
+
+        TT_LEN = NonZeroU64::new(1).unwrap();
+        TT_MASK = 0;
     }
 }
 
 pub fn load(hash: u64) -> Option<TTData> {
     let data = unsafe {
         let index = (hash % TT_LEN) as usize;
-        std::intrinsics::atomic_load_unordered(TT_PTR.add(index))
+        (*TT_PTR.add(index)).load(Ordering::Relaxed)
     };
 
     NonZeroU64::new(data)
@@ -110,14 +112,14 @@ pub fn load(hash: u64) -> Option<TTData> {
 pub fn store(hash: u64, data: TTData) {
     unsafe {
         let index = (hash % TT_LEN) as usize;
-        std::intrinsics::atomic_store_unordered(TT_PTR.add(index), data.0.get());
+        (*TT_PTR.add(index)).store(data.0.get(), Ordering::Relaxed);
     }
 }
 
 pub fn clear() {
     unsafe {
         for i in 0..TT_LEN.get() {
-            std::intrinsics::atomic_store_unordered(TT_PTR.add(i as usize), 0);
+            (*TT_PTR.add(i as usize)).store(0, Ordering::Relaxed);
         }
     }
 }
