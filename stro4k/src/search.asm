@@ -836,6 +836,7 @@ alpha_beta:
     ; we can have junk in the upper bits as they are never read
     mov esi, dword [r8 + 2 * rdi]
     add esi, dword [r9 + 2 * rdi]
+    add esi, dword [r9 + 2 * rdi]
 .conthist_null:
 
     ; killers

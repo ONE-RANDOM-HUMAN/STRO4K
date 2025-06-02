@@ -91,7 +91,7 @@ pub fn order_quiet_moves(
 ) -> usize {
     for mov in &mut *moves {
         mov.score = history.get(mov.mov)
-            + conthist.get(mov.mov);
+            + 2 * conthist.get(mov.mov);
 
         // killers
         if let Some(index) = kt.index(mov.mov) {
