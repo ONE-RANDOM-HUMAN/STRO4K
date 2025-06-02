@@ -87,11 +87,11 @@ pub fn order_quiet_moves(
     moves: &mut [MovePlus],
     kt: KillerTable,
     history: &HistoryTable,
-    conthist: Option<&HistoryTable>,
+    conthist: &HistoryTable,
 ) -> usize {
     for mov in &mut *moves {
         mov.score = history.get(mov.mov)
-            + conthist.map_or(0, |x| x.get(mov.mov));
+            + conthist.get(mov.mov);
 
         // killers
         if let Some(index) = kt.index(mov.mov) {

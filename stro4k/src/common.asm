@@ -42,8 +42,10 @@ struc Board
         resb 1
     .fifty_moves:
         resb 1
+    .move_index:
+        resd 1
     .padding:
-        resb 12
+        resb 8
 endstruc
 
 %if Board_size != 128
@@ -89,11 +91,14 @@ struc Search
         resq 1
     alignb 16
     .ply_data:
-        resb PlyData_size * MAX_BOARDS
+        resq MAX_BOARDS
+    .conthist_stack:
+        resq MAX_BOARDS
+    .history:
     .white_history:
         resw 64 * 64
     .black_history:
-        resw 64 * 64
+        resw (2 * 6 * 64 - 1) * (64 * 64)
 endstruc
 
 %if Search_size % 16 != 0
