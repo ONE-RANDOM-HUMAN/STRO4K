@@ -14,7 +14,8 @@ pub struct Board {
     ep: Option<Square>,
     castling: u8,
     fifty_moves: u8,
-    padding: u64,
+    move_index: u32,
+    padding: u64
 }
 
 unsafe fn _size_check() {
@@ -49,6 +50,7 @@ impl Board {
         ep: None,
         castling: 0b1111,
         fifty_moves: 0,
+        move_index: 0,
         padding: 0,
     };
 
@@ -67,7 +69,6 @@ impl Board {
     #[must_use]
     pub fn make_move(&mut self, mov: Move) -> bool {
         let piece = self.get_piece(mov.origin(), self.side_to_move).unwrap();
-
         let pieces = &mut self.pieces[self.side_to_move as usize];
 
         // move the piece
@@ -75,6 +76,8 @@ impl Board {
 
         let dest_piece = mov.flags().promo_piece().unwrap_or(piece);
         pieces[dest_piece as usize] ^= mov.dest().as_mask();
+
+        self.move_index = dest_piece as u32 * 64 + mov.dest() as u32;
 
         // captures
         if mov.flags().is_capture() {
@@ -203,6 +206,10 @@ impl Board {
         self.fifty_moves
     }
 
+    pub fn move_index(&self) -> u32 {
+        self.move_index
+    }
+
     pub fn is_check(&self) -> bool {
         self.is_area_attacked(self.pieces[self.side_to_move as usize][5])
     }
@@ -216,6 +223,7 @@ impl Board {
             fifty_moves: 0,
             ep: None,
             castling: 0,
+            move_index: 0,
             padding: 0,
         };
 

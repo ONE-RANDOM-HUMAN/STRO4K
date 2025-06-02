@@ -42,7 +42,7 @@ cargo build --release --no-default-features
 
 ## Current size
 ```
-4033 bytes
+4091 bytes
 ```
 ## Features
 * PV output in STRO
@@ -53,6 +53,7 @@ cargo build --release --no-default-features
     * MVV-LVA Move ordering
     * Killer Heuristic
     * History Heuristic
+        * Continuation Histories
     * Late Move Reductions
         * Late Move Pruning
     * Null Move Pruning

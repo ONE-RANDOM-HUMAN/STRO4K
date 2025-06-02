@@ -14,7 +14,7 @@ static SEARCH_RESULT: AtomicU64 = AtomicU64::new(0);
 
 struct SearchThread {
     start: GameStart<'static>,
-    search: Search<'static>,
+    search: Box<Search<'static>>,
     buffer: *mut GameBuf,
 }
 

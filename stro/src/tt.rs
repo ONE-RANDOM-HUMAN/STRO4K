@@ -77,10 +77,7 @@ pub unsafe fn alloc(size_in_bytes: NonZeroU64) {
 
         let size = size_in_bytes.get() as usize / std::mem::size_of::<u64>();
 
-        let mut tt = Vec::new();
-        tt.resize_with(size, || AtomicU64::new(0));
-
-        TT_PTR = Box::leak(tt.into_boxed_slice()).as_mut_ptr();
+        TT_PTR = Box::leak(Box::new_zeroed_slice(size).assume_init()).as_mut_ptr();
         TT_LEN = (size as u64).try_into().unwrap();
         TT_MASK = ((size + 1).next_power_of_two() >> 1) as u64 - 1;
     }

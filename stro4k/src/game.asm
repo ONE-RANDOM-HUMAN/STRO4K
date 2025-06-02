@@ -32,7 +32,7 @@ game_make_move:
     mov ebx, edx
     shr ebx, 12
 
-    ; eax - piece
+    ; eax - origin, ecx - dest
     call board_get_move_pieces
 
     ; dh - dest, dl - origin
@@ -63,6 +63,17 @@ game_make_move:
 .no_promo:
     ; switch origin and dest
     xchg dl, dh
+
+    ; set move index
+    mov edi, eax
+    shl edi, 6
+    add dil, dl
+
+    ; movzx edi, dl
+    ; lea edi, [rdi + 2 * rdi]
+    ; lea edi, [rax + 2 * rdi]
+
+    mov dword [rsi + Board.move_index], edi
 
     ; rdi - destination mask
     xor edi, edi
