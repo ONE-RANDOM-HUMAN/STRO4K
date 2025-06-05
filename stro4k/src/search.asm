@@ -1223,9 +1223,7 @@ alpha_beta:
 
     sub word [r8 + 2 * rsi], cx
 
-    cmp dword [r13 + Search.conthist_stack - Search.ply_data], 0
-    je .no_update_conthist
-
+    ; update conthist
     add r8, qword [r13 + Search.conthist_stack - Search.ply_data]
 
     ; beta cutoff for history
@@ -1267,7 +1265,6 @@ alpha_beta:
     sub ecx, eax ; using negative increase improves compression
 
     sub word [r8 + 2 * rsi], cx
-.no_update_conthist:
 .beta_cutoff_noisy:
     jmp .main_search_end
 .no_beta_cutoff:
