@@ -850,7 +850,7 @@ alpha_beta:
     cmp dx, ax
     cmove esi, edi
     ror eax, 16
-    dec edi ; does nothing but is smaller after compression
+    ; dec edi ; does nothing but is sometimes smaller after compression
 
     mov word [rsp + 4 * rcx + MovePlus.score], si
 
@@ -1182,6 +1182,8 @@ alpha_beta:
     add r8, Search.black_history - Search.white_history
 
 .decrease_white_history:
+    mov r9, r8
+    add r9, qword [r13 + Search.conthist_stack - Search.ply_data]
 
     ; beta cutoff for history
     ; eax - depth
@@ -1223,19 +1225,10 @@ alpha_beta:
 
     sub word [r8 + 2 * rsi], cx
 
-    cmp dword [r13 + Search.conthist_stack - Search.ply_data], 0
+    cmp r8, r9
     je .no_update_conthist
 
-    add r8, qword [r13 + Search.conthist_stack - Search.ply_data]
-
-    ; beta cutoff for history
-    ; eax - depth
-    mov eax, dword [rbp + 8]
-    imul eax, eax
-
-    mov ecx, 2048
-    cmp eax, ecx
-    cmovg eax, ecx
+    mov r8, r9
 
     ; decrease history of searched quiet moves
     mov edi, dword [rbp - 128 + ABLocals.first_quiet]
