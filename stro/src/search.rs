@@ -316,7 +316,7 @@ impl<'a> Search<'a> {
         }
 
         self.ply[ply + 1].kt = KillerTable::new();
-        self.conthist_stack[ply + 1] = 0;
+        self.conthist_stack[ply + 2] = 0;
 
         // Null Move Pruning
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
@@ -393,6 +393,9 @@ impl<'a> Search<'a> {
                 if depth > 0 {
                     let hist_index = self.game.position().side_to_move() as usize;
                     let conthist_index = hist_index
+                        + self.conthist_stack[ply + 1] / std::mem::size_of::<HistoryTable>();
+
+                    let conthist2_index = hist_index
                         + self.conthist_stack[ply] / std::mem::size_of::<HistoryTable>();
 
                     ordered_moves += moveorder::order_quiet_moves(
@@ -400,6 +403,7 @@ impl<'a> Search<'a> {
                         self.ply[ply].kt,
                         &self.history[hist_index],
                         &self.history[conthist_index],
+                        &self.history[conthist2_index],
                     );
                 } else {
                     break;
@@ -450,7 +454,7 @@ impl<'a> Search<'a> {
             }
 
             // Set conthist
-            self.conthist_stack[ply + 1] = self.game.position().move_index() as usize
+            self.conthist_stack[ply + 2] = self.game.position().move_index() as usize
                 * 2 * std::mem::size_of::<HistoryTable>();
 
             // PVS
@@ -504,6 +508,17 @@ impl<'a> Search<'a> {
                     if self.conthist_stack[ply] != 0 {
                         let index = self.game.position().side_to_move() as usize
                             + self.conthist_stack[ply] / std::mem::size_of::<HistoryTable>();
+                        let conthist = &mut self.history[index];
+
+                        conthist.beta_cutoff(mov, depth);
+                        for i in first_quiet..i {
+                            conthist.failed_cutoff(moves[i].mov, depth);
+                        }
+                    }
+
+                    if self.conthist_stack[ply + 1] != 0 {
+                        let index = self.game.position().side_to_move() as usize
+                            + self.conthist_stack[ply + 1] / std::mem::size_of::<HistoryTable>();
                         let conthist = &mut self.history[index];
 
                         conthist.beta_cutoff(mov, depth);

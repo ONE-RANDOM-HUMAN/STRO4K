@@ -585,7 +585,7 @@ alpha_beta:
     and dword [r13 + PlyData_size + PlyData.kt], 0
 
     ; reset future conthist
-    and qword [r13 + Search.conthist_stack - Search.ply_data + 8], 0
+    and dword [r13 + Search.conthist_stack - Search.ply_data + 2 * 8], 0
 
     ; Null move pruning
     ; check depth
@@ -827,32 +827,37 @@ alpha_beta:
     mov r9, r8
     add r9, qword [r13 + Search.conthist_stack - Search.ply_data]
 
+    mov r10, r8
+    add r10, qword [r13 + Search.conthist_stack - Search.ply_data + 8]
+
     ; there must be at least one quiet move or the search would have ended
 .history_score_head:
     movzx edx, word [rsp + 4 * rcx + MovePlus.move]
-    mov edi, edx
-    and edi, 0FFFh
+    mov esi, edx
+    and esi, 0FFFh
 
     ; we can have junk in the upper bits as they are never read
-    mov esi, dword [r8 + 2 * rdi]
-    add esi, dword [r9 + 2 * rdi]
+    xor edi, edi
+    add edi, dword [r8 + 2 * rsi]
+    add edi, dword [r9 + 2 * rsi]
+    add edi, dword [r10 + 2 * rsi]
 .conthist_null:
 
     ; killers
-    mov edi, 07FFFh
+    mov esi, 07FFFh
 
     ; unrolling this loop compresses very well
     cmp dx, ax
-    cmove esi, edi
+    cmove edi, esi
     ror eax, 16
-    dec edi
+    dec esi
 
     cmp dx, ax
-    cmove esi, edi
+    cmove edi, esi
     ror eax, 16
-    ; dec edi ; does nothing but is sometimes smaller after compression
+    dec esi ; does nothing but is sometimes smaller after compression
 
-    mov word [rsp + 4 * rcx + MovePlus.score], si
+    mov word [rsp + 4 * rcx + MovePlus.score], di
 
     inc ecx
     cmp ecx, r14d
@@ -1048,7 +1053,7 @@ alpha_beta:
     mov eax, dword [rsi + Board.move_index]
 
     shl eax, 14 ; multiply by 2 * 2 * 64 * 64
-    mov qword [r13 + Search.conthist_stack - Search.ply_data + 8], rax
+    mov dword [r13 + Search.conthist_stack - Search.ply_data + 2 * 8], eax
 
     ; edi - -alpha
     mov edi, dword [rbp - 128 + ABLocals.alpha]
@@ -1165,13 +1170,11 @@ alpha_beta:
     jnz .beta_cutoff_noisy
 
     ; update killer table
-    shl dword [r13 + PlyData.kt], 16
-    or word [r13 + PlyData.kt], r12w
-    ; edx - copy of move
-    ; mov edx, r12d
-    ; shl r12d, 16 ; temp
-    ; shld dword [r13 + PlyData.kt], r12d, 16
-
+    ; shl dword [r13 + PlyData.kt], 16
+    ; or word [r13 + PlyData.kt], r12w
+    mov edx, r12d
+    shl edx, 16 ; temp
+    shld dword [r13 + PlyData.kt], edx, 16
 
     ; load history table
     lea r8, [rbx + Search.white_history]
@@ -1184,6 +1187,9 @@ alpha_beta:
 .decrease_white_history:
     mov r9, r8
     add r9, qword [r13 + Search.conthist_stack - Search.ply_data]
+
+    mov r10, r8
+    add r10, qword [r13 + Search.conthist_stack - Search.ply_data + 8]
 
     ; beta cutoff for history
     ; eax - depth
@@ -1225,16 +1231,16 @@ alpha_beta:
 
     sub word [r8 + 2 * rsi], cx
 
+    ; update conthist
+    xchg r8, r9
     cmp r8, r9
-    je .no_update_conthist
-
-    mov r8, r9
+    je .no_update_conthist1
 
     ; decrease history of searched quiet moves
     mov edi, dword [rbp - 128 + ABLocals.first_quiet]
-.decrease_conthist_head:
+.decrease_conthist1_head:
     cmp edi, r15d
-    jae .decrease_conthist_end
+    jae .decrease_conthist1_end
 
     ; get index
     mov esi, dword [rsp + 4 * rdi]
@@ -1247,8 +1253,8 @@ alpha_beta:
 
     sub word [r8 + 2 * rsi], cx
     inc edi
-    jmp .decrease_conthist_head
-.decrease_conthist_end:
+    jmp .decrease_conthist1_head
+.decrease_conthist1_end:
     ; increase history of move causing cutoff
 
     mov esi, r12d
@@ -1260,7 +1266,43 @@ alpha_beta:
     sub ecx, eax ; using negative increase improves compression
 
     sub word [r8 + 2 * rsi], cx
-.no_update_conthist:
+.no_update_conthist1:
+
+    xchg r8, r10
+    cmp r8, r9
+    je .no_update_conthist2
+
+    ; decrease history of searched quiet moves
+    mov edi, dword [rbp - 128 + ABLocals.first_quiet]
+.decrease_conthist2_head:
+    cmp edi, r15d
+    jae .decrease_conthist2_end
+
+    ; get index
+    mov esi, dword [rsp + 4 * rdi]
+    and esi, 0FFFh
+
+    movsx ecx, word [r8 + 2 * rsi]
+    imul ecx, eax
+    sar ecx, 11
+    add ecx, eax
+
+    sub word [r8 + 2 * rsi], cx
+    inc edi
+    jmp .decrease_conthist2_head
+.decrease_conthist2_end:
+    ; increase history of move causing cutoff
+
+    mov esi, r12d
+    and esi, 0FFFh
+
+    movsx ecx, word [r8 + 2 * rsi]
+    imul ecx, eax
+    sar ecx, 11
+    sub ecx, eax ; using negative increase improves compression
+
+    sub word [r8 + 2 * rsi], cx
+.no_update_conthist2:
 .beta_cutoff_noisy:
     jmp .main_search_end
 .no_beta_cutoff:
@@ -1300,9 +1342,12 @@ alpha_beta:
     mov rdi, qword [rbp - 128 + ABLocals.hash]
 
     ; upper 16 bits of hash
-    mov esi, 48
-    bzhi rsi, rdi, rsi
-    xor rsi, rdi
+    ; mov esi, 48
+    ; bzhi rsi, rdi, rsi
+    ; xor rsi, rdi
+    mov rsi, rdi
+    shr rsi, 48
+    shl rsi, 48
 
     ; load tt pointer and index
 
