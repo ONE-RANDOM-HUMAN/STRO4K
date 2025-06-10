@@ -1232,9 +1232,7 @@ alpha_beta:
     sub word [r8 + 2 * rsi], cx
 
     ; update conthist
-    xchg r8, r9
-    cmp r8, r9
-    je .no_update_conthist1
+    mov r8, r9
 
     ; decrease history of searched quiet moves
     mov edi, dword [rbp - 128 + ABLocals.first_quiet]
@@ -1266,11 +1264,8 @@ alpha_beta:
     sub ecx, eax ; using negative increase improves compression
 
     sub word [r8 + 2 * rsi], cx
-.no_update_conthist1:
 
-    xchg r8, r10
-    cmp r8, r9
-    je .no_update_conthist2
+    mov r8, r10
 
     ; decrease history of searched quiet moves
     mov edi, dword [rbp - 128 + ABLocals.first_quiet]
@@ -1302,7 +1297,6 @@ alpha_beta:
     sub ecx, eax ; using negative increase improves compression
 
     sub word [r8 + 2 * rsi], cx
-.no_update_conthist2:
 .beta_cutoff_noisy:
     jmp .main_search_end
 .no_beta_cutoff:
