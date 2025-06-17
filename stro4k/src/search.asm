@@ -902,6 +902,9 @@ alpha_beta:
     cmp dword [rbp + 8], 7
     jnle .not_quiescence_no_see
 
+    cmp dword [rbp - 128 + ABLocals.best_eval], MIN_EVAL
+    jle .no_see_pruning
+
     ; SEE pruning
     push r15 ; beta
     push r14 ; alpha

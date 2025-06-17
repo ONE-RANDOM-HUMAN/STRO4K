@@ -422,16 +422,12 @@ impl<'a> Search<'a> {
                 moves[i].mov
             };
 
-            if depth <= 7 {
+            if depth <= 7 && best_eval > MIN_EVAL {
                 let see = self.game.position().see(mov);
                 if see < cmp::min(0, depth * -63) && !pv_node && !is_check {
                     continue;
                 }
-
-                see
-            } else {
-                0
-            };
+            }
 
             if depth <= 0 {
                 assert!(mov.flags().is_noisy(), "{mov:?}");
