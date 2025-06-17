@@ -6,6 +6,7 @@ section .text
 ; Sets rsi to a pointer to the new board
 ; Sets r8 to the pieces of the side that moved
 ; Sets r9 to the pieces of the side to move
+; Preserves eax for null moves
 game_make_move:
     ; make copy of board
     mov ecx, Board_size
@@ -21,7 +22,7 @@ game_make_move:
 
     xchg r8, r9
 .white_to_move:
-    mov al, 64
+    mov cl, 64
     test edx, edx
     jz .null_move
 
@@ -169,23 +170,23 @@ game_make_move:
     and cl, 63
     shr edx, 6
 
-    ; al - ep target - (origin + dest) / 2
-    add al, cl
-    shr al, 1
+    ; cl - ep target - (origin + dest) / 2
+    add cl, al
+    shr cl, 1
 
     cmp dl, DOUBLE_PAWN_PUSH_FLAG
-    mov cl, 64
-    cmovne eax, ecx
+    mov al, 64
+    cmovne ecx, eax
 
     ; remove castling rights 
-    mov rcx, 8100_0000_0000_0081h
-    pext rcx, rdi, rcx
-    not cl
-    and byte [rsi + Board.castling], cl
+    mov rax, 8100_0000_0000_0081h
+    pext rax, rdi, rax
+    not al
+    and byte [rsi + Board.castling], al
 
 .null_move:
     ; set ep
-    mov byte [rsi + Board.ep], al
+    mov byte [rsi + Board.ep], cl
 
     ; update 50 move rule
     inc byte [rsi + Board.fifty_moves]
@@ -228,6 +229,16 @@ board_get_move_pieces:
     ret
     
 
+; rsi - board
+; returns value in NZ flag and al
+board_is_check:
+    movzx eax, byte [rsi + Board.side_to_move]
+    imul eax, eax, 48
+
+    mov rdi, qword [rsi + rax + 40] ; king
+
+    ; jmp board_area_attacked_by
+
 ; board - rsi
 ; area - rdi
 ; Returns attacker piece in edi and attacker squares in rax
@@ -238,8 +249,7 @@ board_area_attacked_by:
     ; eax - enemy color
     movzx eax, byte [rsi + Board.side_to_move]
     xor al, 1
-    shl eax, 4
-    lea eax, [rax + 2 * rax] ; multiply by 48
+    imul eax, eax, 48
 
     ; r10 - enemy pieces
     lea r10, [rsi + Board.pieces + rax]
@@ -288,18 +298,5 @@ board_area_attacked_by:
     cmp edi, 6
     jne .piece_moves_head ; jne = jnz
 .end:
-    ret
-
-; rsi - board
-; returns value in NZ flag and al
-board_is_check:
-    movzx eax, byte [rsi + Board.side_to_move]
-    shl eax, 4
-    lea eax, [rax + 2 * rax] ; multiply by 48
-
-    mov rdi, qword [rsi + rax + 40] ; king
-
-    call board_area_attacked_by
-    setnz al
     ret
 

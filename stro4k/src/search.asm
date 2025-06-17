@@ -84,8 +84,10 @@ root_search:
     cmovl esi, edx
 
     neg edx
-    cmp edi, edx
-    cmovg edi, edx
+    ; cmp edi, edx
+    ; cmovg edi, edx
+    cmp edx, edi
+    cmovl edi, edx
 
     ; alpha - esi
     ; beta - edi
@@ -106,7 +108,9 @@ root_search:
     je .no_aspiration_fail_low
 
     ; fail low
-    shl ebp, 1
+    ; shl ebp, 1
+    add ebp, ebp
+
     mov esi, eax
     sub esi, ebp
     jmp .do_search
@@ -116,11 +120,16 @@ root_search:
     jnge .no_aspiration_fail_high
 
     cmp eax, edx ; score != MAX_EVAL
+    ; add eax, edx
     je .no_aspiration_fail_high
 
     ; fail high
-    shl ebp, 1
-    lea edi, [rax + rbp]
+    ; shl ebp, 1
+    add ebp, ebp
+
+    ; lea edi, [rax + rbp]
+    mov edi, eax
+    add edi, ebp
     jmp .do_search
 .no_aspiration_fail_high:
     ; update best move and last score
@@ -149,12 +158,12 @@ root_search:
 
     ; time_up clobbers r11 due to syscall
     push r11
-    mov rdx, qword [rbx + Search.min_search_time]
-    call time_up
+    call time_elapsed
+    cmp rcx, qword [rbx + Search.min_search_time]
     pop r11
 %else
-    mov rdx, qword [rbx + Search.min_search_time]
-    call time_up
+    call time_elapsed
+    cmp rcx, qword [rbx + Search.min_search_time]
 %endif
     jna .iterative_deepening_head
 .end_search: 
@@ -176,7 +185,7 @@ root_search:
 ; rbx - search
 ; rdx - time to search
 ; set by using ja
-time_up:
+time_elapsed:
     mov eax, CLOCK_GETTIME_SYSCALL
 
     push CLOCK_MONOTONIC
@@ -195,8 +204,6 @@ time_up:
     sub rax, qword [rbx + Search.start_tvnsec]
     add rcx, rax
 
-    ; compare
-    cmp rcx, rdx
     ret
 
 struc ABLocals
@@ -275,14 +282,15 @@ alpha_beta:
     ; determine if we are in check
     ; preserves rsi
     call board_is_check
+    jz .not_check
 
     ; IS_CHECK_FLAG = 1
-    mov byte [rbp - 128 + ABLocals.flags], al
+    ; inc byte [rbp - 128 + ABLocals.flags]
+    mov byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG
 
     ; check extension
-    movzx ecx, al
-    add dword [rbp + 8], ecx
-    
+    inc dword [rbp + 8]
+.not_check:
     ; rdi - moves
     mov rdi, rsp
     mov r14, rdi
@@ -388,8 +396,8 @@ alpha_beta:
     test dword [rbx + Search.nodes], 0FFFh
     jnz .no_stop_search
 
-    mov rdx, qword [rbx + Search.max_search_time]
-    call time_up
+    call time_elapsed
+    cmp rcx, qword [rbx + Search.max_search_time]
     jna .no_stop_search
 .stop_search:
     ; TODO
@@ -603,9 +611,6 @@ alpha_beta:
     sub eax, dword [rbp + 32]
     jnge .no_null_move
 
-    ; save static_eval - beta
-    mov r15d, eax
-
     ; static null move pruning
     ; check depth
     cmp ecx, 7
@@ -615,8 +620,11 @@ alpha_beta:
     imul edx, ecx, STATIC_NULL_MOVE_MARGIN
 
     cmp eax, edx
-    mov eax, dword [rbp + 32] ; beta
-    jge .end
+    ; cmovge eax, dword [rbp + 32] ; beta - need to preserve eax if not pruned
+    ; jge .end
+    jnge .no_static_nmp
+    mov eax, dword [rbp + 32] ; beta - need to preserve eax if not pruned
+    jmp .end
 .no_static_nmp:
     ; check depth
     cmp ecx, 3
@@ -624,7 +632,7 @@ alpha_beta:
 
     ; null move pruning
     xor edx, edx
-    call game_make_move
+    call game_make_move ; preserves eax
 
     ; call alpha beta
     ; edx - ply count
@@ -634,7 +642,8 @@ alpha_beta:
     ; ecx - reduced depth
     mov ecx, dword [rbp + 8]
     imul esi, ecx, 44
-    lea esi, [rsi + 2 * r15 + 566 + 256] ; + 256 since formula is depth - r - 1
+    ; lea esi, [rsi + 2 * r15 + 566 + 256] ; + 256 since formula is depth - r - 1
+    lea esi, [rsi + 2 * rax + 566 + 256] ; + 256 since formula is depth - r - 1
 
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .nmp_not_improving
@@ -1028,14 +1037,11 @@ alpha_beta:
     call game_make_move
     jc .main_search_tail
 
+    ; futility pruning
     ; rsi is a pointer to the current board
     call board_is_check
-
-    movzx r8d, al
-
-    ; futility pruning
-    ; is check
     jnz .no_fprune_move
+
     test r12d, (PROMO_FLAG | CAPTURE_FLAG) << 12
     jnz .no_fprune_move
     test byte [rbp - 128 + ABLocals.flags], F_PRUNE_FLAG

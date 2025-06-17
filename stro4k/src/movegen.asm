@@ -21,8 +21,7 @@ gen_moves:
     mov rcx, qword [rsi + Board.colors + rax * 8] ; side
     or r9, rcx
 
-    shl eax, 4 ; multiply by 16
-    lea eax, [rax + rax * 2] ; multiply by 3
+    imul eax, eax, 48
     lea r10, [rsi + rax] ; pieces
 
     ; non pawn, non castling moves
