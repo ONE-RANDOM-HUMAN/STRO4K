@@ -505,7 +505,7 @@ impl<'a> Search<'a> {
                             .failed_cutoff(moves[i].mov, depth);
                     }
 
-                    if self.conthist_stack[ply] != 0 {
+                    {
                         let index = self.game.position().side_to_move() as usize
                             + self.conthist_stack[ply] / std::mem::size_of::<HistoryTable>();
                         let conthist = &mut self.history[index];
@@ -516,7 +516,7 @@ impl<'a> Search<'a> {
                         }
                     }
 
-                    if self.conthist_stack[ply + 1] != 0 {
+                    {
                         let index = self.game.position().side_to_move() as usize
                             + self.conthist_stack[ply + 1] / std::mem::size_of::<HistoryTable>();
                         let conthist = &mut self.history[index];
