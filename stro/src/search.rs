@@ -360,7 +360,7 @@ impl<'a> Search<'a> {
         // Futility pruning
         let f_prune = depth <= 7 && !is_check && !pv_node;
 
-        const F_PRUNE_MARGIN: i32 = 89;
+        const F_PRUNE_MARGIN: i32 = 110;
         let f_prune_base = static_eval
             + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN;
 
