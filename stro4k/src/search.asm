@@ -1127,8 +1127,8 @@ alpha_beta:
     jng .pvs_no_research
 
     ; check beta
-    cmp eax, dword [rbp + 32]
-    jl .pvs_search_full
+    test byte [rbp - 128 + ABLocals.flags], PV_NODE_FLAG
+    jnz .pvs_search_full
 
     ; check depth
     cmp r11d, dword [rbp + 8]
