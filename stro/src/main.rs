@@ -55,7 +55,7 @@ fn main() {
 fn uci_loop() {
     use std::io;
 
-    use stro::movegen::{gen_moves, MoveBuf};
+    use stro::movegen::{MoveBuf, gen_moves};
     use stro::position::{Board, Color};
     use stro::search::threads::SearchThreads;
 

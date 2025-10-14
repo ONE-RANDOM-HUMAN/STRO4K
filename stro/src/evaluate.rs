@@ -1,5 +1,5 @@
 use crate::consts;
-use crate::movegen::{bishop_moves, knight_moves, queen_moves, rook_moves, MoveFn};
+use crate::movegen::{MoveFn, bishop_moves, knight_moves, queen_moves, rook_moves};
 use crate::position::{Bitboard, Board, Color};
 
 #[repr(C)]

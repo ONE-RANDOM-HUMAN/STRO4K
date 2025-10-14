@@ -60,12 +60,12 @@ impl TTData {
 
 static DEFAULT_TT: AtomicU64 = AtomicU64::new(0);
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 static mut TT_PTR: *const AtomicU64 = &raw const DEFAULT_TT;
 
 static mut TT_LEN: NonZeroU64 = NonZeroU64::new(1).unwrap();
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 static mut TT_MASK: u64 = 0;
 
 /// # Safety
@@ -88,7 +88,8 @@ pub unsafe fn alloc(size_in_bytes: NonZeroU64) {
 pub unsafe fn dealloc() {
     unsafe {
         if !std::ptr::eq(TT_PTR, &raw const DEFAULT_TT) {
-            let slice = std::ptr::slice_from_raw_parts_mut(TT_PTR.cast_mut(), TT_LEN.get() as usize);
+            let slice =
+                std::ptr::slice_from_raw_parts_mut(TT_PTR.cast_mut(), TT_LEN.get() as usize);
             drop(Box::from_raw(slice));
             TT_PTR = &raw const DEFAULT_TT;
         }

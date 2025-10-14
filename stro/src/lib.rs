@@ -1,6 +1,3 @@
-#![warn(unsafe_op_in_unsafe_fn)]
-#![feature(new_zeroed_alloc)]
-
 #[cfg(feature = "asm")]
 pub mod asm;
 pub mod consts;

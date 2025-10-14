@@ -1,4 +1,4 @@
-use crate::consts::{AB_FILE, ALL, A_FILE, H_FILE};
+use crate::consts::{A_FILE, AB_FILE, ALL, H_FILE};
 use crate::position::{Bitboard, Board, Color, Move, MoveFlags, MovePlus, Square};
 
 pub type MoveFn = fn(Bitboard, Bitboard) -> Bitboard;
@@ -45,8 +45,8 @@ pub fn gen_moves<'a>(position: &Board, buf: &'a mut MoveBuf) -> &'a mut [MovePlu
     unsafe { std::slice::from_raw_parts_mut(start, ptr.offset_from(start) as usize) }
 }
 
-pub(super) fn dumb7fill(gen: Bitboard, l_mask: Bitboard, occ: Bitboard, shift: u32) -> Bitboard {
-    let (mut l_gen, mut r_gen) = (gen, gen);
+pub(super) fn dumb7fill(gen_: Bitboard, l_mask: Bitboard, occ: Bitboard, shift: u32) -> Bitboard {
+    let (mut l_gen, mut r_gen) = (gen_, gen_);
 
     // only 6 required for attacks
     for _ in 0..6 {

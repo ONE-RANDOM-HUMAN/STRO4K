@@ -7,9 +7,9 @@ use crate::position::{Board, Move};
 use crate::search::RUNNING;
 use crate::tt;
 
-use super::{elapsed_nanos, Search, SearchResult, Time};
+use super::{Search, SearchResult, Time, elapsed_nanos};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 static SEARCH_RESULT: AtomicU64 = AtomicU64::new(0);
 
 struct SearchThread {
@@ -78,7 +78,7 @@ impl SearchThreads {
         self.asm = value;
     }
 
-    pub fn game(&mut self) -> &Game {
+    pub fn game(&mut self) -> &Game<'_> {
         self.main_thread.search.game()
     }
 

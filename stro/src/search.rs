@@ -6,12 +6,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
-use crate::movegen::{gen_moves, MoveBuf};
+use crate::movegen::{MoveBuf, gen_moves};
 use crate::moveorder::{self, HistoryTable, KillerTable};
 use crate::position::{Board, Move};
 use crate::tt::{self, Bound, TTData};
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub static RUNNING: AtomicBool = AtomicBool::new(false);
 
 #[cfg(not(feature = "asm"))]
@@ -395,8 +395,8 @@ impl<'a> Search<'a> {
                     let conthist_index = hist_index
                         + self.conthist_stack[ply + 1] / std::mem::size_of::<HistoryTable>();
 
-                    let conthist2_index = hist_index
-                        + self.conthist_stack[ply] / std::mem::size_of::<HistoryTable>();
+                    let conthist2_index =
+                        hist_index + self.conthist_stack[ply] / std::mem::size_of::<HistoryTable>();
 
                     ordered_moves += moveorder::order_quiet_moves(
                         &mut moves[ordered_moves..],
@@ -455,7 +455,8 @@ impl<'a> Search<'a> {
 
             // Set conthist
             self.conthist_stack[ply + 2] = self.game.position().move_index() as usize
-                * 2 * std::mem::size_of::<HistoryTable>();
+                * 2
+                * std::mem::size_of::<HistoryTable>();
 
             // PVS
             let eval = if best_move.is_none() || depth <= 0 {
@@ -754,7 +755,7 @@ impl PlyData {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn search_print_info_sysv(search: &mut Search, depth: i32, score: i32) {
     search.print_uci_info(depth, score);
 }

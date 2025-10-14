@@ -11,11 +11,11 @@ pub struct Board {
     pieces: [[Bitboard; 6]; 2],
     colors: [Bitboard; 2],
     side_to_move: Color,
-    ep: Option<Square>,
+    ep: u8,
     castling: u8,
     fifty_moves: u8,
     move_index: u32,
-    padding: u64
+    padding: u64,
 }
 
 unsafe fn _size_check() {
@@ -47,7 +47,7 @@ impl Board {
         ],
         colors: [0x0000_0000_0000_FFFF, 0xFFFF_0000_0000_0000],
         side_to_move: Color::White,
-        ep: None,
+        ep: 64,
         castling: 0b1111,
         fifty_moves: 0,
         move_index: 0,
@@ -150,8 +150,11 @@ impl Board {
         }
 
         // ep target halfway between origin and dest
-        self.ep = (mov.flags() == MoveFlags::DOUBLE_PAWN_PUSH)
-            .then(|| Square::from_index((mov.origin() as u8 + mov.dest() as u8) / 2).unwrap());
+        self.ep = if mov.flags() == MoveFlags::DOUBLE_PAWN_PUSH {
+            (mov.origin() as u8 + mov.dest() as u8) / 2
+        } else {
+            64
+        };
 
         // set 50 move rule
         self.fifty_moves = if piece == Piece::Pawn || mov.flags().is_capture() {
@@ -169,7 +172,7 @@ impl Board {
     /// # Safety
     /// The position must not be check
     pub unsafe fn make_null_move(&mut self) {
-        self.ep = None;
+        self.ep = 64;
         self.fifty_moves += 1;
         self.side_to_move = self.side_to_move.other();
     }
@@ -195,7 +198,7 @@ impl Board {
     }
 
     pub fn ep(&self) -> Option<Square> {
-        self.ep
+        Square::from_index(self.ep)
     }
 
     pub fn castling(&self) -> u8 {
@@ -221,7 +224,7 @@ impl Board {
             colors: [0; 2],
             side_to_move: Color::White,
             fifty_moves: 0,
-            ep: None,
+            ep: 64,
             castling: 0,
             move_index: 0,
             padding: 0,
@@ -311,9 +314,9 @@ impl Board {
 
         let en_passant = parts.next()?;
         position.ep = if en_passant == "-" {
-            None
+            64
         } else {
-            Some(en_passant.parse::<Square>().ok()?)
+            en_passant.parse::<Square>().ok()? as u8
         };
 
         // Treat empty 50mr counter as 0
@@ -330,9 +333,7 @@ impl Board {
             use std::arch::x86_64::*;
 
             let mut value = _mm_cvtsi32_si128(
-                self.side_to_move as i32
-                    | self.ep.map_or(64, |x| x as i32) << 8
-                    | (self.castling as i32) << 16,
+                self.side_to_move as i32 | i32::from(self.ep) << 8 | i32::from(self.castling) << 16,
             );
 
             let ptr = self as *const _ as *const i64;

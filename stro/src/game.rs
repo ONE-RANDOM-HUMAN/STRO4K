@@ -1,4 +1,4 @@
-use crate::movegen::{gen_moves, MoveBuf};
+use crate::movegen::{MoveBuf, gen_moves};
 use crate::position::{Board, Move};
 
 // Enough space to fit longest possible chess game with 50-mr

@@ -1,7 +1,6 @@
 use crate::search::Search;
 
-#[allow(improper_ctypes)]
-extern "C" {
+unsafe extern "C" {
     pub fn root_search_sysv(search: &mut Search, main_thread: bool, max_depth: i32);
 }
 
