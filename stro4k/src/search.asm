@@ -10,11 +10,11 @@ SEE_PRUNE_MARGIN equ -63
 
 section .rodata
 PIECE_VALUES:
-    dd 114
-    dd 425
-    dd 425
-    dd 648
-    dd 1246
+    dd 165
+    dd 426
+    dd 426
+    dd 678
+    dd 1306
     dd MAX_EVAL
 
 default rel
