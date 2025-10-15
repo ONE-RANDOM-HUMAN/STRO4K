@@ -11,6 +11,28 @@ use crate::moveorder::{self, HistoryTable, KillerTable};
 use crate::position::{Board, Move};
 use crate::tt::{self, Bound, TTData};
 
+pub static mut MIN_ASPIRATION_WINDOW_SIZE: i32 = 32;
+pub static mut STATIC_NULL_MOVE_MARGIN: i32 = 80;
+pub static mut F_PRUNE_MARGIN: i32 = 128;
+pub static mut SEE_PRUNE_MARGIN: i32 = -96;
+pub static mut LMR_BASE: f64 = 0.25;
+pub static mut LMR_DEPTH: f64 = 0.25;
+pub static mut LMR_MOVE: f64 = 0.125;
+pub static mut LMR_IMPROVING: f64 = -1.0;
+pub static mut LMP_BASE: f64 = 1.5;
+pub static mut LMP_DEPTH_SQUARED: f64 = 0.5;
+pub static mut LMP_IMPROVING_BASE: f64 = 3.0;
+pub static mut LMP_IMPROVING_DEPTH_SQUARED: f64 = 1.0;
+pub static mut NMP_BASE: f64 = 3.0;
+pub static mut NMP_DEPTH: f64 = 0.25;
+pub static mut NMP_IMPROVING: f64 = -0.5;
+pub static mut MIN_TIME_FRACTION: f64 = 0.025;
+pub static mut MIN_INC_FRACTION: f64 = 0.0;
+pub static mut MAX_TIME_FRACTION: f64 = 0.05;
+pub static mut MAX_INC_FRACTION: f64 = 0.5;
+pub static mut CONTHIST_1_SCALE: f64 = 1.0;
+pub static mut CONTHIST_2_SCALE: f64 = 1.0;
+
 #[unsafe(no_mangle)]
 pub static RUNNING: AtomicBool = AtomicBool::new(false);
 
@@ -104,8 +126,12 @@ impl<'a> Search<'a> {
     }
 
     pub fn set_time(&mut self, time_ms: u32, inc_ms: u32) {
-        self.min_search_time = (time_ms as u64) * 27098 + (inc_ms as u64) * 8979;
-        self.max_search_time = (time_ms as u64) * 84901 + (inc_ms as u64) * 575901;
+        unsafe {
+            let min = time_ms as f64 * MIN_TIME_FRACTION + inc_ms as f64 * MIN_INC_FRACTION;
+            let max = time_ms as f64 * MAX_TIME_FRACTION + inc_ms as f64 * MAX_INC_FRACTION;
+            self.min_search_time = (min * 1_000_000.0) as u64;
+            self.max_search_time = (max * 1_000_000.0) as u64
+        }
     }
 
     #[cfg(feature = "asm")]
@@ -120,7 +146,7 @@ impl<'a> Search<'a> {
 
         let mut reached_depth = max_depth;
         'a: for depth in 1..=max_depth {
-            let mut window = 23;
+            let mut window = unsafe { MIN_ASPIRATION_WINDOW_SIZE };
             let mut alpha = cmp::max(MIN_EVAL, last_score - window);
             let mut beta = cmp::min(MAX_EVAL, last_score + window);
 
@@ -322,8 +348,7 @@ impl<'a> Search<'a> {
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 7 {
-                const STATIC_NULL_MOVE_MARGIN: i32 = 79;
-                let margin = depth * STATIC_NULL_MOVE_MARGIN;
+                let margin = unsafe { depth * STATIC_NULL_MOVE_MARGIN };
 
                 if static_eval >= beta + margin {
                     return Some(beta);
@@ -332,14 +357,18 @@ impl<'a> Search<'a> {
 
             // Null move pruning
             if depth >= 3 {
-                // Round towards -inf is fine
-                let r = (566 + depth * 44 + 2 * (static_eval - beta) - 75 * improving as i32) >> 8;
+                let r = unsafe {
+                    NMP_BASE
+                        + f64::from(depth) * NMP_DEPTH
+                        + (1.0 / 128.0) * f64::from(static_eval - beta)
+                        + f64::from(improving) * NMP_IMPROVING
+                };
 
                 unsafe {
                     self.game.make_null_move();
                 }
 
-                let eval = self.alpha_beta(-beta, -beta + 1, depth - r - 1, ply + 1);
+                let eval = self.alpha_beta(-beta, -beta + 1, depth - r as i32 - 1, ply + 1);
 
                 unsafe {
                     self.game.unmake_move();
@@ -360,9 +389,9 @@ impl<'a> Search<'a> {
         // Futility pruning
         let f_prune = depth <= 7 && !is_check && !pv_node;
 
-        const F_PRUNE_MARGIN: i32 = 89;
-        let f_prune = f_prune
-            && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
+        let f_prune = unsafe {
+            f_prune && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha
+        };
 
         // Stand pat in qsearch
         let mut best_eval = if depth <= 0 { static_eval } else { MIN_EVAL };
@@ -383,7 +412,15 @@ impl<'a> Search<'a> {
 
         // If depth <= 0, there are no quiets anyway
         let mut quiets_to_go = if beta - alpha == 1 {
-            (1 + 8 * improving as i32 + depth * depth) >> (!improving as u32)
+            let value = unsafe {
+                if improving {
+                    LMP_IMPROVING_BASE + LMP_IMPROVING_DEPTH_SQUARED + (depth as f64).powi(2)
+                } else {
+                    LMP_BASE + LMP_DEPTH_SQUARED + (depth as f64).powi(2)
+                }
+            };
+
+            value as i32
         } else {
             0 // This will become negative on decrement
         };
@@ -424,8 +461,10 @@ impl<'a> Search<'a> {
 
             if depth <= 7 {
                 let see = self.game.position().see(mov);
-                if see < cmp::min(0, depth * -63) && !pv_node && !is_check {
-                    continue;
+                unsafe {
+                    if see < cmp::min(0, depth * SEE_PRUNE_MARGIN) && !pv_node && !is_check {
+                        continue;
+                    }
                 }
 
                 see
@@ -464,10 +503,14 @@ impl<'a> Search<'a> {
             } else {
                 let lmr_depth = if depth >= 2 && i >= 3 {
                     // Round towards -inf is fine
-                    let reduction =
-                        (141 + depth * 9 + i as i32 * 34 - improving as i32 * 162) / 256;
+                    let reduction = unsafe {
+                        LMR_BASE
+                            + f64::from(depth) * LMR_DEPTH
+                            + i as f64 * LMR_MOVE
+                            + f64::from(improving) * LMR_IMPROVING
+                    };
 
-                    depth - reduction - 1
+                    depth - reduction as i32 - 1
                 } else {
                     depth - 1
                 };

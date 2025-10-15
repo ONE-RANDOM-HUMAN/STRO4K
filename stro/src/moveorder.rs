@@ -1,4 +1,5 @@
-use crate::position::{Board, Move, MovePlus};
+use crate::{position::{Board, Move, MovePlus}};
+use crate::search::{CONTHIST_1_SCALE, CONTHIST_2_SCALE};
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default, Debug)]
@@ -91,7 +92,11 @@ pub fn order_quiet_moves(
     conthist2: &HistoryTable,
 ) -> usize {
     for mov in &mut *moves {
-        mov.score = history.get(mov.mov) + conthist.get(mov.mov) + conthist2.get(mov.mov);
+        mov.score = unsafe {
+            f64::from(history.get(mov.mov))
+                + f64::from(conthist.get(mov.mov)) * CONTHIST_1_SCALE
+                + f64::from(conthist2.get(mov.mov)) * CONTHIST_2_SCALE
+        } as i16;
 
         // killers
         if let Some(index) = kt.index(mov.mov) {
