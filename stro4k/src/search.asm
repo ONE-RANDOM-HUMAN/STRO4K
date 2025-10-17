@@ -4,9 +4,9 @@ BOUND_LOWER equ 01b
 BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
-F_PRUNE_MARGIN equ 89
-STATIC_NULL_MOVE_MARGIN equ 79
-SEE_PRUNE_MARGIN equ -63
+F_PRUNE_MARGIN equ 84
+STATIC_NULL_MOVE_MARGIN equ 81
+SEE_PRUNE_MARGIN equ -61
 
 section .rodata
 PIECE_VALUES:
@@ -72,7 +72,7 @@ root_search:
     ; ebp - window
     ; esi - alpha
     ; edi - beta
-    mov ebp, 23
+    mov ebp, 22
 
     mov esi, r14d
     lea edi, [rsi + rbp]
@@ -641,13 +641,12 @@ alpha_beta:
 
     ; ecx - reduced depth
     mov ecx, dword [rbp + 8]
-    imul esi, ecx, 44
-    ; lea esi, [rsi + 2 * r15 + 566 + 256] ; + 256 since formula is depth - r - 1
-    lea esi, [rsi + 2 * rax + 566 + 256] ; + 256 since formula is depth - r - 1
+    imul esi, ecx, 45
+    lea esi, [rsi + 2 * rax + 570 + 256] ; + 256 since formula is depth - r - 1
 
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .nmp_not_improving
-    sub esi, 75
+    sub esi, 79
 
 .nmp_not_improving:
     sar esi, 8
@@ -732,14 +731,19 @@ alpha_beta:
     jnz .no_fprune_no_lmp
 
     imul eax, eax
-    add eax, 9
+    lea esi, [rax + 2 * rax + 41]
+    lea eax, [4 * rax + 1]
+    ; lea eax, [rsi + 4 * rax + 1]
 
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
-    jnz .lmp_improving
+    jz .lmp_improving
+    ; jnz .lmp_improving
 
-    sub eax, 8
-    shr eax, 1
+    add eax, esi
+    ; sub eax, esi
 .lmp_improving:
+    shr eax, 3
+
     mov dword [rbp - 128 + ABLocals.quiets_to_go], eax
 
     ; futility pruning
@@ -1087,15 +1091,15 @@ alpha_beta:
     jnge .no_lmr_reduction
 
     ; calculate lmr depth
-    ; 141 + depth * 9 + i * 34
-    imul eax, edx, 9
-    imul ecx, r15d, 34
-    lea eax, [rax + rcx + 141]
+    ; 167 + depth * 14 + i * 33
+    imul eax, edx, 14
+    imul ecx, r15d, 33
+    lea eax, [rax + rcx + 136]
 
     ; decrease reduction if improving
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     jz .lmr_not_improving
-    sub eax, 162
+    sub eax, 167
 .lmr_not_improving:
     ; divide by 256
     sar eax, 8
