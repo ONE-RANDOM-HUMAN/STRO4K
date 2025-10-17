@@ -414,9 +414,9 @@ impl<'a> Search<'a> {
         let mut quiets_to_go = if beta - alpha == 1 {
             let value = unsafe {
                 if improving {
-                    LMP_IMPROVING_BASE + LMP_IMPROVING_DEPTH_SQUARED + (depth as f64).powi(2)
+                    LMP_IMPROVING_BASE + LMP_IMPROVING_DEPTH_SQUARED * (depth as f64).powi(2)
                 } else {
-                    LMP_BASE + LMP_DEPTH_SQUARED + (depth as f64).powi(2)
+                    LMP_BASE + LMP_DEPTH_SQUARED * (depth as f64).powi(2)
                 }
             };
 

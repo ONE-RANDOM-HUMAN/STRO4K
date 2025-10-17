@@ -67,8 +67,8 @@ fn main() {
     println!("option name MinIncFrac type string default 0.0");
     println!("option name MaxTimeFrac type string default 0.05");
     println!("option name MaxIncFrac type string default 0.5");
-    println!("option name Conthist1Scale type string default 1.0");
-    println!("option name Conthist2Scale type string default 1.0");
+    println!("option name Conthist1Scale type string default 0.0");
+    println!("option name Conthist2Scale type string default 0.0");
 
     println!("uciok");
 
@@ -239,10 +239,10 @@ fn uci_loop() {
                     stro::search::MAX_INC_FRACTION = value.parse().unwrap()
                 }
                 "conthist1scale" => unsafe {
-                    stro::search::CONTHIST_1_SCALE = value.parse().unwrap()
+                    stro::search::CONTHIST_1_SCALE = f64::exp(value.parse().unwrap())
                 }
                 "conthist2scale" => unsafe {
-                    stro::search::CONTHIST_2_SCALE = value.parse().unwrap()
+                    stro::search::CONTHIST_2_SCALE = f64::exp(value.parse().unwrap())
                 }
                 name => panic!("Unrecognised option: {name}"),
             }
