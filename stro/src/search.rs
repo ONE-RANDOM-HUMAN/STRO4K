@@ -383,11 +383,13 @@ impl<'a> Search<'a> {
 
         // If depth <= 0, there are no quiets anyway
         let mut quiets_to_go = if beta - alpha == 1 {
-            if improving {
+            let quiets = if improving {
                 (75 + 13 * depth * depth) >> 4
             } else {
                 (2 + 5 * depth * depth) >> 4
-            }
+            };
+
+            cmp::max(quiets, 1)
         } else {
             0 // This will become negative on decrement
         };

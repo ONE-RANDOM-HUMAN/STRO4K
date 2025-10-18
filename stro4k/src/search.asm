@@ -737,7 +737,9 @@ alpha_beta:
     test byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
     cmovz eax, esi
 
+    mov esi, 1
     sar eax, 4
+    cmovz eax, esi
     mov dword [rbp - 128 + ABLocals.quiets_to_go], eax
 
     ; futility pruning
