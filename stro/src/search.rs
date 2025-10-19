@@ -420,7 +420,7 @@ impl<'a> Search<'a> {
                 }
             };
 
-            value as i32
+            cmp::max(value as i32, 1)
         } else {
             0 // This will become negative on decrement
         };
