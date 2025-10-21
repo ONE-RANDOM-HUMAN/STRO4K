@@ -40,6 +40,7 @@ struc Board
         resb 1
     .castling:
         resb 1
+    .first_unhashed:
     .fifty_moves:
         resb 1
     .move_index:

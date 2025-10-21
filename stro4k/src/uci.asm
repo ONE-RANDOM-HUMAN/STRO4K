@@ -83,6 +83,7 @@ _start:
     mov rsp, rsi
 
     ; set up startpos and pointer to positions
+    ; the last bytes are already 0
     lea rdi, [rsi + Search_size]
     mov qword [rsi], rdi
     lea rsi, [STARTPOS]

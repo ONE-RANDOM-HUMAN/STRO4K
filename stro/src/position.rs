@@ -332,11 +332,8 @@ impl Board {
         unsafe {
             use std::arch::x86_64::*;
 
-            let mut value = _mm_cvtsi32_si128(
-                self.side_to_move as i32 | i32::from(self.ep) << 8 | i32::from(self.castling) << 16,
-            );
-
             let ptr = self as *const _ as *const i64;
+            let mut value = _mm_loadu_si128((&raw const self.fifty_moves).cast::<__m128i>().offset(-1));
 
             // pieces and color
             for i in (0..=12).rev() {
