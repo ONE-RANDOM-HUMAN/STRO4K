@@ -104,8 +104,8 @@ impl<'a> Search<'a> {
     }
 
     pub fn set_time(&mut self, time_ms: u32, inc_ms: u32) {
-        self.min_search_time = (time_ms as u64) * 27098 + (inc_ms as u64) * 8979;
-        self.max_search_time = (time_ms as u64) * 84901 + (inc_ms as u64) * 575901;
+        self.min_search_time = (time_ms as u64) * 31796 + (inc_ms as u64) * 8946;
+        self.max_search_time = (time_ms as u64) * 85387 + (inc_ms as u64) * 574673;
     }
 
     #[cfg(feature = "asm")]
@@ -120,7 +120,7 @@ impl<'a> Search<'a> {
 
         let mut reached_depth = max_depth;
         'a: for depth in 1..=max_depth {
-            let mut window = 23;
+            let mut window = 21;
             let mut alpha = cmp::max(MIN_EVAL, last_score - window);
             let mut beta = cmp::min(MAX_EVAL, last_score + window);
 
@@ -322,7 +322,7 @@ impl<'a> Search<'a> {
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 7 {
-                const STATIC_NULL_MOVE_MARGIN: i32 = 79;
+                const STATIC_NULL_MOVE_MARGIN: i32 = 76;
                 let margin = depth * STATIC_NULL_MOVE_MARGIN;
 
                 if static_eval >= beta + margin {
@@ -333,7 +333,7 @@ impl<'a> Search<'a> {
             // Null move pruning
             if depth >= 3 {
                 // Round towards -inf is fine
-                let r = (566 + depth * 44 + 2 * (static_eval - beta) - 75 * improving as i32) >> 8;
+                let r = (557 + depth * 46 + 2 * (static_eval - beta) - 70 * improving as i32) >> 8;
 
                 unsafe {
                     self.game.make_null_move();
@@ -360,7 +360,7 @@ impl<'a> Search<'a> {
         // Futility pruning
         let f_prune = depth <= 7 && !is_check && !pv_node;
 
-        const F_PRUNE_MARGIN: i32 = 89;
+        const F_PRUNE_MARGIN: i32 = 83;
         let f_prune = f_prune
             && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
 
@@ -383,7 +383,13 @@ impl<'a> Search<'a> {
 
         // If depth <= 0, there are no quiets anyway
         let mut quiets_to_go = if beta - alpha == 1 {
-            (1 + 8 * improving as i32 + depth * depth) >> (!improving as u32)
+            let quiets = if improving {
+                (70 + 13 * depth * depth) >> 4
+            } else {
+                (2 + 8 * depth * depth) >> 4
+            };
+
+            cmp::max(quiets, 1)
         } else {
             0 // This will become negative on decrement
         };
@@ -424,7 +430,7 @@ impl<'a> Search<'a> {
 
             if depth <= 7 {
                 let see = self.game.position().see(mov);
-                if see < cmp::min(0, depth * -63) && !pv_node && !is_check {
+                if see < cmp::min(0, depth * -65) && !pv_node && !is_check {
                     continue;
                 }
 
@@ -465,7 +471,7 @@ impl<'a> Search<'a> {
                 let lmr_depth = if depth >= 2 && i >= 3 {
                     // Round towards -inf is fine
                     let reduction =
-                        (141 + depth * 9 + i as i32 * 34 - improving as i32 * 162) / 256;
+                        (136 + depth * 14 + i as i32 * 36 - improving as i32 * 169) / 256;
 
                     depth - reduction - 1
                 } else {
