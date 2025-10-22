@@ -350,11 +350,16 @@ knight_moves:
     vpmovzxbq ymm1, dword [KNIGHT_SHIFTS]
 
 %ifdef AVX512
-    vpbroadcastq ymm2, r8
+    vpbroadcastq ymm4, r8
+
+    vpsllvq ymm5, ymm4, ymm1
+    vpand ymm4, ymm4, ymm7
+    vpsrlvq ymm4, ymm4, ymm1
+
+    vpternlogq ymm5, ymm4, ymm7, 0ECh
 %else
     vmovq xmm2, r8
     vpbroadcastq ymm2, xmm2
-%endif
     
     vpsllvq ymm3, ymm2, ymm1
     vpand ymm4, ymm2, ymm7
@@ -362,6 +367,7 @@ knight_moves:
     vpsrlvq ymm4, ymm4, ymm1
 
     vpor ymm5, ymm4, ymm3
+%endif
     vextracti128 xmm6, ymm5, 1
     jmp dumb7fill.or
 

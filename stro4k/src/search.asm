@@ -439,9 +439,7 @@ alpha_beta:
     ; probe the tt
 
     ; hash the position
-    mov eax, dword [rsi + Board.side_to_move]
-    and eax, 00FFFFFFh
-    vmovd xmm0, eax
+    vmovdqu xmm0, oword [rsi + Board.first_unhashed - 16]
 
     mov eax, 12
 .hash_loop_head:
@@ -449,32 +447,32 @@ alpha_beta:
     dec eax
     jns .hash_loop_head
 
-    vmovq rdx, xmm0
-    mov qword [rbp - 128 + ABLocals.hash], rdx
+    vmovq rdi, xmm0
+    mov qword [rbp - 128 + ABLocals.hash], rdi
 
     ; load tt_entry
-    mov rcx, rdx
+    mov rdx, rdi
 
 %ifndef EXPORT_SYSV
-    and rdx, qword [TT_MASK]
-    lea rax, [TT_MEM]
+    lea r15, [TT_MEM]
+    and rdi, qword [TT_MASK]
 %else
-    and rdx, qword [TT_MASK]
-    mov rax, qword [TT_PTR]
+    and rdi, qword [TT_MASK]
+    mov r15, qword [TT_PTR]
 %endif
 
-    mov rax, qword [rax + rdx * 8]
+    mov rax, qword [r15 + rdi * 8]
 
-    test rax, rax
-    jz .tt_miss
+    ; this check is not needed because even if the hashes match,
+    ; the zero move is not valid
+    ; test rax, rax
+    ; jz .tt_miss
 
 
     ; check the hashes
-    shr rcx, 48 ; hash
-    mov rdx, rax
-    shr rdx, 48 ; tt hash
-    cmp ecx, edx
-    jne .tt_miss
+    xor rdx, rax
+    shr rdx, 48
+    jnz .tt_miss
 
     ; find the index of the entry
 
@@ -487,6 +485,8 @@ alpha_beta:
     mov r12, rax ; TT entry
     movzx eax, ax
     repne scasd
+
+    ; rsi - board
 
     ; move not found
     jne .tt_miss
