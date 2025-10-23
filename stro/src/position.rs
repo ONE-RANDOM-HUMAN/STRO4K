@@ -332,16 +332,33 @@ impl Board {
         unsafe {
             use std::arch::x86_64::*;
 
-            let mut value = _mm_cvtsi32_si128(
-                self.side_to_move as i32 | i32::from(self.ep) << 8 | i32::from(self.castling) << 16,
-            );
-
             let ptr = self as *const _ as *const i64;
+            let mut value =
+                _mm_loadu_si128((&raw const self.fifty_moves).cast::<__m128i>().offset(-1));
 
             // pieces and color
             for i in (0..=12).rev() {
                 value = _mm_aesenc_si128(value, _mm_loadu_si128(ptr.add(i).cast()));
             }
+
+            _mm_cvtsi128_si64x(value) as u64
+        }
+    }
+
+    pub fn material_hash(&self) -> u64 {
+        // SAFETY: aes-ni and 64 bit required for build
+        unsafe {
+            use std::arch::x86_64::*;
+
+            let mut data = [0; 16];
+            for (i, bb) in self.pieces.iter().flatten().enumerate() {
+                data[i] = bb.count_ones() as u8;
+            }
+
+            let mut value = _mm_loadu_si128(data.as_ptr().cast());
+            value = _mm_aesenc_si128(value, value);
+            value = _mm_aesenc_si128(value, value);
+            value = _mm_aesenc_si128(value, value);
 
             _mm_cvtsi128_si64x(value) as u64
         }
