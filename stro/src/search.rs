@@ -12,9 +12,10 @@ use crate::position::{Board, Move};
 use crate::tt::{self, Bound, TTData};
 
 const CORR_HIST_ENTRIES: usize = 1 << 16;
-const CORR_HIST_SCALE: i32 = 1 << 12;
+const CORR_HIST_SCALE_SHIFT: u32 = 12;
+const CORR_HIST_SCALE: i32 = 1 << CORR_HIST_SCALE_SHIFT;
 const CORR_HIST_MAX_WEIGHT: i32 = 1 << 9;
-const CORR_HIST_MAX: i32 = 128;
+const CORR_HIST_MAX: i32 = 96;
 
 #[unsafe(no_mangle)]
 pub static RUNNING: AtomicBool = AtomicBool::new(false);
@@ -266,7 +267,7 @@ impl<'a> Search<'a> {
         let mut static_eval = evaluate::evaluate(self.game.position())
             + (self.corrhist[self.game().position().side_to_move() as usize]
                 [self.game().position().material_hash() as usize % CORR_HIST_ENTRIES]
-                / CORR_HIST_SCALE);
+                >> CORR_HIST_SCALE_SHIFT);
 
         // Use non-tt static eval to ensure continuity
         self.ply[ply].static_eval = static_eval as i16;
@@ -570,7 +571,7 @@ impl<'a> Search<'a> {
 
             if !is_check
                 && depth > 0
-                && best_move.is_none_or(|x| !x.flags().is_noisy())
+                && !mov.flags().is_noisy()
                 && best_eval > MIN_EVAL
                 && best_eval < MAX_EVAL
                 && (bound != Bound::Lower || best_eval >= static_eval)
@@ -582,7 +583,7 @@ impl<'a> Search<'a> {
                 let entry = &mut self.corrhist[self.game().position().side_to_move() as usize]
                     [self.game().position().material_hash() as usize % CORR_HIST_ENTRIES];
 
-                *entry = (*entry * (CORR_HIST_SCALE - weight)) / CORR_HIST_SCALE + diff * weight;
+                *entry = diff * weight - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
             }
 
             self.ply[ply].best_move = best_move;
