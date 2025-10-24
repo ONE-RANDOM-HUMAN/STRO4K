@@ -351,7 +351,7 @@ impl Board {
             use std::arch::x86_64::*;
 
             let mut data = [0_u8; 16];
-            let ptr = data.as_mut_ptr().cast::<u64>();
+            let ptr = self.pieces.as_ptr().cast::<u64>();
             for (i, v) in data.iter_mut().enumerate() {
                 if i < 8 {
                     *v = (*(ptr.add(i))).count_ones() as u8;
