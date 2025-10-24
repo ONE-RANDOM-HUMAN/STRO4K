@@ -493,7 +493,7 @@ impl<'a> Search<'a> {
                 self.game.unmake_move();
             }
 
-            if eval > best_eval {
+            if best_move.is_none() || eval > best_eval {
                 best_move = Some(mov);
                 best_eval = eval;
             }

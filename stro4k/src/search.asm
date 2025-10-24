@@ -1163,14 +1163,19 @@ alpha_beta:
     ; unmake move
     add qword [rbx], -Board_size
 
+    cmp dword [rbp - 128 + ABLocals.best_move], 0
+    je .first_best_move
 
     ; check best move
     cmp eax, dword [rbp - 128 + ABLocals.best_eval]
     jng .no_new_best_move
 
+.first_best_move:
+
     ; update best move and eval
     mov dword [rbp - 128 + ABLocals.best_move], r12d
     mov dword [rbp - 128 + ABLocals.best_eval], eax
+.no_new_best_move:
 
     ; check against beta
     cmp eax, dword [rbp + 32]
@@ -1314,7 +1319,7 @@ alpha_beta:
 .beta_cutoff_noisy:
     jmp .main_search_end
 .no_beta_cutoff:
-.no_new_best_move:
+; .no_new_best_move:
     ; check alpha
     cmp eax, dword [rbp - 128 + ABLocals.alpha]
     jng .no_alpha_improvement
