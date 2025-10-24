@@ -120,7 +120,7 @@ impl<'a> Search<'a> {
 
         let mut reached_depth = max_depth;
         'a: for depth in 1..=max_depth {
-            let mut window = 21;
+            let mut window = 11;
             let mut alpha = cmp::max(MIN_EVAL, last_score - window);
             let mut beta = cmp::min(MAX_EVAL, last_score + window);
 
@@ -322,7 +322,7 @@ impl<'a> Search<'a> {
         if depth > 0 && !pv_node && !is_check && static_eval >= beta {
             // Static null move pruning
             if depth <= 7 {
-                const STATIC_NULL_MOVE_MARGIN: i32 = 76;
+                const STATIC_NULL_MOVE_MARGIN: i32 = 38;
                 let margin = depth * STATIC_NULL_MOVE_MARGIN;
 
                 if static_eval >= beta + margin {
@@ -360,7 +360,7 @@ impl<'a> Search<'a> {
         // Futility pruning
         let f_prune = depth <= 7 && !is_check && !pv_node;
 
-        const F_PRUNE_MARGIN: i32 = 83;
+        const F_PRUNE_MARGIN: i32 = 42;
         let f_prune = f_prune
             && static_eval + cmp::max(1, depth + improving as i32) * F_PRUNE_MARGIN <= alpha;
 
@@ -430,7 +430,7 @@ impl<'a> Search<'a> {
 
             if depth <= 7 {
                 let see = self.game.position().see(mov);
-                if see < cmp::min(0, depth * -65) && !pv_node && !is_check {
+                if see < cmp::min(0, depth * -33) && !pv_node && !is_check {
                     continue;
                 }
 
