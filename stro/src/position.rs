@@ -350,7 +350,7 @@ impl Board {
         unsafe {
             use std::arch::x86_64::*;
 
-            let mut value = _mm_set_epi64x(self.pieces[0][0] as _, self.pieces[1][0] as _);
+            let mut value = _mm_set_epi64x(self.pieces[1][0] as _, self.pieces[0][0] as _);
             value = _mm_aesenc_si128(value, value);
             value = _mm_aesenc_si128(value, value);
             value = _mm_aesenc_si128(value, value);

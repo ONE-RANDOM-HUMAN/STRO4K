@@ -65,7 +65,8 @@ pub struct Search<'a> {
     start: Time,
     min_search_time: u64, // min search time in nanoseconds
     max_search_time: u64, // max search time in nanoseconds
-    corrhist: [[i32; CORR_HIST_ENTRIES]; 2],
+    pawn_corrhist: [[i32; CORR_HIST_ENTRIES]; 2],
+    material_corrhist: [[i32; CORR_HIST_ENTRIES]; 2],
     ply: [PlyData; 12288],
     conthist_stack: [usize; 12288],
     history: [HistoryTable; 6 * 64 * 2],
@@ -105,7 +106,11 @@ impl<'a> Search<'a> {
         self.ply.fill(PlyData::new());
         self.conthist_stack.fill(0);
 
-        for history in self.corrhist.iter_mut().flatten() {
+        for history in self.pawn_corrhist.iter_mut().flatten() {
+            *history = 0;
+        }
+
+        for history in self.material_corrhist.iter_mut().flatten() {
             *history = 0;
         }
 
@@ -265,10 +270,10 @@ impl<'a> Search<'a> {
         let pv_node = beta - alpha != 1;
 
         let mut static_eval = evaluate::evaluate(self.game.position())
-            + (self.corrhist[self.game().position().side_to_move() as usize]
+            + (self.pawn_corrhist[self.game().position().side_to_move() as usize]
                 [self.game().position().pawn_hash() as usize % CORR_HIST_ENTRIES]
                 >> CORR_HIST_SCALE_SHIFT)
-            + (self.corrhist[self.game().position().side_to_move() as usize]
+            + (self.material_corrhist[self.game().position().side_to_move() as usize]
                 [self.game().position().material_hash() as usize % CORR_HIST_ENTRIES]
                 >> CORR_HIST_SCALE_SHIFT);
 
@@ -581,13 +586,13 @@ impl<'a> Search<'a> {
                 let weight = cmp::min(depth * depth, CORR_HIST_MAX_WEIGHT);
                 let diff = (best_eval - static_eval).clamp(-CORR_HIST_MAX, CORR_HIST_MAX);
 
-                let entry = &mut self.corrhist[self.game().position().side_to_move() as usize]
+                let entry = &mut self.pawn_corrhist[self.game().position().side_to_move() as usize]
                     [self.game().position().pawn_hash() as usize % CORR_HIST_ENTRIES];
 
                 *entry = diff * weight
                     - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
 
-                let entry = &mut self.corrhist[self.game().position().side_to_move() as usize]
+                let entry = &mut self.material_corrhist[self.game().position().side_to_move() as usize]
                     [self.game().position().material_hash() as usize % CORR_HIST_ENTRIES];
 
                 *entry = diff * weight
