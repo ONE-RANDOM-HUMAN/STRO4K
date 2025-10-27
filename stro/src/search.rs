@@ -266,6 +266,9 @@ impl<'a> Search<'a> {
 
         let mut static_eval = evaluate::evaluate(self.game.position())
             + (self.corrhist[self.game().position().side_to_move() as usize]
+                [self.game().position().pawn_hash() as usize % CORR_HIST_ENTRIES]
+                >> CORR_HIST_SCALE_SHIFT)
+            + (self.corrhist[self.game().position().side_to_move() as usize]
                 [self.game().position().material_hash() as usize % CORR_HIST_ENTRIES]
                 >> CORR_HIST_SCALE_SHIFT);
 
@@ -579,9 +582,16 @@ impl<'a> Search<'a> {
                 let diff = (best_eval - static_eval).clamp(-CORR_HIST_MAX, CORR_HIST_MAX);
 
                 let entry = &mut self.corrhist[self.game().position().side_to_move() as usize]
+                    [self.game().position().pawn_hash() as usize % CORR_HIST_ENTRIES];
+
+                *entry = diff * weight
+                    - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
+
+                let entry = &mut self.corrhist[self.game().position().side_to_move() as usize]
                     [self.game().position().material_hash() as usize % CORR_HIST_ENTRIES];
 
-                *entry = diff * weight - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
+                *entry = diff * weight
+                    - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
             }
 
             self.ply[ply].best_move = best_move;
