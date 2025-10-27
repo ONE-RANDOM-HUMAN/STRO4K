@@ -350,9 +350,14 @@ impl Board {
         unsafe {
             use std::arch::x86_64::*;
 
-            let mut data = [0; 16];
-            for (i, bb) in self.pieces.iter().flatten().enumerate() {
-                data[i] = bb.count_ones() as u8;
+            let mut data = [0_u8; 16];
+            let ptr = self.pieces.as_ptr().cast::<u64>();
+            for (i, v) in data.iter_mut().enumerate() {
+                if i < 8 {
+                    *v = (*(ptr.add(i))).count_ones() as u8;
+                } else {
+                    *v = (*(ptr.add(i - 4))).count_ones() as u8;
+                }
             }
 
             let mut value = _mm_loadu_si128(data.as_ptr().cast());
