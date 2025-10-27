@@ -264,14 +264,15 @@ impl<'a> Search<'a> {
         let mut ordered_moves = 0;
         let pv_node = beta - alpha != 1;
 
-        let mut static_eval = evaluate::evaluate(self.game.position())
+        // Use uncorrected static eval to ensure continuity
+        let static_eval = evaluate::evaluate(self.game.position());
+        self.ply[ply].static_eval = static_eval as i16;
+        let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
+
+        let mut static_eval = static_eval
             + (self.corrhist[self.game().position().side_to_move() as usize]
                 [self.game().position().material_hash() as usize % CORR_HIST_ENTRIES]
                 >> (CORR_HIST_SCALE_SHIFT + 1));
-
-        // Use non-tt static eval to ensure continuity
-        self.ply[ply].static_eval = static_eval as i16;
-        let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
 
         // Probe tt
         let hash = self.game.position().hash();
