@@ -8,6 +8,11 @@ F_PRUNE_MARGIN equ 83
 STATIC_NULL_MOVE_MARGIN equ 76
 SEE_PRUNE_MARGIN equ -65
 
+CORR_HIST_SCALE_SHIFT equ 9
+CORR_HIST_SCALE equ 1 << CORR_HIST_SCALE_SHIFT
+CORR_HIST_MAX_WEIGHT equ 1 << 5
+CORR_HIST_MAX equ 96
+
 section .rodata
 PIECE_VALUES:
     dd 146
@@ -58,8 +63,8 @@ root_search:
 %ifdef EXPORT_SYSV
     ; Save in last plydata - should never be used
     mov qword [rbx + Search.ply_data + (MAX_BOARDS - 1) * PlyData_size], rsp
-%endif
     and qword [rbx + Search.nodes], 0
+%endif
 
     ; r13d - depth
     ; r14d - last score
@@ -209,6 +214,9 @@ time_elapsed:
 struc ABLocals
     .hash:
         resq 1
+    .material_corrhist:
+        resq 1
+    .first_zeroed:
     .ordered_moves:
         resd 1
     .first_quiet:
@@ -269,12 +277,12 @@ alpha_beta:
     inc qword [rbx + Search.nodes]
 
     ; r13 - ply data
-    mov rcx, qword [rbp + 16] ; ply count
-    lea r13, [rbx + Search.ply_data + rcx * PlyData_size]
+    ; mov rcx, qword [rbp + 16] ; ply count
+    lea r13, [rbx + Search.ply_data + rdx * PlyData_size]
 
     ; clear non-hash locals
     vxorps xmm0, xmm0, xmm0
-    vmovups yword [rbp - 128 + 8], ymm0
+    vmovups yword [rbp - 128 + ABLocals.first_zeroed], ymm0
 
     ; rsi - current position
     mov rsi, qword [rbx]
@@ -285,8 +293,8 @@ alpha_beta:
     jz .not_check
 
     ; IS_CHECK_FLAG = 1
-    ; inc byte [rbp - 128 + ABLocals.flags]
-    mov byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG
+    inc byte [rbp - 128 + ABLocals.flags]
+    ; mov byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG
 
     ; check extension
     inc dword [rbp + 8]
@@ -372,7 +380,7 @@ alpha_beta:
 
     dec eax
     jnz .reptition_loop_head
-    jmp .end
+    jmp .end ; exit with eax = 0
 .repetition_loop_end:
 
     ; determine if this is a pv node
@@ -423,6 +431,60 @@ alpha_beta:
     mov rsi, qword [rbx]
     call evaluate
 
+    ; material corrhist
+
+    ; material hash
+%ifdef AVX512
+    vpopcntq zmm0, zword [rsi]
+    vpopcntq zmm1, zword [rsi + 32]
+
+    vpmovqb xmm0, zmm0
+    vpmovqb xmm1, zmm1
+
+    vpunpcklqdq xmm0, xmm0, xmm1
+    vaesenc xmm0, xmm0, xmm0
+    vaesenc xmm0, xmm0, xmm0
+    vaesenc xmm0, xmm0, xmm0
+    vpextrw edx, xmm0, 0
+    ; vmovw dx, xmm0 ; AVX512-FP16
+
+%else
+    vpxor xmm0, xmm0, xmm0
+
+%assign i 0
+%rep    8
+    popcnt rdx, qword [rsi + 8 * i]
+    vpinsrb xmm0, dl, i
+%assign i i+1
+%endrep
+
+%assign i 4
+%rep    8
+    popcnt rdx, qword [rsi + 8 * i]
+    vpinsrb xmm0, dl, i + 4
+%assign i i+1
+%endrep
+
+    vaesenc xmm0, xmm0, xmm0
+    vaesenc xmm0, xmm0, xmm0
+    vaesenc xmm0, xmm0, xmm0
+
+    vpextrw edx, xmm0, 0
+%endif
+
+    lea rdx, [rbx + 4 * rdx + Search.white_corrhist]
+
+    cmp byte [rsi + Board.side_to_move], 0
+    je .corrhist_white
+
+    add rdx, Search.black_corrhist - Search.white_corrhist
+.corrhist_white:
+    mov qword [rbp - 128 + ABLocals.material_corrhist], rdx
+    mov edx, dword [rdx]
+
+    sar edx, CORR_HIST_SCALE_SHIFT
+    add eax, edx
+
     ; store the static eval
     mov word [r13 + PlyData.static_eval], ax
     mov word [rbp - 128 + ABLocals.static_eval], ax
@@ -441,10 +503,10 @@ alpha_beta:
     ; hash the position
     vmovdqu xmm0, oword [rsi + Board.first_unhashed - 16]
 
-    mov eax, 12
+    mov ecx, 12
 .hash_loop_head:
-    vaesenc xmm0, xmm0, oword [rsi + Board.pieces + 8 * rax]
-    dec eax
+    vaesenc xmm0, xmm0, oword [rsi + Board.pieces + 8 * rcx]
+    dec ecx
     jns .hash_loop_head
 
     vmovq rdi, xmm0
@@ -793,19 +855,18 @@ alpha_beta:
     jge .end
 
     ; check alpha
-    mov dl, BOUND_UPPER
-    mov ecx, dword [rbp + 24]
-    cmp eax, ecx
-    jng .initial_eval_no_alpha_raise
+    ; mov dl, BOUND_EXACT
+    mov byte [rbp - 128 + ABLocals.bound], BOUND_EXACT
+    cmp eax, dword [rbp + 24]
+    jg .initial_eval_alpha_raise
 
     ; exceeded alpha
-    mov ecx, eax
-    mov dl, BOUND_EXACT
-.initial_eval_no_alpha_raise:
+    mov byte [rbp - 128 + ABLocals.bound], BOUND_UPPER
+    mov eax, dword [rbp + 24]
+.initial_eval_alpha_raise:
 
     ; set locals
-    mov dword [rbp - 128 + ABLocals.alpha], ecx
-    mov byte [rbp - 128 + ABLocals.bound], dl
+    mov dword [rbp - 128 + ABLocals.alpha], eax
 
     mov edx, dword [rbp - 128 + ABLocals.ordered_moves]
     mov dword [rbp - 128 + ABLocals.first_quiet], edx
@@ -858,7 +919,7 @@ alpha_beta:
     add edi, dword [r8 + 2 * rsi]
     add edi, dword [r9 + 2 * rsi]
     add edi, dword [r10 + 2 * rsi]
-.conthist_null:
+; .conthist_null:
 
     ; killers
     mov esi, 07FFFh
@@ -879,7 +940,7 @@ alpha_beta:
     inc ecx
     cmp ecx, r14d
     jne .history_score_head
-.history_score_end:
+; .history_score_end:
 
 .main_search_no_order_moves:
 
@@ -1341,10 +1402,73 @@ alpha_beta:
     ; store tt and best move
     mov edx, dword [rbp - 128 + ABLocals.best_move]
     test edx, edx
-    jz .no_store_tt
+    jz .no_store_tt_no_corrhist
 
     ; store best move
     mov word [r13 + PlyData.best_move], dx
+
+    test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG
+    jnz .no_update_corrhist
+
+    cmp dword [rbp + 8], 0
+    jng .no_update_corrhist
+
+    ; dh - best move
+    test dh, (PROMO_FLAG | CAPTURE_FLAG) << 4
+    jnz .no_update_corrhist
+
+    movsx ecx, word [r13 + PlyData.static_eval]
+    ; bounds
+    cmp byte [rbp - 128 + ABLocals.bound], BOUND_LOWER
+    jne .corrhist_no_lower_bound
+
+    cmp eax, ecx
+    jnge .no_update_corrhist
+
+.corrhist_no_lower_bound:
+    cmp byte [rbp - 128 + ABLocals.bound], BOUND_UPPER
+    jne .corrhist_no_upper_bound
+
+    cmp eax, ecx
+    jnle .no_update_corrhist
+.corrhist_no_upper_bound:
+
+    ; edi - weight
+    mov edi, dword [rbp + 8]
+    imul edi, edi
+
+    mov esi, CORR_HIST_MAX_WEIGHT
+    cmp edi, esi
+    cmovg edi, esi
+
+    ; ecx - -diff
+    sub ecx, eax
+
+    mov esi, CORR_HIST_MAX
+    ; add esi, CORR_HIST_MAX - CORR_HIST_MAX_WEIGHT
+    cmp ecx, esi
+    cmovg ecx, esi
+
+    ; ecx - diff
+    neg ecx
+    cmp ecx, esi
+    cmovg ecx, esi
+
+    mov rsi, qword [rbp - 128 + ABLocals.material_corrhist]
+
+    ; diff * weight
+    imul ecx, edi
+
+    ; entry * (weight - CORR_HIST_SCALE)
+    sub edi, CORR_HIST_SCALE
+    imul edi, dword [rsi]
+    sar edi, CORR_HIST_SCALE_SHIFT
+
+    ; diff * weight - (entry * (weight - CORR_HIST_SCALE))
+    sub ecx, edi
+    mov dword [rsi], ecx
+
+.no_update_corrhist:
 
     ; load hash
     mov rdi, qword [rbp - 128 + ABLocals.hash]
@@ -1387,7 +1511,7 @@ alpha_beta:
 
     ; store entry into tt
     mov qword [r15 + 8 * rdi], rsi
-.no_store_tt:
+.no_store_tt_no_corrhist:
 .end:
     leave
     pop rcx

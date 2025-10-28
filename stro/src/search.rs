@@ -265,8 +265,8 @@ impl<'a> Search<'a> {
         let pv_node = beta - alpha != 1;
 
         let mut static_eval = evaluate::evaluate(self.game.position())
-            + (self.corrhist[self.game().position().side_to_move() as usize]
-                [self.game().position().material_hash() as usize % CORR_HIST_ENTRIES]
+            + (self.corrhist[self.game.position().side_to_move() as usize]
+                [(self.game.position().material_hash() % CORR_HIST_ENTRIES as u64) as usize]
                 >> CORR_HIST_SCALE_SHIFT);
 
         // Use non-tt static eval to ensure continuity
@@ -568,6 +568,7 @@ impl<'a> Search<'a> {
 
         if let Some(mov) = best_move {
             let static_eval = self.ply[ply].static_eval as i32;
+            self.ply[ply].best_move = best_move;
 
             if !is_check
                 && depth > 0
@@ -578,13 +579,13 @@ impl<'a> Search<'a> {
                 let weight = cmp::min(depth * depth, CORR_HIST_MAX_WEIGHT);
                 let diff = (best_eval - static_eval).clamp(-CORR_HIST_MAX, CORR_HIST_MAX);
 
-                let entry = &mut self.corrhist[self.game().position().side_to_move() as usize]
-                    [self.game().position().material_hash() as usize % CORR_HIST_ENTRIES];
+                let entry = &mut self.corrhist[self.game.position().side_to_move() as usize]
+                    [self.game.position().material_hash() as usize % CORR_HIST_ENTRIES];
 
-                *entry = diff * weight - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
+                *entry = diff * weight
+                    - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
             }
 
-            self.ply[ply].best_move = best_move;
             tt::store(hash, TTData::new(mov, bound, best_eval, depth, hash));
         }
 
