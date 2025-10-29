@@ -115,7 +115,7 @@ PAWN_ATTACKED_EVAL:
     db  -50,  -78
     db  -53,  -36
     db  -54,   -9
-    db    0,    0
+    ; db    0,    0
 
 RANK_PST:
     db    0,    0
@@ -266,6 +266,9 @@ evaluate:
     shl rdi, 9
     andn r13, r8, rdi
     or r13, rax
+    ; andn r14, r8, rdi
+    ; or r14, rax
+    ; mov r13, r14
 
     ; black
     mov rdi, qword [r11]
@@ -295,6 +298,8 @@ evaluate:
     mov rax, qword [r10 + 16]
     test rax, rbx
     jz .no_bishop_pair
+    ; neg rbx
+    ; test rax, rbx
     andn rax, rbx, rax
     jz .no_bishop_pair
 
@@ -304,7 +309,9 @@ evaluate:
     ; Pawn shield
 
     xor eax, eax
-    mov edx, 4
+    ; mov edx, 4
+    push 4
+    pop rdx
 .side_phase_head:
     popcnt rdi, qword [r11 + 8 * rdx]
     lea eax, [rdi + 2 * rax]
@@ -327,7 +334,7 @@ evaluate:
     test edx, ecx
     jnz .pawn_shield
 
-    mov ecx, 0E0E0h
+    shl ecx, 5 ; 0E0E0h
     test edx, ecx
     jz .no_pawn_shield
 .pawn_shield:
@@ -337,7 +344,7 @@ evaluate:
 
     vpmovsxbw xmm1, qword [rbp + PAWN_SHIELD_EVAL - EVAL_WEIGHTS + 2 * rax]
     vpbroadcastw xmm2, word [rsp]
-    vpmullw xmm1, xmm2, xmm1
+    vpmullw xmm1, xmm1, xmm2
     vpsraw xmm1, xmm1, 4
     vpaddw xmm0, xmm0, xmm1
 .no_pawn_shield:
@@ -418,8 +425,8 @@ evaluate:
 
     mov edx, 4
 .mobility_attack_head:
-    mov rdi, qword [r11 + rdx * 8 - 8]
-    and rdi, rax
+    mov rdi, rax
+    and rdi, qword [r11 + rdx * 8 - 8]
     popcnt rdi, rdi
 
 %ifdef AVX512

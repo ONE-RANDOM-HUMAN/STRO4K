@@ -8,7 +8,7 @@ use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{MoveBuf, gen_moves};
 use crate::moveorder::{self, HistoryTable, KillerTable};
-use crate::position::{Board, Move};
+use crate::position::{Board, Color, Move};
 use crate::tt::{self, Bound, TTData};
 
 const CORR_HIST_ENTRIES: usize = 1 << 16;
@@ -264,13 +264,27 @@ impl<'a> Search<'a> {
         let mut ordered_moves = 0;
         let pv_node = beta - alpha != 1;
 
-        let mut static_eval = evaluate::evaluate(self.game.position())
-            + (self.corrhist[self.game().position().side_to_move() as usize]
-                [self.game().position().pawn_hash() as usize % CORR_HIST_ENTRIES]
-                >> CORR_HIST_SCALE_SHIFT)
-            + (self.corrhist[self.game().position().side_to_move() as usize]
-                [self.game().position().material_hash() as usize % CORR_HIST_ENTRIES]
-                >> CORR_HIST_SCALE_SHIFT);
+        let mut static_eval = {
+            let eval = evaluate::evaluate(self.game.position());
+
+            let pawn = self.corrhist[self.game.position().side_to_move() as usize]
+                [self.game.position().pawn_hash() as usize % CORR_HIST_ENTRIES]
+                >> CORR_HIST_SCALE_SHIFT;
+
+            let white_non_pawn = self.corrhist[self.game.position().side_to_move() as usize]
+                [self.game.position().non_pawn_hash(Color::White) as usize % CORR_HIST_ENTRIES]
+                >> CORR_HIST_SCALE_SHIFT;
+
+            let black_non_pawn = self.corrhist[self.game.position().side_to_move() as usize]
+                [self.game.position().non_pawn_hash(Color::Black) as usize % CORR_HIST_ENTRIES]
+                >> CORR_HIST_SCALE_SHIFT;
+
+            let material = self.corrhist[self.game.position().side_to_move() as usize]
+                [self.game.position().material_hash() as usize % CORR_HIST_ENTRIES]
+                >> CORR_HIST_SCALE_SHIFT;
+
+            eval + pawn + white_non_pawn + black_non_pawn + material
+        };
 
         // Use non-tt static eval to ensure continuity
         self.ply[ply].static_eval = static_eval as i16;
@@ -584,7 +598,16 @@ impl<'a> Search<'a> {
 
                 let entry = &mut self.corrhist[self.game().position().side_to_move() as usize]
                     [self.game().position().pawn_hash() as usize % CORR_HIST_ENTRIES];
+                *entry = diff * weight
+                    - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
 
+                let entry = &mut self.corrhist[self.game().position().side_to_move() as usize]
+                    [self.game().position().non_pawn_hash(Color::White) as usize % CORR_HIST_ENTRIES];
+                *entry = diff * weight
+                    - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
+
+                let entry = &mut self.corrhist[self.game().position().side_to_move() as usize]
+                    [self.game().position().non_pawn_hash(Color::Black) as usize % CORR_HIST_ENTRIES];
                 *entry = diff * weight
                     - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
 

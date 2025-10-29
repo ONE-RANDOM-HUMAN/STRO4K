@@ -367,12 +367,13 @@ knight_moves:
 ; r8 - gen (preserved)
 ; r9 - preserved
 king_moves:
+    mov rdx, r8
+    shl rdx, 1
+    and rdx, qword [NOT_A_FILE]
+
     mov rax, r8
     shr rax, 1
     and rax, qword [NOT_H_FILE]
-
-    lea rdx, [r8 + r8]
-    and rdx, qword [NOT_A_FILE]
 
     or rax, r8
     or rax, rdx

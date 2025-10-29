@@ -161,6 +161,8 @@ NOT_AB_FILE:
 NOT_GH_FILE:
     dq ~0C0C0_C0C0_C0C0_C0C0h
 
+alignb 256
+
 ; TODO: reduce size of this
 STARTPOS:
     dq 0x0000_0000_0000_FF00
@@ -212,4 +214,6 @@ TT_MEM:
 %endif
 
 THREAD_STACKS:
-    times NUM_THREADS resb THREAD_STACK_SIZE
+%rep NUM_THREADS
+    resb THREAD_STACK_SIZE
+%endrep NUM_THREADS
