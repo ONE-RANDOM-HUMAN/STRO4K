@@ -350,8 +350,30 @@ impl Board {
         unsafe {
             use std::arch::x86_64::*;
 
-            let mut value = _mm_set_epi64x(self.pieces[0][0] as _, self.pieces[1][0] as _);
+            let mut value = _mm_set_epi64x(self.pieces[1][0] as _, self.pieces[0][0] as _);
             value = _mm_aesenc_si128(value, value);
+            value = _mm_aesenc_si128(value, value);
+            value = _mm_aesenc_si128(value, value);
+
+            _mm_cvtsi128_si64x(value) as u64
+        }
+    }
+
+    pub fn non_pawn_hash(&self, side: Color) -> u64 {
+        // SAFETY: aes-ni and 64 bit required for build
+        unsafe {
+            use std::arch::x86_64::*;
+
+            let pieces = self.pieces[side as usize];
+            let v1 = _mm_set_epi64x(pieces[2] as _, pieces[1] as _);
+            let v2 = _mm_set_epi64x(pieces[4] as _, pieces[3] as _);
+            let v3 = _mm_set_epi64x(pieces[3] as _, pieces[2] as _);
+            let v4 = _mm_set_epi64x(pieces[5] as _, pieces[4] as _);
+
+            let v1 = _mm_aesenc_si128(v1, v3);
+            let v2 = _mm_aesenc_si128(v2, v4);
+
+            let mut value = _mm_aesenc_si128(v1, v2);
             value = _mm_aesenc_si128(value, value);
             value = _mm_aesenc_si128(value, value);
 
