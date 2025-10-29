@@ -83,6 +83,7 @@ _start:
     mov rsp, rsi
 
     ; set up startpos and pointer to positions
+    ; the last bytes are already 0
     lea rdi, [rsi + Search_size]
     mov qword [rsi], rdi
     lea rsi, [STARTPOS]
@@ -199,10 +200,12 @@ _start:
     push rbp
 
     ; read until end of line
-    cmp al, `\n` ; might have been read when parsing inc
-    je .go_finish_read
+    ; cmp al, `\n` ; might have been read when parsing inc
+    ; je .go_finish_read
+    jmp .go_read_until_newline_start
 .go_read_until_newline_head:
     call read1
+.go_read_until_newline_start:
     cmp al, `\n`
     jne .go_read_until_newline_head
 
@@ -224,7 +227,9 @@ _start:
     rep movsb
 
     mov qword [rbx], rdi
-    mov cl, 128
+    push 116
+    pop rcx
+    ; mov cl, 128
     rep movsb ; copy the current position
 
     ; clone the thread
@@ -234,7 +239,9 @@ _start:
     mov edi, CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD
 
     ; new stack
-    mov rsi, rbx
+    ; mov rsi, rbx
+    push rbx
+    pop rsi
     syscall
 
     test eax, eax
@@ -269,7 +276,8 @@ _start:
     call root_search
 
 .go_wait_for_threads:
-    lock and dword [RUNNING_WORKER_THREADS], 7FFF_FFFFh
+    ; lock and dword [RUNNING_WORKER_THREADS], 7FFF_FFFFh
+    lock btr dword [RUNNING_WORKER_THREADS], 31
     jnz .go_wait_for_threads
 
     mov rdx, "bestmove"

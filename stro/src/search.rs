@@ -11,6 +11,12 @@ use crate::moveorder::{self, HistoryTable, KillerTable};
 use crate::position::{Board, Move};
 use crate::tt::{self, Bound, TTData};
 
+const CORR_HIST_ENTRIES: usize = 1 << 16;
+const CORR_HIST_SCALE_SHIFT: u32 = 9;
+const CORR_HIST_SCALE: i32 = 1 << CORR_HIST_SCALE_SHIFT;
+const CORR_HIST_MAX_WEIGHT: i32 = 1 << 5;
+const CORR_HIST_MAX: i32 = 96;
+
 #[unsafe(no_mangle)]
 pub static RUNNING: AtomicBool = AtomicBool::new(false);
 
@@ -59,6 +65,7 @@ pub struct Search<'a> {
     start: Time,
     min_search_time: u64, // min search time in nanoseconds
     max_search_time: u64, // max search time in nanoseconds
+    corrhist: [[i32; CORR_HIST_ENTRIES]; 2],
     ply: [PlyData; 12288],
     conthist_stack: [usize; 12288],
     history: [HistoryTable; 6 * 64 * 2],
@@ -97,6 +104,10 @@ impl<'a> Search<'a> {
         // tt must be cleared seperately
         self.ply.fill(PlyData::new());
         self.conthist_stack.fill(0);
+
+        for history in self.corrhist.iter_mut().flatten() {
+            *history = 0;
+        }
 
         for history in self.history.iter_mut() {
             history.reset();
@@ -253,7 +264,10 @@ impl<'a> Search<'a> {
         let mut ordered_moves = 0;
         let pv_node = beta - alpha != 1;
 
-        let mut static_eval = evaluate::evaluate(self.game.position());
+        let mut static_eval = evaluate::evaluate(self.game.position())
+            + (self.corrhist[self.game.position().side_to_move() as usize]
+                [(self.game.position().material_hash() % CORR_HIST_ENTRIES as u64) as usize]
+                >> CORR_HIST_SCALE_SHIFT);
 
         // Use non-tt static eval to ensure continuity
         self.ply[ply].static_eval = static_eval as i16;
@@ -552,9 +566,26 @@ impl<'a> Search<'a> {
             }
         }
 
-        // Store tt if not in qsearch
         if let Some(mov) = best_move {
+            let static_eval = self.ply[ply].static_eval as i32;
             self.ply[ply].best_move = best_move;
+
+            if !is_check
+                && depth > 0
+                && !mov.flags().is_noisy()
+                && (bound != Bound::Lower || best_eval >= static_eval)
+                && (bound != Bound::Upper || best_eval <= static_eval)
+            {
+                let weight = cmp::min(depth * depth, CORR_HIST_MAX_WEIGHT);
+                let diff = (best_eval - static_eval).clamp(-CORR_HIST_MAX, CORR_HIST_MAX);
+
+                let entry = &mut self.corrhist[self.game.position().side_to_move() as usize]
+                    [self.game.position().material_hash() as usize % CORR_HIST_ENTRIES];
+
+                *entry = diff * weight
+                    - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
+            }
+
             tt::store(hash, TTData::new(mov, bound, best_eval, depth, hash));
         }
 

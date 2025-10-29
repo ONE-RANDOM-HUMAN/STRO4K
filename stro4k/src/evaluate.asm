@@ -244,11 +244,11 @@ section .text
 
 ; board - rsi
 evaluate:
-    push rbx
-    push rbp
-    push r13
-    push r14
     push r15
+    push r14
+    push r13
+    push rbp
+    push rbx
     lea rbp, [EVAL_WEIGHTS]
 
     ; Side to move
@@ -593,10 +593,10 @@ evaluate:
     sar eax, 2
 .no_side_insufficient_material:
 
-    pop r15
-    pop r14
-    pop r13
-    pop rbp
     pop rbx
+    pop rbp
+    pop r13
+    pop r14
+    pop r15
     ret
 

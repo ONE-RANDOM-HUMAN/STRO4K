@@ -40,6 +40,7 @@ struc Board
         resb 1
     .castling:
         resb 1
+    .first_unhashed:
     .fifty_moves:
         resb 1
     .move_index:
@@ -90,6 +91,10 @@ struc Search
     .max_search_time:
         resq 1
     alignb 16
+    .white_corrhist:
+        resd 65536
+    .black_corrhist:
+        resd 65536
     .ply_data:
         resq MAX_BOARDS
     .conthist_stack:
