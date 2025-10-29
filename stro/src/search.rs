@@ -571,6 +571,7 @@ impl<'a> Search<'a> {
 
         if let Some(mov) = best_move {
             let static_eval = self.ply[ply].static_eval as i32;
+            self.ply[ply].best_move = best_move;
 
             if !is_check
                 && depth > 0
@@ -594,7 +595,6 @@ impl<'a> Search<'a> {
                     - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
             }
 
-            self.ply[ply].best_move = best_move;
             tt::store(hash, TTData::new(mov, bound, best_eval, depth, hash));
         }
 
