@@ -1,4 +1,4 @@
-use crate::position::{Board, Move, MovePlus};
+use crate::{position::{Board, Move, MovePlus}};
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default, Debug)]
