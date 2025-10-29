@@ -63,7 +63,7 @@ root_search:
 %ifdef EXPORT_SYSV
     ; Save in last plydata - should never be used
     mov qword [rbx + Search.ply_data + (MAX_BOARDS - 1) * PlyData_size], rsp
-    and qword [rbx + Search.nodes], 0
+    mov qword [rbx + Search.nodes], 0
 %endif
 
     ; r13d - depth
@@ -213,6 +213,8 @@ time_elapsed:
 
 struc ABLocals
     .hash:
+        resq 1
+    .pawn_corrhist:
         resq 1
     .material_corrhist:
         resq 1
@@ -431,7 +433,33 @@ alpha_beta:
     mov rsi, qword [rbx]
     call evaluate
 
-    ; material corrhist
+    ; corrhist
+
+    lea r8, [rbx + Search.white_corrhist]
+
+    cmp byte [rsi + Board.side_to_move], 0
+    je .corrhist_white
+
+    add r8, Search.black_corrhist - Search.white_corrhist
+.corrhist_white:
+
+    ; pawn hash
+    vmovq xmm0, qword [rsi + Board.black_pieces]
+    vpinsrq xmm0, qword [rsi], 1
+
+    vaesenc xmm0, xmm0, xmm0
+    vaesenc xmm0, xmm0, xmm0
+    vaesenc xmm0, xmm0, xmm0
+
+    vpextrw edx, xmm0, 0
+    ; vmovw dx, xmm0 ; AVX512-FP16
+
+    lea rdx, [r8 + 4 * rdx]
+    mov qword [rbp - 128 + ABLocals.pawn_corrhist], rdx
+    mov edx, dword [rdx]
+
+    sar edx, CORR_HIST_SCALE_SHIFT
+    add eax, edx
 
     ; material hash
 %ifdef AVX512
@@ -442,12 +470,6 @@ alpha_beta:
     vpmovqb xmm1, zmm1
 
     vpunpcklqdq xmm0, xmm0, xmm1
-    vaesenc xmm0, xmm0, xmm0
-    vaesenc xmm0, xmm0, xmm0
-    vaesenc xmm0, xmm0, xmm0
-    vpextrw edx, xmm0, 0
-    ; vmovw dx, xmm0 ; AVX512-FP16
-
 %else
     vpxor xmm0, xmm0, xmm0
 
@@ -464,21 +486,13 @@ alpha_beta:
     vpinsrb xmm0, dl, i + 4
 %assign i i+1
 %endrep
-
+%endif
     vaesenc xmm0, xmm0, xmm0
     vaesenc xmm0, xmm0, xmm0
     vaesenc xmm0, xmm0, xmm0
 
     vpextrw edx, xmm0, 0
-%endif
-
-    lea rdx, [rbx + 4 * rdx + Search.white_corrhist]
-
-    cmp byte [rsi + Board.side_to_move], 0
-    je .corrhist_white
-
-    add rdx, Search.black_corrhist - Search.white_corrhist
-.corrhist_white:
+    lea rdx, [r8 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.material_corrhist], rdx
     mov edx, dword [rdx]
 
@@ -652,10 +666,10 @@ alpha_beta:
 .no_tt_probe:
 
     ; reset future killers
-    and dword [r13 + PlyData_size + PlyData.kt], 0
+    mov dword [r13 + PlyData_size + PlyData.kt], 0
 
     ; reset future conthist
-    and dword [r13 + Search.conthist_stack - Search.ply_data + 2 * 8], 0
+    mov dword [r13 + Search.conthist_stack - Search.ply_data + 2 * 8], 0
 
     ; Null move pruning
     ; check depth
@@ -1454,20 +1468,34 @@ alpha_beta:
     cmp ecx, esi
     cmovg ecx, esi
 
-    mov rsi, qword [rbp - 128 + ABLocals.material_corrhist]
-
     ; diff * weight
     imul ecx, edi
 
+    mov rsi, qword [rbp - 128 + ABLocals.pawn_corrhist]
+
     ; entry * (weight - CORR_HIST_SCALE)
-    sub edi, CORR_HIST_SCALE
-    imul edi, dword [rsi]
-    sar edi, CORR_HIST_SCALE_SHIFT
+    mov edx, edi
+    sub edx, CORR_HIST_SCALE
+    imul edx, dword [rsi]
+    sar edx, CORR_HIST_SCALE_SHIFT
 
     ; diff * weight - (entry * (weight - CORR_HIST_SCALE))
-    sub ecx, edi
-    mov dword [rsi], ecx
+    sub edx, ecx
+    neg edx
+    mov dword [rsi], edx
 
+    mov rsi, qword [rbp - 128 + ABLocals.material_corrhist]
+
+    ; entry * (weight - CORR_HIST_SCALE)
+    mov edx, edi
+    sub edx, CORR_HIST_SCALE
+    imul edx, dword [rsi]
+    sar edx, CORR_HIST_SCALE_SHIFT
+
+    ; diff * weight - (entry * (weight - CORR_HIST_SCALE))
+    sub edx, ecx
+    neg edx
+    mov dword [rsi], edx
 .no_update_corrhist:
 
     ; load hash
@@ -1490,7 +1518,7 @@ alpha_beta:
     mov r15, qword [TT_PTR]
     and rdi, qword [TT_MASK]
 %endif
-    or rsi, rdx ; store move
+    or si, word [r13 + PlyData.best_move] ; store move
 
     ; store eval
     mov edx, eax

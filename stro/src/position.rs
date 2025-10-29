@@ -345,6 +345,20 @@ impl Board {
         }
     }
 
+    pub fn pawn_hash(&self) -> u64 {
+        // SAFETY: aes-ni and 64 bit required for build
+        unsafe {
+            use std::arch::x86_64::*;
+
+            let mut value = _mm_set_epi64x(self.pieces[0][0] as _, self.pieces[1][0] as _);
+            value = _mm_aesenc_si128(value, value);
+            value = _mm_aesenc_si128(value, value);
+            value = _mm_aesenc_si128(value, value);
+
+            _mm_cvtsi128_si64x(value) as u64
+        }
+    }
+
     pub fn material_hash(&self) -> u64 {
         // SAFETY: aes-ni and 64 bit required for build
         unsafe {

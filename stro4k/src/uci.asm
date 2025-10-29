@@ -41,7 +41,7 @@ write8:
 
     syscall
 
-    pop rdx
+    pop rax
     ret
 
 
@@ -57,35 +57,12 @@ _start:
     mov rdx, `uciok  \n`
     call write8
 
-    ; set up threads
-.setup_threads:
-    ; rsi - search
-    mov rsi, THREAD_STACKS - (MAX_BOARDS * Board_size) - Search_size
-    mov edx, NUM_THREADS
-    xor eax, eax
-.setup_threads_head:
-    add rsi, THREAD_STACK_SIZE
-
-    ; clear Boards and search
-    mov rdi, rsi
-    mov ecx, MAX_BOARDS * Board_size + Search_size
-    rep stosb
-
-    ; set search time - time elapsed cannot be greater
-    ; without overflowing
-    or qword [rsi + Search.min_search_time], -1
-    or qword [rsi + Search.max_search_time], -1
-
-    dec edx
-    jnz .setup_threads_head
-
-    ; switch to the stack of the last thread
-    mov rsp, rsi
+    mov rsp, THREAD_STACKS + (NUM_THREADS * THREAD_STACK_SIZE) - (MAX_BOARDS * Board_size) - Search_size
 
     ; set up startpos and pointer to positions
     ; the last bytes are already 0
-    lea rdi, [rsi + Search_size]
-    mov qword [rsi], rdi
+    lea rdi, [rsp + Search_size]
+    mov qword [rsp], rdi
     lea rsi, [STARTPOS]
 
     push 116
@@ -101,16 +78,16 @@ _start:
     ; isready
     mov rdx, `readyok\n`
     call write8
-.isready_read_loop:
+.isready_ucinewgame_read_loop:
     call read1
     cmp al, `\n`
-    jne .isready_read_loop
+    jne .isready_ucinewgame_read_loop
 
     jmp .uci_loop_head
 .not_isready_or_go:
     cmp al, 'q'
     jb .position
-    ja .ucinewgame
+    ja .isready_ucinewgame_read_loop ; ucinewgame
 
     ; quit
 
@@ -127,19 +104,6 @@ _start:
     pop rax
     xor edi, edi
     syscall
-.ucinewgame:
-    lea rdi, [TT_MEM]
-    mov rcx, TT_SIZE_BYTES
-    xor eax, eax
-    rep stosb
-
-.ucinewgame_read_loop:
-    call read1
-    cmp al, `\n`
-    jne .ucinewgame_read_loop
-
-    ; reset threads
-    jmp .setup_threads
 .go:
     mov eax, CLOCK_GETTIME_SYSCALL
     push CLOCK_MONOTONIC
@@ -162,9 +126,7 @@ _start:
     cmp al, bl
     jne .go_find_time_head_1
 
-    push 5
-    pop rdx
-    call read
+    times 5 call read1
 
     xor ebp, ebp
 .go_read_number_loop_head_1:
@@ -183,9 +145,7 @@ _start:
     cmp al, bl
     jne .go_find_time_head_2
 
-    push 4
-    pop rdx
-    call read
+    times 4 call read1
 
     xor ebp, ebp
 .go_read_number_loop_head_2:
@@ -211,7 +171,7 @@ _start:
 
 .go_finish_read:
     mov dword [RUNNING_WORKER_THREADS], 8000_0000h | (NUM_THREADS - 1)
-    and qword [SEARCH_RESULT], 0
+    mov qword [SEARCH_RESULT], 0
 
 %if NUM_THREADS > 1
     ; create threads
@@ -246,6 +206,9 @@ _start:
 
     test eax, eax
     jnz .no_thread_search
+
+    or qword [rbx + Search.min_search_time], -1
+    or qword [rbx + Search.max_search_time], -1
 
     call root_search
 
@@ -308,13 +271,12 @@ _start:
     jmp .uci_loop_head
 
 .position:
-    ; read 2 * 8 bytes
+    ; read 16 bytes
     ; 'osition startpos'
-    push 8
-    pop rdx
+    ; push 8
+    ; pop rdx
 
-    call read
-    call read
+    times 16 call read1
 
     ; rbx - game
     mov rbx, rsp
@@ -328,9 +290,8 @@ _start:
     cmp al, `\n`
     je .uci_loop_head
 
-    push 6 ; read 'moves '
-    pop rdx
-    call read
+    ; read 'moves '
+    times 6 call read1
 
     sub rsp, 1024 ; allocate memory for moves
 .position_make_moves:
