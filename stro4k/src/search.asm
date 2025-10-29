@@ -216,6 +216,8 @@ struc ABLocals
         resq 1
     .pawn_corrhist:
         resq 1
+    .non_pawn_corrhists:
+        resq 2
     .material_corrhist:
         resq 1
     .first_zeroed:
@@ -362,7 +364,8 @@ alpha_beta:
     mov rdi, rsi
 
     ; repeating positions remaining before draw
-    mov eax, 2
+    ; mov eax, 2
+    mov al, 2 ; rest of eax is alread 0
 .reptition_loop_head:
     ; check for 50 move reset
     cmp byte [rdi + Board.fifty_moves], 0
@@ -415,7 +418,6 @@ alpha_beta:
     mov rsp, qword [rbx + Search.ply_data + (MAX_BOARDS - 1) * PlyData_size]
     sub rsp, 32
 %else
-    ; lea rsp, [rbx - 8]
     lea rsp, [rbx - 40]
 %endif
     ; restore r13-r15 - these are the first registers to be pushed by alpha_beta
@@ -423,7 +425,7 @@ alpha_beta:
     pop r13
     pop r14
     pop r15
-    pop rax
+    pop rax ; return address
 
     dec r13d
     jmp root_search.end_search
@@ -431,6 +433,7 @@ alpha_beta:
 
     ; get the static evaluation
     mov rsi, qword [rbx]
+    ; evaluate
     call evaluate
 
     ; corrhist
@@ -444,8 +447,8 @@ alpha_beta:
 .corrhist_white:
 
     ; pawn hash
-    vmovq xmm0, qword [rsi + Board.black_pieces]
-    vpinsrq xmm0, qword [rsi], 1
+    vmovq xmm0, qword [rsi]
+    vpinsrq xmm0, qword [rsi + Board.black_pieces], 1
 
     vaesenc xmm0, xmm0, xmm0
     vaesenc xmm0, xmm0, xmm0
@@ -456,6 +459,55 @@ alpha_beta:
 
     lea rdx, [r8 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.pawn_corrhist], rdx
+    mov edx, dword [rdx]
+
+    sar edx, CORR_HIST_SCALE_SHIFT
+    add eax, edx
+
+    ; non pawn hash
+%ifdef AVX512
+    vmovdqu ymm0, yword [rsi + 8]
+    vaesenc ymm0, ymm0, yword [rsi + 16]
+    vextracti128 xmm1, ymm0, 1
+%else
+    vmovdqu xmm0, oword [rsi + 8]
+    vmovdqu xmm1, oword [rsi + 24]
+    vaesenc xmm0, xmm0, oword [rsi + 16]
+    vaesenc xmm1, xmm1, oword [rsi + 32]
+%endif
+
+    vaesenc xmm0, xmm0, xmm1
+    vaesenc xmm0, xmm0, xmm0
+    vaesenc xmm0, xmm0, xmm0
+
+    vpextrw edx, xmm0, 0
+
+    lea rdx, [r8 + 4 * rdx]
+    mov qword [rbp - 128 + ABLocals.non_pawn_corrhists], rdx
+    mov edx, dword [rdx]
+
+    sar edx, CORR_HIST_SCALE_SHIFT
+    add eax, edx
+
+%ifdef AVX512
+    vmovdqu ymm0, yword [rsi + 48 + 8]
+    vaesenc ymm0, ymm0, yword [rsi + 48 + 16]
+    vextracti128 xmm1, ymm0, 1
+%else
+    vmovdqu xmm0, oword [rsi + 48 + 8]
+    vmovdqu xmm1, oword [rsi + 48 + 24]
+    vaesenc xmm0, xmm0, oword [rsi + 48 + 16]
+    vaesenc xmm1, xmm1, oword [rsi + 48 + 32]
+%endif
+
+    vaesenc xmm0, xmm0, xmm1
+    vaesenc xmm0, xmm0, xmm0
+    vaesenc xmm0, xmm0, xmm0
+
+    vpextrw edx, xmm0, 0
+
+    lea rdx, [r8 + 4 * rdx]
+    mov qword [rbp - 128 + ABLocals.non_pawn_corrhists + 8], rdx
     mov edx, dword [rdx]
 
     sar edx, CORR_HIST_SCALE_SHIFT
@@ -771,7 +823,7 @@ alpha_beta:
     movzx edx, word [rsp + 4 * rsi + MovePlus.move]
 
     ; if move > CAPTURE_FLAG, then it is a capture or promo
-    cmp edx, CAPTURE_FLAG << 12
+    cmp dh, CAPTURE_FLAG << 4
     sbb dword [rbp - 128 + ABLocals.ordered_moves], -1
 
     ; eax - score
@@ -1255,15 +1307,17 @@ alpha_beta:
     mov byte [rbp - 128 + ABLocals.bound], BOUND_LOWER
 
     ; move ordering for quiet moves
+    ; mov edx, r12d
+    ; test dh, (CAPTURE_FLAG | PROMO_FLAG) << 4
     test r12d, (CAPTURE_FLAG | PROMO_FLAG) << 12
     jnz .beta_cutoff_noisy
 
     ; update killer table
-    ; shl dword [r13 + PlyData.kt], 16
-    ; or word [r13 + PlyData.kt], r12w
-    mov edx, r12d
-    shl edx, 16 ; temp
-    shld dword [r13 + PlyData.kt], edx, 16
+    shl dword [r13 + PlyData.kt], 16
+    or word [r13 + PlyData.kt], r12w
+    ; mov edx, r12d
+    ; shl edx, 16 ; temp
+    ; shld dword [r13 + PlyData.kt], edx, 16
 
     ; load history table
     lea r8, [rbx + Search.white_history]
@@ -1386,7 +1440,7 @@ alpha_beta:
     sub ecx, eax ; using negative increase improves compression
 
     sub word [r8 + 2 * rsi], cx
-.beta_cutoff_noisy:
+; .beta_cutoff_noisy:
     jmp .main_search_end
 .no_beta_cutoff:
 .no_new_best_move:
@@ -1409,6 +1463,7 @@ alpha_beta:
     inc r15d
     cmp r15d, r14d
     jne .main_search_loop_head
+.beta_cutoff_noisy:
 .main_search_end:
     ; eax - best eval
     mov eax, dword [rbp - 128 + ABLocals.best_eval]
@@ -1472,6 +1527,32 @@ alpha_beta:
     imul ecx, edi
 
     mov rsi, qword [rbp - 128 + ABLocals.pawn_corrhist]
+
+    ; entry * (weight - CORR_HIST_SCALE)
+    mov edx, edi
+    sub edx, CORR_HIST_SCALE
+    imul edx, dword [rsi]
+    sar edx, CORR_HIST_SCALE_SHIFT
+
+    ; diff * weight - (entry * (weight - CORR_HIST_SCALE))
+    sub edx, ecx
+    neg edx
+    mov dword [rsi], edx
+
+    mov rsi, qword [rbp - 128 + ABLocals.non_pawn_corrhists]
+
+    ; entry * (weight - CORR_HIST_SCALE)
+    mov edx, edi
+    sub edx, CORR_HIST_SCALE
+    imul edx, dword [rsi]
+    sar edx, CORR_HIST_SCALE_SHIFT
+
+    ; diff * weight - (entry * (weight - CORR_HIST_SCALE))
+    sub edx, ecx
+    neg edx
+    mov dword [rsi], edx
+
+    mov rsi, qword [rbp - 128 + ABLocals.non_pawn_corrhists + 8]
 
     ; entry * (weight - CORR_HIST_SCALE)
     mov edx, edi

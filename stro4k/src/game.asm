@@ -67,14 +67,15 @@ game_make_move:
 
     ; set move index
     mov edi, eax
-    shl edi, 6
-    add dil, dl
+    shl eax, 6
+    add al, dl
 
     ; movzx edi, dl
     ; lea edi, [rdi + 2 * rdi]
     ; lea edi, [rax + 2 * rdi]
 
-    mov dword [rsi + Board.move_index], edi
+    mov dword [rsi + Board.move_index], eax
+    xchg eax, edi
 
     ; rdi - destination mask
     xor edi, edi
@@ -134,16 +135,20 @@ game_make_move:
 .no_capture:
 
     xor eax, eax
-    xor ebx, ebx
     mov ecx, 5
-.update_colors_head:
+.update_colors_head_1:
     or rax, qword [rsi + Board.white_pieces + 8 * rcx]
-    or rbx, qword [rsi + Board.black_pieces + 8 * rcx]
     dec ecx
-    jns .update_colors_head
-
+    jns .update_colors_head_1
     mov qword [rsi + Board.white], rax
-    mov qword [rsi + Board.black], rbx
+
+    xor eax, eax
+    mov ecx, 5
+.update_colors_head_2:
+    or rax, qword [rsi + Board.white_pieces + 48 + 8 * rcx]
+    dec ecx
+    jns .update_colors_head_2
+    mov qword [rsi + Board.black], rax
 
     ; rdi - area
     call board_area_attacked_by

@@ -279,11 +279,13 @@ _start:
     times 16 call read1
 
     ; rbx - game
-    mov rbx, rsp
+    ; mov rbx, rsp
+    push rsp
+    pop rbx
 
     ; reset game to startpos
-    lea rbp, [rsp + Search_size]
-    mov qword [rbx], rbp
+    lea rsi, [rsp + Search_size]
+    mov qword [rbx], rsi
 
     ; check if there ane any moves
     call read1
@@ -293,7 +295,7 @@ _start:
     ; read 'moves '
     times 6 call read1
 
-    sub rsp, 1024 ; allocate memory for moves
+    sub rsp, 1024 + 128 ; allocate memory for moves
 .position_make_moves:
     push 4 ; read the move
     pop rdx
@@ -345,7 +347,7 @@ _start:
     cmp al, `\n`
     jne .position_make_moves
 .position_end:
-    add rsp, 1024
+    add rsp, 1024 + 128
     jmp .uci_loop_head
 
 %endif
