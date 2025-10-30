@@ -18,6 +18,8 @@ STRO4K 3.0 is available in the `version_3.0` branch. It has the same features an
 
 STRO4K 4.0 is available in the `version_4.0` branch. It has does not support resetting the engine state, but displays full evaluation and depth.
 
+STRO4K 5.0 is available in the `version_5.0` branch. It has does not support resetting the engine state, and does not display evaluation.
+
 ## Building
 STRO4K has only been tested to build on Linux systems. Building STRO4K requires `nasm`, `xz` and [`sstrip`](https://github.com/aunali1/super-strip). A script is provided which attempts to download `sstrip` and build STRO4K.
 
@@ -42,7 +44,7 @@ cargo build --release --no-default-features
 
 ## Current size
 ```
-4069 bytes
+4094 bytes
 ```
 ## Features
 * PV output in STRO
@@ -63,6 +65,10 @@ cargo build --release --no-default-features
         * Thread Voting
     * Internal Iterative Reductions
     * Static Exchange Evaluation
+    * Correction Histories
+        * Pawn Correction History
+        * Non-Pawn Correction Histories
+        * Material Correction History
 * Evaluation
     * Material
         * Insufficient Material
@@ -92,4 +98,4 @@ Finished match
 ```
 
 ### How do you plan on fitting a neural network in 4096 bytes?
-Hope.
+Hope. Not a lot of it left, unfortunately.
