@@ -452,7 +452,6 @@ alpha_beta:
 
     vaesenc xmm0, xmm0, xmm0
     vaesenc xmm0, xmm0, xmm0
-    vaesenc xmm0, xmm0, xmm0
 
     vpextrw edx, xmm0, 0
     ; vmovw dx, xmm0 ; AVX512-FP16
@@ -539,7 +538,6 @@ alpha_beta:
 %assign i i+1
 %endrep
 %endif
-    vaesenc xmm0, xmm0, xmm0
     vaesenc xmm0, xmm0, xmm0
     vaesenc xmm0, xmm0, xmm0
 

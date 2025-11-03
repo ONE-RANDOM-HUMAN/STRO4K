@@ -160,20 +160,35 @@ pub(super) unsafe fn gen_pawn(
 
     // SAFETY: The ptr is valid by the safety requirements of the function
     unsafe {
+        // Flip black moves to match asm move order
         ptr = pawn_serialise(
             ptr,
             queenside_attacks & enemy,
             consts[3],
             MoveFlags::CAPTURE,
+            position.side_to_move() == Color::Black,
         );
-        ptr = pawn_serialise(ptr, kingside_attacks & enemy, consts[2], MoveFlags::CAPTURE);
+        ptr = pawn_serialise(
+            ptr,
+            kingside_attacks & enemy,
+            consts[2],
+            MoveFlags::CAPTURE,
+            position.side_to_move() == Color::Black,
+        );
         ptr = pawn_serialise(
             ptr,
             double_pushes,
             2 * consts[0],
             MoveFlags::DOUBLE_PAWN_PUSH,
+            position.side_to_move() == Color::Black,
         );
-        ptr = pawn_serialise(ptr, single_pushes, consts[0], MoveFlags::NONE);
+        ptr = pawn_serialise(
+            ptr,
+            single_pushes,
+            consts[0],
+            MoveFlags::NONE,
+            position.side_to_move() == Color::Black,
+        );
     }
 
     ptr
@@ -267,9 +282,19 @@ pub(super) unsafe fn pawn_serialise(
     mut squares: Bitboard,
     offset: i8,
     flags: MoveFlags,
+    flip: bool,
 ) -> *mut MovePlus {
+    if flip {
+        squares = squares.swap_bytes();
+    }
+
     while squares != 0 {
-        let index = squares.trailing_zeros() as u8;
+        let index = if flip {
+            squares.trailing_zeros() as u8 ^ 0b111000
+        } else {
+            squares.trailing_zeros() as u8
+        };
+
         let dest = Square::from_index(index).unwrap();
         let origin = dest.offset(-offset).unwrap();
 
