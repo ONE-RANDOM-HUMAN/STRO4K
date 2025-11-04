@@ -353,7 +353,6 @@ impl Board {
             let mut value = _mm_set_epi64x(self.pieces[1][0] as _, self.pieces[0][0] as _);
             value = _mm_aesenc_si128(value, value);
             value = _mm_aesenc_si128(value, value);
-            value = _mm_aesenc_si128(value, value);
 
             _mm_cvtsi128_si64x(value) as u64
         }
@@ -397,7 +396,6 @@ impl Board {
             }
 
             let mut value = _mm_loadu_si128(data.as_ptr().cast());
-            value = _mm_aesenc_si128(value, value);
             value = _mm_aesenc_si128(value, value);
             value = _mm_aesenc_si128(value, value);
 

@@ -136,18 +136,10 @@ gen_moves:
 .pawn_serialise_outer_head:
     pop rbp
 
-    ; preserve move generation order
-    ; test ecx, ecx
-    cmp byte [rsi + Board.side_to_move], 0
-    jz .pawn_serialise_white
-    bswap rbp
-.pawn_serialise_white:
 .pawn_serialise_inner_head:
     tzcnt rax, rbp ; index
     jc .pawn_serialise_inner_end
     btr rbp, rax
-
-    xor al, cl
 
     mov edx, eax
     shl eax, 6
@@ -196,26 +188,27 @@ gen_moves:
 
     shr edx, 2
 .white_castling:
-    test edx, 1
-    jz .no_queenside_castling
-
     test r9b, 0b0000_1110
     jnz .no_queenside_castling
+
+    test edx, 1
+    jz .no_queenside_castling
 
     mov eax, (QUEENSIDE_CASTLE_FLAG << 12) | (2 << 6) | 4
     xor eax, ecx
     stosd
 
 .no_queenside_castling:
-    test edx, 2
-    jz .no_kingside_castling
-
     test r9b, 0b0110_0000
     jnz .no_kingside_castling
+
+    test edx, 2
+    jz .no_kingside_castling
 
     mov eax, (KINGSIDE_CASTLE_FLAG << 12) | (6 << 6) | 4
     xor eax, ecx
     stosd
+
 .no_kingside_castling:
 
     pop rbp
