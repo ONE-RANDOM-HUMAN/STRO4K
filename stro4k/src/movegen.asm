@@ -10,7 +10,7 @@ gen_moves:
 
     ; r9 - occ
     mov r9, qword [rsi + Board.colors]
-    or r9, qword [rsi + Board.colors + 8]
+    xor r9, qword [rsi + Board.colors + 8]
 
     ; r10 - side
     mov r10, qword [rsi + Board.colors + rax * 8]
