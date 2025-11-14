@@ -4,22 +4,22 @@ BOUND_LOWER equ 01b
 BOUND_UPPER equ 10b
 BOUND_EXACT equ 11b
 
-F_PRUNE_MARGIN equ 83
-STATIC_NULL_MOVE_MARGIN equ 76
-SEE_PRUNE_MARGIN equ -65
+F_PRUNE_MARGIN equ 42
+STATIC_NULL_MOVE_MARGIN equ 38
+SEE_PRUNE_MARGIN equ -33
 
 CORR_HIST_SCALE_SHIFT equ 9
 CORR_HIST_SCALE equ 1 << CORR_HIST_SCALE_SHIFT
 CORR_HIST_MAX_WEIGHT equ 1 << 5
-CORR_HIST_MAX equ 128
+CORR_HIST_MAX equ 64
 
 section .rodata
 PIECE_VALUES:
-    dd 146
-    dd 438
-    dd 438
-    dd 704
-    dd 1404
+    dd 73
+    dd 219
+    dd 219
+    dd 352
+    dd 702
     dd MAX_EVAL
 
 default rel
@@ -77,7 +77,7 @@ root_search:
     ; ebp - window
     ; esi - alpha
     ; edi - beta
-    mov ebp, 21
+    mov ebp, 11
 
     mov esi, r14d
     lea edi, [rsi + rbp]
