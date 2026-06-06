@@ -210,10 +210,12 @@ RUNNING_WORKER_THREADS:
 alignb 4096
 %ifndef EXPORT_SYSV
 TT_MEM:
-    resb TT_SIZE_BYTES
+%rep TT_SIZE_MB
+    resb 1024 * 1024
+%endrep
 %endif
 
 THREAD_STACKS:
 %rep NUM_THREADS
     resb THREAD_STACK_SIZE
-%endrep NUM_THREADS
+%endrep

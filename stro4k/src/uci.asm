@@ -239,8 +239,7 @@ _start:
     call root_search
 
 .go_wait_for_threads:
-    ; lock and dword [RUNNING_WORKER_THREADS], 7FFF_FFFFh
-    lock btr dword [RUNNING_WORKER_THREADS], 31
+    lock and dword [RUNNING_WORKER_THREADS], 7FFF_FFFFh
     jnz .go_wait_for_threads
 
     mov rdx, "bestmove"
