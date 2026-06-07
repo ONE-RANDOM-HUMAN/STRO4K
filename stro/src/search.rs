@@ -64,6 +64,7 @@ pub struct Search<'a> {
     nodes: u64,
     start: Time,
     min_search_time: u64, // min search time in nanoseconds
+    long_search_time: u64,
     max_search_time: u64, // max search time in nanoseconds
     corrhist: [[i32; CORR_HIST_ENTRIES]; 2],
     ply: [PlyData; 12288],
@@ -95,6 +96,7 @@ impl<'a> Search<'a> {
             (&raw mut (*ptr).game).write(game);
             (&raw mut (*ptr).start).write(time_now());
             (&raw mut (*ptr).min_search_time).write(u64::MAX);
+            (&raw mut (*ptr).long_search_time).write(u64::MAX);
             (&raw mut (*ptr).max_search_time).write(u64::MAX);
             result.assume_init()
         }
@@ -116,6 +118,7 @@ impl<'a> Search<'a> {
 
     pub fn set_time(&mut self, time_ms: u32, inc_ms: u32) {
         self.min_search_time = (time_ms as u64) * 31796 + (inc_ms as u64) * 8946;
+        self.long_search_time = (time_ms as u64) * 58592 + (inc_ms as u64) * 291810;
         self.max_search_time = (time_ms as u64) * 85387 + (inc_ms as u64) * 574673;
     }
 
@@ -152,13 +155,19 @@ impl<'a> Search<'a> {
                 }
             };
 
+            let search_time = if best_move == self.ply[0].best_move {
+                self.min_search_time
+            } else {
+                self.long_search_time
+            };
+
             best_move = self.ply[0].best_move;
 
             if main_thread {
                 self.print_uci_info(depth, last_score);
             }
 
-            if self.time_up(self.min_search_time) {
+            if self.time_up(search_time) {
                 reached_depth = depth;
                 break 'a;
             }
