@@ -1,10 +1,8 @@
-default rel
 section .text
 
 %ifndef EXPORT_SYSV
 global _start
 
-default rel
 read1:
     push 1
     pop rdx

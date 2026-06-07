@@ -239,7 +239,6 @@ FILE_PST:
     db   22,  -39
 
 
-default rel
 section .text
 
 ; board - rsi

@@ -1,3 +1,9 @@
+%ifdef EXPORT_SYSV
+default rel
+%else
+default abs
+%endif
+
 %ifndef NUM_THREADS
 %define NUM_THREADS 4
 %endif

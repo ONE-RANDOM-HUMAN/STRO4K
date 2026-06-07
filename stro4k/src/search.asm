@@ -22,7 +22,6 @@ PIECE_VALUES:
     dd 1404
     dd MAX_EVAL
 
-default rel
 section .text
 
 %ifdef EXPORT_SYSV

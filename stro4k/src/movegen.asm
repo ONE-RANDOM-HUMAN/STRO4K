@@ -1,5 +1,4 @@
 section .text
-default rel
 
 ; rdi - buffer (allows the use of stosw)
 ; rsi - position
