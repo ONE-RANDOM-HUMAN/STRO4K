@@ -12,9 +12,9 @@ use crate::position::{Board, Color, Move};
 use crate::tt::{self, Bound, TTData};
 
 const CORR_HIST_ENTRIES: usize = 1 << 16;
-const CORR_HIST_SCALE_SHIFT: u32 = 9;
+const CORR_HIST_SCALE_SHIFT: u32 = 11;
 const CORR_HIST_SCALE: i32 = 1 << CORR_HIST_SCALE_SHIFT;
-const CORR_HIST_MAX_WEIGHT: i32 = 1 << 5;
+const CORR_HIST_MAX_WEIGHT: i32 = 128;
 const CORR_HIST_MAX: i32 = 128;
 
 #[unsafe(no_mangle)]
