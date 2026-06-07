@@ -138,7 +138,9 @@ root_search:
 .no_aspiration_fail_high:
     ; update best move and last score
     mov r14d, eax
-    movzx r15d, word [rbx + Search.ply_data + PlyData.best_move]
+    movzx eax, word [rbx + Search.ply_data + PlyData.best_move]
+    xchg eax, r15d
+
 
 %ifdef EXPORT_SYSV
     test r12d, r12d
@@ -148,6 +150,7 @@ root_search:
     mov esi, r13d
     mov edx, r14d
 
+    push rax
     push r11
     push rbp
     mov rbp, rsp
@@ -155,21 +158,30 @@ root_search:
     call search_print_info_sysv
     leave
     pop r11
+    pop rax
+
 
 .no_search_print_info:
     cmp r13d, r11d
     jge .end_search
+
+    cmp eax, r15d
+    jne .iterative_deepening_head
 
     ; time_up clobbers r11 due to syscall
     push r11
     call time_elapsed
     cmp rcx, qword [rbx + Search.min_search_time]
     pop r11
+    jna .iterative_deepening_head
 %else
+    cmp eax, r15d
+    jne .iterative_deepening_head
+
     call time_elapsed
     cmp rcx, qword [rbx + Search.min_search_time]
-%endif
     jna .iterative_deepening_head
+%endif
 .end_search: 
 
     shl r15, 32

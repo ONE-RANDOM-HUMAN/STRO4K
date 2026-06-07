@@ -152,13 +152,14 @@ impl<'a> Search<'a> {
                 }
             };
 
+            let best_move_changed = best_move != self.ply[0].best_move;
             best_move = self.ply[0].best_move;
 
             if main_thread {
                 self.print_uci_info(depth, last_score);
             }
 
-            if self.time_up(self.min_search_time) {
+            if !best_move_changed && self.time_up(self.min_search_time) {
                 reached_depth = depth;
                 break 'a;
             }
