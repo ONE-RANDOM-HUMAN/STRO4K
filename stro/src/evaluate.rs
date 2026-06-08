@@ -10,7 +10,7 @@ pub const MAX_EVAL: i32 = 128 * 256 - 1;
 pub const MIN_EVAL: i32 = -MAX_EVAL;
 
 /// Values for use when we don't want seperate MG and EG values
-pub const PIECE_VALUES: [i32; 6] = [146, 438, 438, 704, 1404, MAX_EVAL];
+pub const PIECE_VALUES: [i32; 6] = [146, 427, 450, 704, 1404, MAX_EVAL];
 
 #[rustfmt::skip]
 const MATERIAL_EVAL: [Eval; 5] = [

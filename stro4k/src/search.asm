@@ -16,8 +16,8 @@ CORR_HIST_MAX equ 128
 section .rodata
 PIECE_VALUES:
     dd 146
-    dd 438
-    dd 438
+    dd 427
+    dd 450
     dd 704
     dd 1404
     dd MAX_EVAL
