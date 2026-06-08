@@ -587,7 +587,7 @@ evaluate:
     jne .no_enemy_insufficient_material
     cmp eax, 700
     jg .no_enemy_insufficient_material
-    sar eax, 2
+    sar eax, 1
 .no_enemy_insufficient_material:
 
     neg eax
@@ -596,7 +596,7 @@ evaluate:
     jne .no_side_insufficient_material
     cmp eax, 700
     jg .no_side_insufficient_material
-    sar eax, 2
+    sar eax, 1
 .no_side_insufficient_material:
 
     pop rbx

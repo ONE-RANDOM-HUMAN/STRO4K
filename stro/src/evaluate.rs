@@ -316,7 +316,7 @@ fn resolve(board: &Board, eval: Eval) -> i32 {
     if (0..=700).contains(&score) && board.pieces()[0][0] == 0
         || (-700..=0).contains(&score) && board.pieces()[1][0] == 0
     {
-        score /= 4;
+        score /= 2;
     }
 
     if board.side_to_move() == Color::White {
