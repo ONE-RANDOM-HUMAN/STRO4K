@@ -265,25 +265,21 @@ impl<'a> Search<'a> {
         let pv_node = beta - alpha != 1;
 
         let mut static_eval = {
-            let eval = evaluate::evaluate(self.game.position());
+            let eval = evaluate::evaluate(self.game.position()) * CORR_HIST_SCALE;
 
             let pawn = self.corrhist[self.game.position().side_to_move() as usize]
-                [self.game.position().pawn_hash() as usize % CORR_HIST_ENTRIES]
-                >> CORR_HIST_SCALE_SHIFT;
+                [self.game.position().pawn_hash() as usize % CORR_HIST_ENTRIES];
 
             let white_non_pawn = self.corrhist[self.game.position().side_to_move() as usize]
-                [self.game.position().non_pawn_hash(Color::White) as usize % CORR_HIST_ENTRIES]
-                >> CORR_HIST_SCALE_SHIFT;
+                [self.game.position().non_pawn_hash(Color::White) as usize % CORR_HIST_ENTRIES];
 
             let black_non_pawn = self.corrhist[self.game.position().side_to_move() as usize]
-                [self.game.position().non_pawn_hash(Color::Black) as usize % CORR_HIST_ENTRIES]
-                >> CORR_HIST_SCALE_SHIFT;
+                [self.game.position().non_pawn_hash(Color::Black) as usize % CORR_HIST_ENTRIES];
 
             let material = self.corrhist[self.game.position().side_to_move() as usize]
-                [self.game.position().material_hash() as usize % CORR_HIST_ENTRIES]
-                >> CORR_HIST_SCALE_SHIFT;
+                [self.game.position().material_hash() as usize % CORR_HIST_ENTRIES];
 
-            eval + pawn + white_non_pawn + black_non_pawn + material
+            (eval + pawn + white_non_pawn + black_non_pawn + material) >> CORR_HIST_SCALE_SHIFT
         };
 
         // Use non-tt static eval to ensure continuity

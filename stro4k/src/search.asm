@@ -436,6 +436,7 @@ alpha_beta:
     call evaluate
 
     ; corrhist
+    shl eax, CORR_HIST_SCALE_SHIFT
 
     lea r8, [rbx + Search.white_corrhist]
 
@@ -457,10 +458,7 @@ alpha_beta:
 
     lea rdx, [r8 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.pawn_corrhist], rdx
-    mov edx, dword [rdx]
-
-    sar edx, CORR_HIST_SCALE_SHIFT
-    add eax, edx
+    add eax, dword [rdx]
 
     ; non pawn hash
 %ifdef AVX512
@@ -482,10 +480,7 @@ alpha_beta:
 
     lea rdx, [r8 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.non_pawn_corrhists], rdx
-    mov edx, dword [rdx]
-
-    sar edx, CORR_HIST_SCALE_SHIFT
-    add eax, edx
+    add eax, dword [rdx]
 
 %ifdef AVX512
     vmovdqu ymm0, yword [rsi + 48 + 8]
@@ -506,10 +501,7 @@ alpha_beta:
 
     lea rdx, [r8 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.non_pawn_corrhists + 8], rdx
-    mov edx, dword [rdx]
-
-    sar edx, CORR_HIST_SCALE_SHIFT
-    add eax, edx
+    add eax, dword [rdx]
 
     ; material hash
 %ifdef AVX512
@@ -543,10 +535,9 @@ alpha_beta:
     vpextrw edx, xmm0, 0
     lea rdx, [r8 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.material_corrhist], rdx
-    mov edx, dword [rdx]
+    add eax, dword [rdx]
 
-    sar edx, CORR_HIST_SCALE_SHIFT
-    add eax, edx
+    sar eax, CORR_HIST_SCALE_SHIFT
 
     ; store the static eval
     mov word [r13 + PlyData.static_eval], ax
