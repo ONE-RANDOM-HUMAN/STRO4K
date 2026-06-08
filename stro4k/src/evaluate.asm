@@ -572,11 +572,11 @@ evaluate:
     imul ecx, eax
 
     sub ebx, ecx
-    movsx rax, ebx
+    movsx rcx, ebx
 
     ; divide by 2 * 24
-    imul rax, rax, 2aaaaaabh
-    mov rcx, rax
+    imul rcx, rcx, 2aaaaaabh
+    mov rax, rcx
     sar rax, 35
     shr rcx, 63
     add eax, ecx
@@ -585,16 +585,23 @@ evaluate:
     js .no_enemy_insufficient_material
     cmp qword [r10], 0
     jne .no_enemy_insufficient_material
-    cmp eax, 700
+    popcnt rcx, qword [r11]
+    imul ecx, ecx, -146
+    add ecx, 700
+    cmp eax, ecx
     jg .no_enemy_insufficient_material
     sar eax, 2
 .no_enemy_insufficient_material:
+    xchg r10, r11
 
     neg eax
     js .no_side_insufficient_material
-    cmp qword [r11], 0
+    cmp qword [r10], 0
     jne .no_side_insufficient_material
-    cmp eax, 700
+    popcnt rcx, qword [r11]
+    imul ecx, ecx, -146
+    add ecx, 700
+    cmp eax, ecx
     jg .no_side_insufficient_material
     sar eax, 2
 .no_side_insufficient_material:
