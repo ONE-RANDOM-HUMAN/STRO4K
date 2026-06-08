@@ -4,11 +4,11 @@ use std::cmp;
 use std::num::NonZeroU16;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::evaluate::{self, MAX_EVAL, MIN_EVAL};
+use crate::evaluate::{self, MAX_EVAL, MIN_EVAL, PIECE_VALUES};
 use crate::game::{Game, GameBuf};
 use crate::movegen::{MoveBuf, gen_moves};
 use crate::moveorder::{self, HistoryTable, KillerTable};
-use crate::position::{Board, Color, Move};
+use crate::position::{Board, Color, Move, Piece};
 use crate::tt::{self, Bound, TTData};
 
 const CORR_HIST_ENTRIES: usize = 1 << 16;
@@ -461,7 +461,8 @@ impl<'a> Search<'a> {
 
             if depth <= 7 {
                 let see = self.game.position().see(mov);
-                if see < cmp::min(0, depth * -65) && !pv_node && !is_check {
+                const MAX_SEE: i32 = -(PIECE_VALUES[Piece::Knight as usize] - PIECE_VALUES[Piece::Bishop as usize]).abs();
+                if see < cmp::min(MAX_SEE, depth * -65) && !pv_node && !is_check {
                     continue;
                 }
 

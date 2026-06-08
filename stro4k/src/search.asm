@@ -7,6 +7,7 @@ BOUND_EXACT equ 11b
 F_PRUNE_MARGIN equ 83
 STATIC_NULL_MOVE_MARGIN equ 76
 SEE_PRUNE_MARGIN equ -65
+MAX_SEE equ -23;
 
 CORR_HIST_SCALE_SHIFT equ 9
 CORR_HIST_SCALE equ 1 << CORR_HIST_SCALE_SHIFT
@@ -1139,10 +1140,9 @@ alpha_beta:
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_see_pruning
 
-    xor esi, esi
+    mov esi, MAX_SEE
     imul eax, dword [rbp + 8], SEE_PRUNE_MARGIN
 
-    ; We can't just use SF since imul leaves it unspecified
     cmp esi, eax
     cmovnl esi, eax
 
