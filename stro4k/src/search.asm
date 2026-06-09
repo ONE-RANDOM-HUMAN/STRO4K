@@ -217,6 +217,8 @@ struc ABLocals
         resq 1
     .non_pawn_corrhists:
         resq 2
+    .minor_piece_corrhist:
+        resq 1
     .material_corrhist:
         resq 1
     .first_zeroed:
@@ -506,6 +508,22 @@ alpha_beta:
 
     lea rdx, [r8 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.non_pawn_corrhists + 8], rdx
+    mov edx, dword [rdx]
+
+    sar edx, CORR_HIST_SCALE_SHIFT
+    add eax, edx
+
+    ; minor piece hash
+    vmovdqu xmm0, oword [rsi + 8]
+    vaesenc xmm0, xmm0, oword [rsi + 48 + 8]
+
+    vaesenc xmm0, xmm0, xmm0
+    vaesenc xmm0, xmm0, xmm0
+
+    vpextrw edx, xmm0, 0
+
+    lea rdx, [r8 + 4 * rdx]
+    mov qword [rbp - 128 + ABLocals.minor_piece_corrhist], rdx
     mov edx, dword [rdx]
 
     sar edx, CORR_HIST_SCALE_SHIFT
@@ -1550,6 +1568,19 @@ alpha_beta:
     mov dword [rsi], edx
 
     mov rsi, qword [rbp - 128 + ABLocals.non_pawn_corrhists + 8]
+
+    ; entry * (weight - CORR_HIST_SCALE)
+    mov edx, edi
+    sub edx, CORR_HIST_SCALE
+    imul edx, dword [rsi]
+    sar edx, CORR_HIST_SCALE_SHIFT
+
+    ; diff * weight - (entry * (weight - CORR_HIST_SCALE))
+    sub edx, ecx
+    neg edx
+    mov dword [rsi], edx
+
+    mov rsi, qword [rbp - 128 + ABLocals.minor_piece_corrhist]
 
     ; entry * (weight - CORR_HIST_SCALE)
     mov edx, edi
