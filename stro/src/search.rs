@@ -279,11 +279,15 @@ impl<'a> Search<'a> {
                 [self.game.position().non_pawn_hash(Color::Black) as usize % CORR_HIST_ENTRIES]
                 >> CORR_HIST_SCALE_SHIFT;
 
+            let minor_piece = self.corrhist[self.game.position().side_to_move() as usize]
+                [self.game.position().minor_piece_hash() as usize % CORR_HIST_ENTRIES]
+                >> CORR_HIST_SCALE_SHIFT;
+
             let material = self.corrhist[self.game.position().side_to_move() as usize]
                 [self.game.position().material_hash() as usize % CORR_HIST_ENTRIES]
                 >> CORR_HIST_SCALE_SHIFT;
 
-            eval + pawn + white_non_pawn + black_non_pawn + material
+            eval + pawn + white_non_pawn + black_non_pawn + minor_piece + material
         };
 
         // Use non-tt static eval to ensure continuity
@@ -613,8 +617,12 @@ impl<'a> Search<'a> {
                     - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
 
                 let entry = &mut corrhist
-                    [self.game.position().material_hash() as usize % CORR_HIST_ENTRIES];
+                    [self.game.position().minor_piece_hash() as usize % CORR_HIST_ENTRIES];
+                *entry = diff * weight
+                    - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
 
+                let entry = &mut corrhist
+                    [self.game.position().material_hash() as usize % CORR_HIST_ENTRIES];
                 *entry = diff * weight
                     - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
             }

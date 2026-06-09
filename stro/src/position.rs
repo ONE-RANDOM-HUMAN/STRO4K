@@ -1,4 +1,5 @@
-use std::fmt;
+use std::arch::x86_64::{_mm_cvtsi128_si64, _mm_set_epi64x};
+use std::{arch::x86_64::_mm_aesenc_si128, fmt};
 use std::num::NonZeroU16;
 
 use crate::{consts, evaluate, movegen};
@@ -377,6 +378,19 @@ impl Board {
             value = _mm_aesenc_si128(value, value);
 
             _mm_cvtsi128_si64x(value) as u64
+        }
+    }
+
+    pub fn minor_piece_hash(&self) -> u64 {
+        unsafe {
+            let white = _mm_set_epi64x(self.pieces[0][2] as _, self.pieces[0][1] as _);
+            let black = _mm_set_epi64x(self.pieces[1][2] as _, self.pieces[1][1] as _);
+
+            let mut value = _mm_aesenc_si128(white, black);
+            value = _mm_aesenc_si128(value, value);
+            value = _mm_aesenc_si128(value, value);
+
+            _mm_cvtsi128_si64(value) as u64
         }
     }
 
