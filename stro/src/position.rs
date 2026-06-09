@@ -394,6 +394,19 @@ impl Board {
         }
     }
 
+    pub fn major_piece_hash(&self) -> u64 {
+        unsafe {
+            let white = _mm_set_epi64x(self.pieces[0][4] as _, self.pieces[0][3] as _);
+            let black = _mm_set_epi64x(self.pieces[1][4] as _, self.pieces[1][3] as _);
+
+            let mut value = _mm_aesenc_si128(white, black);
+            value = _mm_aesenc_si128(value, value);
+            value = _mm_aesenc_si128(value, value);
+
+            _mm_cvtsi128_si64(value) as u64
+        }
+    }
+
     pub fn material_hash(&self) -> u64 {
         // SAFETY: aes-ni and 64 bit required for build
         unsafe {
