@@ -383,10 +383,10 @@ impl Board {
 
     pub fn minor_piece_hash(&self) -> u64 {
         unsafe {
-            let white = _mm_set_epi64x(self.pieces[0][2] as _, self.pieces[0][1] as _);
-            let black = _mm_set_epi64x(self.pieces[1][2] as _, self.pieces[1][1] as _);
+            let mut value = _mm_set_epi64x(self.pieces[1][5] as _, self.pieces[0][5] as _);
+            value = _mm_aesenc_si128(value, _mm_set_epi64x(self.pieces[0][2] as _, self.pieces[0][1] as _));
+            value = _mm_aesenc_si128(value, _mm_set_epi64x(self.pieces[1][2] as _, self.pieces[1][1] as _));
 
-            let mut value = _mm_aesenc_si128(white, black);
             value = _mm_aesenc_si128(value, value);
             value = _mm_aesenc_si128(value, value);
 

@@ -514,7 +514,10 @@ alpha_beta:
     add eax, edx
 
     ; minor piece hash
-    vmovdqu xmm0, oword [rsi + 8]
+    vmovq xmm0, qword [rsi + 40]
+    vpinsrq xmm0, qword [rsi + 48 + 40], 1
+
+    vaesenc xmm0, xmm0, oword [rsi + 8]
     vaesenc xmm0, xmm0, oword [rsi + 48 + 8]
 
     vaesenc xmm0, xmm0, xmm0
