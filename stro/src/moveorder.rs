@@ -18,12 +18,19 @@ impl KillerTable {
     }
 }
 
-#[repr(transparent)]
+#[repr(C, align(4))]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct HistoryTable([i16; 64 * 64]);
 impl HistoryTable {
     pub fn new() -> Self {
         HistoryTable([0; 64 * 64])
+    }
+
+    pub fn corrhist(&mut self) -> &mut i32 {
+        // Corresponds to nonexistant moves from from E2/F2 ta A1
+        unsafe {
+            &mut *self.0.as_mut_ptr().add(12).cast()
+        }
     }
 
     pub fn reset(&mut self) {
