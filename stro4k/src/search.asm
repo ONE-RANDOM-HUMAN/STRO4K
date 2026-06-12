@@ -425,7 +425,7 @@ alpha_beta:
 %else
     lea rsp, [rbx - 48]
 %endif
-    ; restore r13-r15 - these are the first registers to be pushed by alpha_beta
+    ; restore r12-r15 - these are the first registers to be pushed by alpha_beta
     ; after it is called by root_search.
     pop r12
     pop r13
@@ -433,7 +433,7 @@ alpha_beta:
     pop r15
     pop rax ; return address
 
-    dec r13d
+    dec r12d
     jmp root_search.end_search
 .no_stop_search:
 
