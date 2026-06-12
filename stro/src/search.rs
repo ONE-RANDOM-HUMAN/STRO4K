@@ -129,6 +129,9 @@ impl<'a> Search<'a> {
         let mut best_move = None;
         let mut last_score = 0;
 
+        self.ply[0].static_eval = i16::MAX;
+        self.ply[1].static_eval = i16::MAX;
+
         let mut reached_depth = max_depth;
         'a: for depth in 1..=max_depth {
             let mut window = 21;
@@ -296,8 +299,8 @@ impl<'a> Search<'a> {
         };
 
         // Use non-tt static eval to ensure continuity
-        self.ply[ply].static_eval = static_eval as i16;
-        let improving = ply >= 2 && static_eval > i32::from(self.ply[ply - 2].static_eval);
+        self.ply[ply + 2].static_eval = static_eval as i16;
+        let improving = static_eval > i32::from(self.ply[ply].static_eval);
 
         // Probe tt
         let hash = self.game.position().hash();
@@ -593,7 +596,7 @@ impl<'a> Search<'a> {
         }
 
         if let Some(mov) = best_move {
-            let static_eval = self.ply[ply].static_eval as i32;
+            let static_eval = self.ply[ply + 2].static_eval as i32;
             self.ply[ply].best_move = best_move;
 
             if !is_check

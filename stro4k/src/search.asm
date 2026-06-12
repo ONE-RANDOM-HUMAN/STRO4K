@@ -40,7 +40,7 @@ root_search_sysv:
     push qword [rbx] ; save current position
     push rbx
 
-    mov r12d, esi
+    mov r10d, esi
     mov r11d, edx
     call root_search
 
@@ -64,15 +64,17 @@ root_search:
     mov qword [rbx + Search.ply_data + (MAX_BOARDS - 1) * PlyData_size], rsp
     mov qword [rbx + Search.nodes], 0
 %endif
+    lea r13, [rbx + Search.ply_data - PlyData_size]
+    mov word [r13 + PlyData_size + PlyData.static_eval], 7FFFh
+    mov word [r13 + 2 * PlyData_size + PlyData.static_eval], 7FFFh
 
-    ; r13d - depth
+    ; r12d - depth
     ; r14d - last score
     ; r15d - best move - does not need to be initialised
-    ; mov r13d, 1
-    xor r13d, r13d
+    xor r12d, r12d
     xor r14d, r14d
 .iterative_deepening_head:
-    inc r13d
+    inc r12d
     ; ebp - window
     ; esi - alpha
     ; edi - beta
@@ -97,10 +99,8 @@ root_search:
     ; beta - edi
 
     ; depth
-    mov ecx, r13d
+    mov ecx, r12d
 
-    ; ply count
-    xor edx, edx
     call alpha_beta
 
     mov edx, MIN_EVAL
@@ -141,23 +141,25 @@ root_search:
     movzx r15d, word [rbx + Search.ply_data + PlyData.best_move]
 
 %ifdef EXPORT_SYSV
-    test r12d, r12d
+    test r10d, r10d
     jz .no_search_print_info
 
     mov rdi, rbx
-    mov esi, r13d
+    mov esi, r12d
     mov edx, r14d
 
     push r11
+    push r10
     push rbp
     mov rbp, rsp
     and rsp, -16
     call search_print_info_sysv
     leave
+    pop r10
     pop r11
 
 .no_search_print_info:
-    cmp r13d, r11d
+    cmp r12d, r11d
     jge .end_search
 
     ; time_up clobbers r11 due to syscall
@@ -173,7 +175,7 @@ root_search:
 .end_search: 
 
     shl r15, 32
-    or r15, r13
+    or r15, r12
     lea rbx, [SEARCH_RESULT]
     mov rax, qword [rbx]
 .search_result_head:
@@ -259,10 +261,10 @@ IMPROVING_FLAG_INDEX equ 1
 
 ; search - rbx
 ; depth - rcx
-; ply - rdx
 ; alpha - rsi
 ; beta - rdi
-; preserves all general purpose registers except rcx and rax
+; ply_data - PlyData_size - r13
+; preserves all general purpose registers except rax
 alpha_beta:
     push r15
     push r14
@@ -285,8 +287,7 @@ alpha_beta:
     inc qword [rbx + Search.nodes]
 
     ; r13 - ply data
-    ; mov rcx, qword [rbp + 16] ; ply count
-    lea r13, [rbx + Search.ply_data + rdx * PlyData_size]
+    add r13, PlyData_size
 
     ; clear non-hash locals
     vxorps xmm0, xmm0, xmm0
@@ -420,12 +421,13 @@ alpha_beta:
     ; TODO
 %ifdef EXPORT_SYSV
     mov rsp, qword [rbx + Search.ply_data + (MAX_BOARDS - 1) * PlyData_size]
-    sub rsp, 32
+    sub rsp, 40
 %else
-    lea rsp, [rbx - 40]
+    lea rsp, [rbx - 48]
 %endif
     ; restore r13-r15 - these are the first registers to be pushed by alpha_beta
     ; after it is called by root_search.
+    pop r12
     pop r13
     pop r14
     pop r15
@@ -582,13 +584,11 @@ alpha_beta:
     add eax, edx
 
     ; store the static eval
-    mov word [r13 + PlyData.static_eval], ax
+    mov word [r13 + 2 * PlyData_size + PlyData.static_eval], ax
     mov word [rbp - 128 + ABLocals.static_eval], ax
 
     ; calculate the improving variable
-    cmp dword [rbp + 16], 2
-    jnae .not_improving
-    cmp ax, word [r13 - 2 * PlyData_size + PlyData.static_eval]
+    cmp ax, word [r13 + PlyData.static_eval]
     jng .not_improving
 
     or byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
@@ -697,7 +697,7 @@ alpha_beta:
     jz .tt_end ; No bound
 
     ; cx - static eval
-    movsx ecx, word [r13 + PlyData.static_eval]
+    movsx ecx, word [r13 + 2 * PlyData_size + PlyData.static_eval]
     cmovpe ecx, eax
     jpe .possible_tt_cutoff ; Exact bound
 
@@ -793,10 +793,6 @@ alpha_beta:
     call game_make_move ; preserves eax
 
     ; call alpha beta
-    ; edx - ply count
-    mov edx, dword [rbp + 16]
-    inc edx
-
     ; ecx - reduced depth
     mov ecx, dword [rbp + 8]
     imul esi, ecx, 46
@@ -1270,17 +1266,12 @@ alpha_beta:
 
 .no_lmr_reduction:
     ; save lmr depth + 1
-    mov r11d, edx
 
     ; esi - -alpha - 1
     lea esi, [rdi - 1]
 
     ; ecx - lmr depth
     lea ecx, [rdx - 1]
-
-    ; ply + 1
-    mov edx, dword [rbp + 16]
-    inc edx
 
     call alpha_beta
     neg eax
@@ -1296,7 +1287,7 @@ alpha_beta:
     jl .pvs_search_full
 
     ; check depth
-    cmp r11d, dword [rbp + 8]
+    cmp edx, dword [rbp + 8]
     je .pvs_no_research ; search with full depth already completed
 .pvs_search_full:
     ; edx - depth
@@ -1308,10 +1299,6 @@ alpha_beta:
 
     ; depth - 1
     lea ecx, [rdx - 1]
-
-    ; ply + 1
-    mov edx, dword [rbp + 16]
-    inc edx
 
     call alpha_beta
     neg eax
@@ -1516,7 +1503,7 @@ alpha_beta:
     test dh, (PROMO_FLAG | CAPTURE_FLAG) << 4
     jnz .no_update_corrhist
 
-    movsx ecx, word [r13 + PlyData.static_eval]
+    movsx ecx, word [r13 + 2 * PlyData_size + PlyData.static_eval]
     ; bounds
     cmp byte [rbp - 128 + ABLocals.bound], BOUND_LOWER
     jne .corrhist_no_lower_bound
