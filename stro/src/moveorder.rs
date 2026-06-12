@@ -33,6 +33,13 @@ impl HistoryTable {
         }
     }
 
+    pub fn corrhist2(&mut self) -> &mut i32 {
+        // Corresponds to nonexistant moves from from G2/H2 ta A1
+        unsafe {
+            &mut *self.0.as_mut_ptr().add(14).cast()
+        }
+    }
+
     pub fn reset(&mut self) {
         self.0.fill(0);
     }
