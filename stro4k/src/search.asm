@@ -216,8 +216,8 @@ struc ABLocals
     .hash:
         resq 1
     .corrhist_start:
-    .conthist_corrhist:
-        resq 1
+    .conthist_corrhists:
+        resq 2
     .pawn_corrhist:
         resq 1
     .non_pawn_corrhists:
@@ -444,8 +444,8 @@ alpha_beta:
 
     ; corrhist
 
-    lea r8, [rbx + Search.white_history]
     lea r9, [rbx + Search.white_corrhist]
+    lea r8, [rbx + Search.white_history]
 
     cmp byte [rsi + Board.side_to_move], 0
     je .corrhist_white
@@ -455,10 +455,17 @@ alpha_beta:
 .corrhist_white:
 
     ; conthist corrhist
-    ; this is done out-of-order, which is one byte smaller
     mov rdx, qword [r13 + Search.conthist_stack - Search.ply_data + 8]
     lea rdx, [rdx + r8 + 2 * 12]
-    mov qword [rbp - 128 + ABLocals.conthist_corrhist], rdx
+    mov qword [rbp - 128 + ABLocals.conthist_corrhists], rdx
+    mov edx, dword [rdx]
+
+    sar edx, CORR_HIST_SCALE_SHIFT
+    add eax, edx
+
+    mov rdx, qword [r13 + Search.conthist_stack - Search.ply_data]
+    lea rdx, [rdx + r8 + 2 * 14]
+    mov qword [rbp - 128 + ABLocals.conthist_corrhists + 8], rdx
     mov edx, dword [rdx]
 
     sar edx, CORR_HIST_SCALE_SHIFT
@@ -985,8 +992,8 @@ alpha_beta:
     mov eax, dword [r13 + PlyData.kt]
 
     ; load history
-    lea r8, [rbx + Search.white_history]
     mov rsi, qword [rbx]
+    lea r8, [rbx + Search.white_history]
     cmp byte [rsi + Board.side_to_move], 0
     je .order_quiet_white_moves
 
@@ -1007,8 +1014,7 @@ alpha_beta:
     and esi, 0FFFh
 
     ; we can have junk in the upper bits as they are never read
-    xor edi, edi
-    add edi, dword [r8 + 2 * rsi]
+    mov edi, dword [r8 + 2 * rsi]
     add edi, dword [r9 + 2 * rsi]
     add edi, dword [r10 + 2 * rsi]
 ; .conthist_null:
@@ -1042,15 +1048,13 @@ alpha_beta:
     mov edi, r15d
     mov esi, edi
 .find_highest_score_head:
-    inc edi
-    cmp edi, r14d
-    je .find_highest_score_end
-
     mov eax, dword [rsp + 4 * rdi + MovePlus.score]
     cmp ax, word [rsp + 4 * rsi + MovePlus.score]
     cmovg esi, edi
 
-    jmp .find_highest_score_head
+    inc edi
+    cmp edi, r14d
+    jne .find_highest_score_head
 .find_highest_score_end:
     ; swap with the next move in the sequence
     mov edi, dword [rsp + 4 * rsi]
@@ -1095,7 +1099,7 @@ alpha_beta:
     mov r15d, r13d ; r15d - beta
 
     ; edx - attacking piece square
-    mov edi, eax
+    xchg eax, edi
     xor eax, eax
     bts rax, r12
 
@@ -1168,14 +1172,11 @@ alpha_beta:
     test byte [rbp - 128 + ABLocals.flags], IS_CHECK_FLAG | PV_NODE_FLAG
     jnz .no_see_pruning
 
-    xor esi, esi
+    test edi, edi
+    jns .no_see_pruning
+
     imul eax, dword [rbp + 8], SEE_PRUNE_MARGIN
-
-    ; We can't just use SF since imul leaves it unspecified
-    cmp esi, eax
-    cmovnl esi, eax
-
-    cmp edi, esi
+    cmp edi, eax
     jl .main_search_tail
 .no_see_pruning:
 
@@ -1331,14 +1332,14 @@ alpha_beta:
 
     ; update killer table
     shl dword [r13 + PlyData.kt], 16
-    or word [r13 + PlyData.kt], r12w
+    mov word [r13 + PlyData.kt], r12w
     ; mov edx, r12d
     ; shl edx, 16 ; temp
     ; shld dword [r13 + PlyData.kt], edx, 16
 
     ; load history table
-    lea r8, [rbx + Search.white_history]
     mov rsi, qword [rbx]
+    lea r8, [rbx + Search.white_history]
     cmp byte [rsi + Board.side_to_move], 0
     je .decrease_white_history
 
@@ -1544,7 +1545,7 @@ alpha_beta:
 
     push rax
     lea rsi, qword [rbp - 128 + ABLocals.corrhist_start]
-%rep 6
+%rep 7
     lodsq
 
     ; entry * (weight - CORR_HIST_SCALE)

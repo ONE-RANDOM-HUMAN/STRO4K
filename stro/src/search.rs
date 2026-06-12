@@ -273,6 +273,10 @@ impl<'a> Search<'a> {
                 + self.conthist_stack[ply + 1] / std::mem::size_of::<HistoryTable>();
             let conthist = *self.history[conthist_index].corrhist() >> CORR_HIST_SCALE_SHIFT;
 
+            let conthist2_index =
+                hist_index + self.conthist_stack[ply] / std::mem::size_of::<HistoryTable>();
+            let conthist2 = *self.history[conthist2_index].corrhist2() >> CORR_HIST_SCALE_SHIFT;
+
             let eval = evaluate::evaluate(self.game.position());
 
             let pawn = self.corrhist[self.game.position().side_to_move() as usize]
@@ -295,7 +299,7 @@ impl<'a> Search<'a> {
                 [self.game.position().material_hash() as usize % CORR_HIST_ENTRIES]
                 >> CORR_HIST_SCALE_SHIFT;
 
-            eval + conthist + pawn + white_non_pawn + black_non_pawn + minor_piece + material
+            eval + conthist + conthist2 + pawn + white_non_pawn + black_non_pawn + minor_piece + material
         };
 
         // Use non-tt static eval to ensure continuity
@@ -615,6 +619,12 @@ impl<'a> Search<'a> {
                     + self.conthist_stack[ply + 1] / std::mem::size_of::<HistoryTable>();
 
                 let entry = self.history[conthist_index].corrhist();
+                *entry = diff * weight
+                    - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
+
+                let conthist2_index =
+                    hist_index + self.conthist_stack[ply] / std::mem::size_of::<HistoryTable>();
+                let entry = self.history[conthist2_index].corrhist2();
                 *entry = diff * weight
                     - ((*entry * (weight - CORR_HIST_SCALE)) >> CORR_HIST_SCALE_SHIFT);
 
