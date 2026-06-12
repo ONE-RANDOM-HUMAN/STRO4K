@@ -342,7 +342,11 @@ evaluate:
     popcnt eax, eax
 
     vpmovsxbw xmm1, qword [rbp + PAWN_SHIELD_EVAL - EVAL_WEIGHTS + 2 * rax]
+%ifdef AVX512
+    vpbroadcastw xmm2, edi
+%else
     vpbroadcastw xmm2, word [rsp]
+%endif
     vpmullw xmm1, xmm1, xmm2
     vpsraw xmm1, xmm1, 4
     vpaddw xmm0, xmm0, xmm1
@@ -422,7 +426,8 @@ evaluate:
     ; mobility attacks
     vpmovsxbw xmm1, qword [rbp + MOBILITY_ATTACK_EVAL - EVAL_WEIGHTS - 8 + rcx * 8]
 
-    mov edx, 4
+    push 4
+    pop rdx
 .mobility_attack_head:
     mov rdi, rax
     and rdi, qword [r11 + rdx * 8 - 8]
@@ -569,9 +574,9 @@ evaluate:
     imul ebx, eax
 
     sub eax, 48 ; 2 * -(24 - phase)
-    imul ecx, eax
+    imul eax, ecx
 
-    sub ebx, ecx
+    sub ebx, eax
     movsx rax, ebx
 
     ; divide by 2 * 24
