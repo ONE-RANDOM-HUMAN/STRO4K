@@ -239,8 +239,6 @@ struc ABLocals
         resd 1
     .alpha:
         resd 1
-    .static_eval:
-        resw 1
     .bound:
         resb 1
     .flags:
@@ -592,14 +590,6 @@ alpha_beta:
 
     ; store the static eval
     mov word [r13 + 2 * PlyData_size + PlyData.static_eval], ax
-    mov word [rbp - 128 + ABLocals.static_eval], ax
-
-    ; calculate the improving variable
-    cmp ax, word [r13 + PlyData.static_eval]
-    jng .not_improving
-
-    or byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
-.not_improving:
 
     ; probe the tt
 
@@ -738,7 +728,7 @@ alpha_beta:
     jnz .no_tt_cutoff
     jmp .end 
 .no_tt_cutoff:
-    mov word [rbp - 128 + ABLocals.static_eval], cx
+    mov word [r13 + 2 * PlyData_size + PlyData.static_eval], cx
     jmp .tt_end
 .tt_miss:
     ; iir
@@ -753,6 +743,15 @@ alpha_beta:
 ; .no_iir:
 .tt_end:
 .no_tt_probe:
+
+    ; calculate the improving variable
+    movsx eax, word [r13 + 2 * PlyData_size + PlyData.static_eval]
+    cmp ax, word [r13 + PlyData.static_eval]
+    jng .not_improving
+
+    or byte [rbp - 128 + ABLocals.flags], IMPROVING_FLAG
+.not_improving:
+
 
     ; reset future killers
     mov dword [r13 + PlyData_size + PlyData.kt], 0
@@ -772,7 +771,6 @@ alpha_beta:
 
     ; check that the static eval exceeds beta
     ; eax - static eval - beta
-    movsx eax, word [rbp - 128 + ABLocals.static_eval]
     sub eax, dword [rbp + 32]
     jnge .no_null_move
 
@@ -881,7 +879,7 @@ alpha_beta:
     jb .order_noisy_score_head
 .order_noisy_no_moves:
     ; ecx - static eval
-    movsx ecx, word [rbp - 128 + ABLocals.static_eval]
+    movsx ecx, word [r13 + 2 * PlyData_size + PlyData.static_eval]
 
     ; edx - depth
     mov edx, dword [rbp + 8]

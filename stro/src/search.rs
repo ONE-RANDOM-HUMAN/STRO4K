@@ -302,10 +302,6 @@ impl<'a> Search<'a> {
             eval + conthist + conthist2 + pawn + white_non_pawn + black_non_pawn + minor_piece + material
         };
 
-        // Use non-tt static eval to ensure continuity
-        self.ply[ply + 2].static_eval = static_eval as i16;
-        let improving = static_eval > i32::from(self.ply[ply].static_eval);
-
         // Probe tt
         let hash = self.game.position().hash();
         let mut tt_success = false;
@@ -361,6 +357,9 @@ impl<'a> Search<'a> {
         if !tt_success && depth > 3 {
             depth -= 1;
         }
+
+        self.ply[ply + 2].static_eval = static_eval as i16;
+        let improving = static_eval > i32::from(self.ply[ply].static_eval);
 
         self.ply[ply + 1].kt = KillerTable::new();
         self.conthist_stack[ply + 2] = 0;
