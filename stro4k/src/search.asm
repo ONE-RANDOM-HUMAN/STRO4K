@@ -213,6 +213,9 @@ time_elapsed:
 struc ABLocals
     .hash:
         resq 1
+    .corrhist_start:
+    .conthist_corrhist:
+        resq 1
     .pawn_corrhist:
         resq 1
     .non_pawn_corrhists:
@@ -439,13 +442,25 @@ alpha_beta:
 
     ; corrhist
 
-    lea r8, [rbx + Search.white_corrhist]
+    lea r8, [rbx + Search.white_history]
+    lea r9, [rbx + Search.white_corrhist]
 
     cmp byte [rsi + Board.side_to_move], 0
     je .corrhist_white
 
-    add r8, Search.black_corrhist - Search.white_corrhist
+    add r8, Search.black_history - Search.white_history
+    add r9, Search.black_corrhist - Search.white_corrhist
 .corrhist_white:
+
+    ; conthist corrhist
+    ; this is done out-of-order, which is one byte smaller
+    mov rdx, qword [r13 + Search.conthist_stack - Search.ply_data + 8]
+    lea rdx, [rdx + r8 + 2 * 12]
+    mov qword [rbp - 128 + ABLocals.conthist_corrhist], rdx
+    mov edx, dword [rdx]
+
+    sar edx, CORR_HIST_SCALE_SHIFT
+    add eax, edx
 
     ; pawn hash
     vmovq xmm0, qword [rsi]
@@ -457,7 +472,7 @@ alpha_beta:
     vpextrw edx, xmm0, 0
     ; vmovw dx, xmm0 ; AVX512-FP16
 
-    lea rdx, [r8 + 4 * rdx]
+    lea rdx, [r9 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.pawn_corrhist], rdx
     mov edx, dword [rdx]
 
@@ -482,7 +497,7 @@ alpha_beta:
 
     vpextrw edx, xmm0, 0
 
-    lea rdx, [r8 + 4 * rdx]
+    lea rdx, [r9 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.non_pawn_corrhists], rdx
     mov edx, dword [rdx]
 
@@ -506,7 +521,7 @@ alpha_beta:
 
     vpextrw edx, xmm0, 0
 
-    lea rdx, [r8 + 4 * rdx]
+    lea rdx, [r9 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.non_pawn_corrhists + 8], rdx
     mov edx, dword [rdx]
 
@@ -522,7 +537,7 @@ alpha_beta:
 
     vpextrw edx, xmm0, 0
 
-    lea rdx, [r8 + 4 * rdx]
+    lea rdx, [r9 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.minor_piece_corrhist], rdx
     mov edx, dword [rdx]
 
@@ -559,7 +574,7 @@ alpha_beta:
     vaesenc xmm0, xmm0, xmm0
 
     vpextrw edx, xmm0, 0
-    lea rdx, [r8 + 4 * rdx]
+    lea rdx, [r9 + 4 * rdx]
     mov qword [rbp - 128 + ABLocals.material_corrhist], rdx
     mov edx, dword [rdx]
 
@@ -1541,8 +1556,8 @@ alpha_beta:
     imul ecx, edi
 
     push rax
-    lea rsi, qword [rbp - 128 + ABLocals.pawn_corrhist]
-%rep 5
+    lea rsi, qword [rbp - 128 + ABLocals.corrhist_start]
+%rep 6
     lodsq
 
     ; entry * (weight - CORR_HIST_SCALE)
