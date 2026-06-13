@@ -5,23 +5,28 @@ section .text
 gen_moves:
     push rbx
     push rbp
-    movzx eax, byte [rsi + Board.side_to_move]
 
     ; r9 - occ
     mov r9, qword [rsi + Board.colors]
-    or r9, qword [rsi + Board.colors + 8]
+    xor r9, qword [rsi + Board.colors + 8]
 
     ; r10 - side
-    mov r10, qword [rsi + Board.colors + rax * 8]
-
     ; r11 - pieces
-    imul eax, eax, 48
-    lea r11, [rsi + rax] ; pieces
+    mov r10, qword [rsi + Board.white]
+    mov r11, rsi
+
+    cmp byte [rsi + Board.side_to_move], 0
+    je .white_to_move
+
+    xor r11, 48
+    mov r10, qword [rsi + Board.black]
+.white_to_move:
 
     lea rcx, [move_fns + 8]
     mov ebx, 5
 .piece_moves_head:
     mov r12, qword [r11 + 8 * rbx]
+.serialise_end:
 .gen_piece_head:
     blsi r8, r12
     jz .gen_piece_end
@@ -34,7 +39,6 @@ gen_moves:
 .serialise_head:
     tzcnt rax, rbp
     jc .serialise_end
-    ; jc .gen_piece_head
     btr rbp, rax
 
     bt r9, rax
@@ -48,8 +52,8 @@ gen_moves:
     stosd
 
     jmp .serialise_head
-.serialise_end:
-    jmp .gen_piece_head
+; .serialise_end:
+;     jmp .gen_piece_head
 
 .gen_piece_end:
     sub rcx, 2

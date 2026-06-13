@@ -210,7 +210,7 @@ _start:
 
     call root_search
 
-    lock dec dword [RUNNING_WORKER_THREADS]
+    lock dec dword [rbx + RUNNING_WORKER_THREADS - SEARCH_RESULT]
     jmp _start.exit
 .no_thread_search:
     
@@ -237,7 +237,7 @@ _start:
     call root_search
 
 .go_wait_for_threads:
-    lock and dword [RUNNING_WORKER_THREADS], 7FFF_FFFFh
+    lock and dword [rbx + RUNNING_WORKER_THREADS - SEARCH_RESULT], 7FFF_FFFFh
     jnz .go_wait_for_threads
 
     mov rdx, "bestmove"

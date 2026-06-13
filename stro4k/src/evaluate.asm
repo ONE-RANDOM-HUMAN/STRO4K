@@ -81,19 +81,14 @@ DOUBLED_ISOLATED_PAWN_EVAL:
     db  -34,  -80,  -26,   11
 
 
+; first two in each row are open mg and eg
+; second two semi-open mg and eg
 OPEN_FILE_EVAL:
-    db    1,  -10
-    db   -6,    3
-    db   33,   -4
-    db  -10,   18
-    db  -56,   -6
-
-SEMI_OPEN_FILE_EVAL:
-    db    0,    7
-    db   -6,   22
-    db   21,  -10
-    db    3,    5
-    db  -15,   10
+    db    1,  -10,    0,    7
+    db   -6,    3,   -6,   22
+    db   33,   -4,   21,  -10
+    db  -10,   18,    3,    5
+    db  -56,   -6,  -15,   10
 
 ; 0-4 pawns, 4 is max possible
 PAWN_SHIELD_EVAL:
@@ -284,7 +279,7 @@ evaluate:
 
     ; r9 - occ
     mov r9, qword [rsi + Board.white]
-    or r9, qword [rsi + Board.black]
+    xor r9, qword [rsi + Board.black]
 
     cmp byte [rsi + Board.side_to_move], 0
     je .white_to_move
@@ -350,9 +345,9 @@ evaluate:
 %else
     vpbroadcastw xmm2, word [rsp]
 %endif
-    vpmullw xmm1, xmm1, xmm2
-    vpsraw xmm1, xmm1, 4
-    vpaddw xmm0, xmm0, xmm1
+    vpmullw xmm2, xmm1, xmm2
+    vpsraw xmm2, xmm2, 4
+    vpaddw xmm0, xmm0, xmm2
 .no_pawn_shield:
 
     mov ecx, 5
@@ -526,7 +521,7 @@ evaluate:
 
     vpshufd xmm1, xmm1, 01h
     vpaddw xmm0, xmm0, xmm1
-.no_isolated_pawn:
+; .no_isolated_pawn:
     jmp .not_piece_eval
 .not_pawn_eval:
     ; Non-pawn eval
@@ -537,18 +532,16 @@ evaluate:
     test rdi, qword [r10]
     jnz .closed_file
 
+    vpmovsxbw xmm1, qword [rbp + OPEN_FILE_EVAL - EVAL_WEIGHTS + 4 * rcx - 4]
     test rdi, qword [r11]
-    jnz .semi_open_file
+    jz .semi_open_file
 
-    vpmovsxbw xmm1, qword [rbp + OPEN_FILE_EVAL - EVAL_WEIGHTS + 2 * rcx - 2]
-    vpaddw xmm0, xmm0, xmm1
-    jmp .open_file_end
+    vpshufd xmm1, xmm1, 01h
 .semi_open_file:
-    vpmovsxbw xmm1, qword [rbp + SEMI_OPEN_FILE_EVAL - EVAL_WEIGHTS + 2 * rcx - 2]
     vpaddw xmm0, xmm0, xmm1
 
 .closed_file:
-.open_file_end:
+.no_isolated_pawn:
 .not_piece_eval:
 
     jmp .piece_type_head

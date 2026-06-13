@@ -145,7 +145,7 @@ game_make_move:
     xor eax, eax
     mov ecx, 5
 .update_colors_head_2:
-    or rax, qword [rsi + Board.white_pieces + 48 + 8 * rcx]
+    or rax, qword [rsi + Board.black_pieces + 8 * rcx]
     dec ecx
     jns .update_colors_head_2
     mov qword [rsi + Board.black], rax
@@ -237,10 +237,12 @@ board_get_move_pieces:
 ; rsi - board
 ; returns value in NZ flag and al
 board_is_check:
-    movzx eax, byte [rsi + Board.side_to_move]
-    imul eax, eax, 48
+    mov rdi, qword [rsi + 40] ; king
+    cmp byte [rsi + Board.side_to_move], 0
+    je .white_king
 
-    mov rdi, qword [rsi + rax + 40] ; king
+    mov rdi, qword [rsi + Board.black_pieces + 40] ; king
+.white_king:
 
     ; jmp board_area_attacked_by
 
@@ -251,21 +253,17 @@ board_is_check:
 ; interprets the occupied squares as white ^ black
 ; sets r10 to enemy pieces
 board_area_attacked_by:
-    ; eax - enemy color
-    movzx eax, byte [rsi + Board.side_to_move]
-    xor al, 1
-    imul eax, eax, 48
-
-    ; r10 - enemy pieces
-    lea r10, [rsi + Board.pieces + rax]
-
     ; r8 - area
     mov r8, rdi
     mov r9, qword [NOT_A_FILE]
 
-    test al, al
+    ; r10 - enemy pieces
+    lea r10, [rsi + Board.black_pieces]
+
+
     mov rax, rdi
-    jz .enemy_white
+    cmp byte [rsi + Board.side_to_move], 0
+    jne .enemy_white
 
     ; pawn moves from area
     shl rax, 9
@@ -274,6 +272,8 @@ board_area_attacked_by:
     shl rdi, 7
     jmp .enemy_black
 .enemy_white:
+    xor r10, 48
+
     shr rax, 7
     and rax, r9
     and rdi, r9

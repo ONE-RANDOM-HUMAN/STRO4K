@@ -57,7 +57,7 @@ root_search_sysv:
 %endif
 ; search - rbx
 ; time should be calculated before calling root_search
-; returns best move in [rbx + 4]
+; returns with rbx pointing to SEARCH_RESULT
 root_search:
 %ifdef EXPORT_SYSV
     ; Save in last plydata - should never be used
@@ -68,19 +68,19 @@ root_search:
     mov word [r13 + PlyData_size + PlyData.static_eval], 7FFFh
     mov word [r13 + 2 * PlyData_size + PlyData.static_eval], 7FFFh
 
-    ; r12d - depth
-    ; r14d - last score
+    ; r12d - last score
+    ; r14d - depth
     ; r15d - best move - does not need to be initialised
     xor r12d, r12d
     xor r14d, r14d
 .iterative_deepening_head:
-    inc r12d
+    inc r14d
     ; ebp - window
     ; esi - alpha
     ; edi - beta
     mov ebp, 21
 
-    mov esi, r14d
+    mov esi, r12d
     lea edi, [rsi + rbp]
     sub esi, ebp
 .do_search:
@@ -99,7 +99,7 @@ root_search:
     ; beta - edi
 
     ; depth
-    mov ecx, r12d
+    mov ecx, r14d
 
     call alpha_beta
 
@@ -124,7 +124,6 @@ root_search:
     jnge .no_aspiration_fail_high
 
     cmp eax, edx ; score != MAX_EVAL
-    ; add eax, edx
     je .no_aspiration_fail_high
 
     ; fail high
@@ -137,7 +136,7 @@ root_search:
     jmp .do_search
 .no_aspiration_fail_high:
     ; update best move and last score
-    mov r14d, eax
+    mov r12d, eax
     movzx r15d, word [rbx + Search.ply_data + PlyData.best_move]
 
 %ifdef EXPORT_SYSV
@@ -145,8 +144,8 @@ root_search:
     jz .no_search_print_info
 
     mov rdi, rbx
-    mov esi, r12d
-    mov edx, r14d
+    mov esi, r14d
+    mov edx, r12d
 
     push r11
     push r10
@@ -159,7 +158,7 @@ root_search:
     pop r11
 
 .no_search_print_info:
-    cmp r12d, r11d
+    cmp r14d, r11d
     jge .end_search
 
     ; time_up clobbers r11 due to syscall
@@ -175,7 +174,8 @@ root_search:
 .end_search: 
 
     shl r15, 32
-    or r15, r12
+    ; or r15, r14
+    add r15, r14
     lea rbx, [SEARCH_RESULT]
     mov rax, qword [rbx]
 .search_result_head:
@@ -418,22 +418,19 @@ alpha_beta:
     cmp rcx, qword [rbx + Search.max_search_time]
     jna .no_stop_search
 .stop_search:
-    ; TODO
 %ifdef EXPORT_SYSV
     mov rsp, qword [rbx + Search.ply_data + (MAX_BOARDS - 1) * PlyData_size]
-    sub rsp, 40
+    sub rsp, 24
 %else
-    lea rsp, [rbx - 48]
+    lea rsp, [rbx - 32]
 %endif
-    ; restore r12-r15 - these are the first registers to be pushed by alpha_beta
+    ; restore r14-r15 - these are the first registers to be pushed by alpha_beta
     ; after it is called by root_search.
-    pop r12
-    pop r13
     pop r14
     pop r15
     pop rax ; return address
 
-    dec r12d
+    dec r14d
     jmp root_search.end_search
 .no_stop_search:
 
@@ -659,7 +656,7 @@ alpha_beta:
     ; check that the move is legal
     mov r11, rdi ; index + 4
 
-    mov edx, eax
+    xchg eax, edx
     call game_make_move
     jc .tt_miss
 
