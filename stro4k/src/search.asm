@@ -16,10 +16,10 @@ CORR_HIST_MAX equ 192
 section .rodata
 PIECE_VALUES:
     dd 146
-    dd 438
-    dd 438
-    dd 704
-    dd 1404
+    dd 439
+    dd 439
+    dd 705
+    dd 1406
     dd MAX_EVAL
 
 section .text

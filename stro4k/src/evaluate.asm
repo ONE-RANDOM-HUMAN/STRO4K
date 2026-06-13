@@ -4,16 +4,16 @@ MIN_EVAL equ -MAX_EVAL
 MG_BISHOP_PAIR equ 27
 EG_BISHOP_PAIR equ 95
 
-MG_TEMPO equ 30
+MG_TEMPO equ 32
 EG_TEMPO equ 14
 
 section .rodata
 MATERIAL_EVAL:
-    dw  114,  178
-    dw  366,  488
-    dw  412,  487
-    dw  553,  854
-    dw 1381, 1427
+    dw  115,  178
+    dw  368,  488
+    dw  414,  486
+    dw  556,  854
+    dw 1383, 1428
 
 ; For smaller size
 BISHOP_PAIR_EVAL:
@@ -26,63 +26,66 @@ MOBILITY_EVAL:
     db   13,    8
     db    8,    8
     db    5,    6
-    db    4,    4
+    db    4,    3
 
-; stored in reverse, with rooks attacked first
+; stored in reverse, with queens attacked first. Pawns attacked are stored separately
 MOBILITY_ATTACK_EVAL:
+    db   49,    2
     db   76,   11
     db   50,   33
     db   -1,   -8
-    db   -6,   27
 
-
-    db   47,   40
+    db   51,   89
+    db   49,   40
     db    3,    0
-    db   18,   53
+    db   19,   53
+
+    db   64,   24
+    db   -4,   19
+    db   20,   41
+    db   22,   33
+
+    db   -7,   11
+    db  -12,   28
+    db    3,   41
+    db    7,   23
+
+MOBILITY_ATTACK_PAWN_EVAL:
+    db   -6,   27
     db    3,   29
-
-
-    db   -5,   19
-    db   18,   41
-    db   21,   34
     db    2,   34
-
-
-    db  -22,   26
-    db   -5,   42
-    db    8,   23
     db    2,   14
 
 
 ; first two in each row and unblocked mg and eg
 ; second two are blocked mg and eg
 PASSED_PAWN_EVAL:
-    db  -11,   -4,  -13,    4
+    db  -11,   -4,  -14,    4
     db  -17,    9,  -26,   10
-    db  -10,   41,  -20,   19
+    db  -10,   41,  -21,   19
     db   21,   67,   17,   14
-    db   46,  107,   48,   25
+    db   47,  107,   48,   25
     db  102,  124,   16,   29
 
 
 ; first two in each row are doubled mg and eg
 ; second two are isolated mg and eg
 DOUBLED_ISOLATED_PAWN_EVAL:
-    db  -56,  -87,    4,    9
+    db  -57,  -86,    5,    9
     db  -33,  -51,  -14,  -14
     db  -26,  -28,  -14,  -17
     db  -37,  -16,  -30,  -24
     db  -20,  -28,  -22,  -28
     db  -34,  -37,  -24,   -9
     db  -12,  -58,  -14,  -15
-    db  -33,  -80,  -26,   11
+    db  -34,  -80,  -26,   11
 
 
 OPEN_FILE_EVAL:
     db    1,  -10
     db   -6,    3
-    db   34,   -4
-    db  -11,   18
+    db   33,   -4
+    db  -10,   18
     db  -56,   -6
 
 SEMI_OPEN_FILE_EVAL:
@@ -96,25 +99,25 @@ SEMI_OPEN_FILE_EVAL:
 PAWN_SHIELD_EVAL:
     db  -32,  -23
     db   -9,  -21
-    db    6,    6
-    db   23,   35
-    db   16,   49
+    db    7,    6
+    db   24,   35
+    db   16,   48
 
 EVAL_WEIGHTS:
 PAWN_DEFENDED_EVAL:
     db   15,    7
     db    1,   10
-    db    2,   15
-    db   11,   16
-    db   -2,   29
+    db    1,   15
+    db    9,   17
+    db   -4,   28
     db  -49,   38
 
 PAWN_ATTACKED_EVAL:
     db    8,   31
-    db  -67,  -50
-    db  -50,  -78
-    db  -53,  -36
-    db  -54,   -9
+    db  -69,  -49
+    db  -52,  -78
+    db  -56,  -35
+    db  -57,   -8
     ; db    0,    0
 
 RANK_PST:
@@ -123,54 +126,54 @@ RANK_PST:
     db  -22,  -18
     db    1,  -17
     db   18,   -6
-    db   48,   19
-    db   83,  119
+    db   48,   18
+    db   84,  119
     db    0,    0
 
 
     db  -27,    0
-    db  -13,    4
+    db  -12,    4
     db  -14,   10
-    db   18,   31
+    db   18,   30
     db   38,   30
-    db   74,   14
-    db   63,   13
-    db  -81,   31
+    db   72,   15
+    db   62,   13
+    db  -82,   31
 
 
-    db  -10,   13
+    db  -10,   14
     db    7,   10
-    db   11,   13
-    db   12,   15
+    db   11,   12
+    db   12,   14
     db   11,   22
-    db   42,   17
-    db   -1,   22
-    db  -44,   35
+    db   41,   17
+    db   -2,   22
+    db  -43,   35
 
 
     db  -10,   15
     db  -21,   21
-    db  -18,   26
-    db  -10,   40
+    db  -17,   26
+    db   -9,   39
     db   17,   42
     db   49,   33
     db   41,   37
-    db   71,   30
+    db   72,   30
 
 
-    db   19,    6
+    db   18,    7
     db   27,   10
-    db   12,   48
-    db    7,   80
-    db   12,   98
-    db   44,   93
-    db   17,  105
-    db   59,   73
+    db   13,   47
+    db    8,   79
+    db   13,   98
+    db   43,   94
+    db   15,  107
+    db   61,   72
 
 
     db   15,  -60
     db   -2,  -19
-    db  -39,    0
+    db  -39,    1
     db  -43,   25
     db  -20,   47
     db   33,   65
@@ -180,7 +183,7 @@ RANK_PST:
 
 FILE_PST:
     db  -21,    7
-    db   -2,   26
+    db   -2,   27
     db  -17,    8
     db    2,   -3
     db    4,    7
@@ -190,21 +193,21 @@ FILE_PST:
 
 
     db   -9,    0
-    db    3,    9
+    db    2,   10
     db   -4,   19
     db   13,   27
-    db    7,   27
-    db    2,   15
-    db   12,   19
+    db    8,   27
+    db    3,   15
+    db   13,   19
     db    9,    5
 
 
     db   12,    8
     db   15,   12
     db    0,   19
-    db    1,   22
+    db    2,   22
     db    0,   22
-    db   -5,   23
+    db   -6,   23
     db   20,   13
     db   20,    6
 
@@ -213,7 +216,7 @@ FILE_PST:
     db  -12,   37
     db    4,   38
     db   17,   30
-    db   18,   22
+    db   19,   22
     db    0,   32
     db    7,   25
     db    6,   13
@@ -224,15 +227,15 @@ FILE_PST:
     db   13,   63
     db    9,   77
     db   11,   77
-    db   19,   76
+    db   19,   77
     db   40,   56
-    db   54,   50
+    db   54,   51
 
 
-    db   43,  -39
+    db   44,  -39
     db   38,   -2
-    db   -1,   16
-    db  -67,   30
+    db    0,   16
+    db  -67,   31
     db  -14,   10
     db  -62,   22
     db   24,  -11
@@ -425,12 +428,13 @@ evaluate:
 
     ; mobility attacks
     vpmovsxbw xmm1, qword [rbp + MOBILITY_ATTACK_EVAL - EVAL_WEIGHTS - 8 + rcx * 8]
+    vpmovsxbw xmm3, qword [rbp + MOBILITY_ATTACK_PAWN_EVAL - EVAL_WEIGHTS - 2 + rcx * 2]
 
     push 4
     pop rdx
 .mobility_attack_head:
     mov rdi, rax
-    and rdi, qword [r11 + rdx * 8 - 8]
+    and rdi, qword [r11 + rdx * 8]
     popcnt rdi, rdi
 
 %ifdef AVX512
@@ -442,10 +446,10 @@ evaluate:
     vpmullw xmm2, xmm1, xmm2
     vpaddw xmm0, xmm0, xmm2
 
-    vpshufd xmm1, xmm1, 39h
+    vpalignr xmm1, xmm3, xmm1, 4
 
     dec edx
-    jnz .mobility_attack_head
+    jns .mobility_attack_head
 
 .no_mobility:
     cmp r11, r10 ; sets CF if r11 < r10
