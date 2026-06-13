@@ -1501,7 +1501,7 @@ alpha_beta:
     test dh, (PROMO_FLAG | CAPTURE_FLAG) << 4
     jnz .no_update_corrhist
 
-    movsx ecx, word [r13 + 2 * PlyData_size + PlyData.static_eval]
+    movsx ecx, word [rbp - 128 + ABLocals.static_eval]
     ; bounds
     cmp byte [rbp - 128 + ABLocals.bound], BOUND_LOWER
     jne .corrhist_no_lower_bound

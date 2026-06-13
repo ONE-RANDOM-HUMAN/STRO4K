@@ -600,7 +600,6 @@ impl<'a> Search<'a> {
         }
 
         if let Some(mov) = best_move {
-            let static_eval = self.ply[ply + 2].static_eval as i32;
             self.ply[ply].best_move = best_move;
 
             if !is_check
